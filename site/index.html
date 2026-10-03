@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aktienfinder</title>
+<meta name="description" content="Täglicher Scan nach bullischen Umkehrsignalen: RSI-Divergenz, MACD, Momentum Bias Index">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path d='M1 12 5 7l3 3 7-8' fill='none' stroke='%2300c896' stroke-width='2'/></svg>">
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #262b35; --text: #e6e8ec; --muted: #8a93a3;
+    --green: #00c896; --red: #ff5a4f; --amber: #f2b33d; --blue: #5b8cff; --row-hover: #1d212a;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="dark"]) {
+      --bg: #f6f7f9; --panel: #ffffff; --line: #e3e6eb; --text: #1b1f27; --muted: #667085;
+      --green: #00936d; --red: #d7372c; --amber: #b7791f; --blue: #2f5fd0; --row-hover: #f0f2f5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 14px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1400px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .sub { color: var(--muted); }
+  .stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+  .stat b { display: block; font-size: 18px; }
+  .stat span { color: var(--muted); font-size: 12px; }
+  .controls { max-width: 1400px; margin: 0 auto; padding: 8px 16px; display: flex; flex-wrap: wrap;
+              gap: 10px 16px; align-items: center; }
+  .controls label { color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  select, input[type=search] { background: var(--panel); color: var(--text); border: 1px solid var(--line);
+                               border-radius: 6px; padding: 6px 8px; font: inherit; }
+  input[type=range] { accent-color: var(--green); }
+  main { max-width: 1400px; margin: 0 auto; padding: 0 16px 32px; }
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
+  table { border-collapse: collapse; width: 100%; min-width: 1000px; }
+  th, td { padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { position: sticky; top: 0; background: var(--panel); color: var(--muted); font-weight: 600;
+       font-size: 12px; cursor: pointer; user-select: none; }
+  th.sorted::after { content: " ▼"; }
+  th.sorted.asc::after { content: " ▲"; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody tr.main { cursor: pointer; }
+  tbody tr.main:hover { background: var(--row-hover); }
+  .name { color: var(--muted); font-size: 12px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .score { display: flex; align-items: center; gap: 8px; }
+  .bar { width: 48px; height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--green); }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 12px;
+          border: 1px solid var(--line); color: var(--muted); }
+  .g { color: var(--green); } .r { color: var(--red); } .a { color: var(--amber); } .m { color: var(--muted); }
+  tr.detail td { white-space: normal; background: var(--bg); color: var(--muted); font-size: 13px; }
+  tr.detail ul { margin: 4px 0; padding-left: 18px; }
+  .empty { padding: 32px; text-align: center; color: var(--muted); }
+  details { margin-top: 16px; color: var(--muted); }
+  details pre { white-space: pre-wrap; font-size: 12px; }
+  footer { color: var(--muted); font-size: 12px; margin-top: 16px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Aktienfinder</h1>
+  <div class="sub">Trichter: Rückgang ≥ 20 % → Rücksetzer in der Fibonacci-Golden-Zone → RSI-Divergenz + schrumpfende rote MACD-Balken bei steigender MACD-Linie + grünes X im Momentum Bias Index (innerhalb von ~3 Wochen) → Analysten-Kursziel.</div>
+  <div class="stats" id="stats"></div>
+</header>
+
+<div class="controls">
+  <label>Region
+    <select id="region">
+      <option value="">Alle</option><option value="us">USA</option>
+      <option value="europe">Europa</option><option value="global">Global</option>
+    </select>
+  </label>
+  <label>Börsenwert
+    <select id="minCap">
+      <option value="0">alle</option><option value="2000000000">ab 2 Mrd. $</option>
+      <option value="10000000000">ab 10 Mrd. $</option><option value="50000000000">ab 50 Mrd. $</option>
+      <option value="200000000000">ab 200 Mrd. $</option>
+    </select>
+  </label>
+  <label>Kursziel-Upside
+    <select id="minUpside">
+      <option value="-999">alle</option><option value="20">ab 20 %</option>
+      <option value="40" selected>ab 40 %</option><option value="60">ab 60 %</option>
+    </select>
+  </label>
+  <label>Mindest-Score <input type="range" id="minScore" min="0" max="100" step="5" value="0">
+    <b id="minScoreVal">0</b></label>
+  <label><input type="checkbox" id="onlyRed"> MACD noch rot</label>
+  <label><input type="checkbox" id="onlyBreakout"> Ausbruch über EMA 20</label>
+  <label><input type="checkbox" id="onlyFib"> in Fib-Zone</label>
+  <input type="search" id="search" placeholder="Ticker oder Name …">
+</div>
+
+<main>
+  <div class="table-wrap">
+    <table>
+      <thead><tr id="head"></tr></thead>
+      <tbody id="body"><tr><td class="empty" colspan="16">Lade Daten …</td></tr></tbody>
+    </table>
+  </div>
+  <details>
+    <summary>Datenquellen &amp; Einstellungen</summary>
+    <pre id="sources"></pre>
+  </details>
+  <footer>Keine Anlageberatung. Daten: Yahoo Finance (Tageskerzen). Momentum Bias Index nach AlgoAlpha (MPL 2.0).
+    Zeile antippen für Details.</footer>
+</main>
+
+<script>
+const REGION = { us: "USA", europe: "Europa", global: "Global" };
+// Yahoo-Suffix → TradingView-Börse
+const TV_EXCHANGE = { DE: "XETR", L: "LSE", PA: "EURONEXT", AS: "EURONEXT", BR: "EURONEXT", LS: "EURONEXT",
+  MI: "MIL", MC: "BME", SW: "SIX", ST: "OMXSTO", CO: "OMXCOP", HE: "OMXHEX", OL: "OSL", VI: "VIE",
+  IR: "EURONEXT", WA: "GPW", T: "TSE", HK: "HKEX", TO: "TSX", V: "TSXV", AX: "ASX", NS: "NSE", BO: "BSE",
+  KS: "KRX", KQ: "KRX", TW: "TWSE", SI: "SGX", SA: "BMFBOVESPA", MX: "BMV", JO: "JSE", TA: "TASE", NZ: "NZX",
+  SS: "SSE", SZ: "SZSE" };
+
+function tvUrl(ticker) {
+  let sym = ticker, ex = "";
+  const m = ticker.match(/^(.+)\.([A-Z]{1,2})$/);
+  if (m && TV_EXCHANGE[m[2]]) { sym = m[1]; ex = TV_EXCHANGE[m[2]]; }
+  if (ex === "HKEX") sym = String(parseInt(sym, 10));
+  sym = sym.replace("-", ".");
+  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(ex ? ex + ":" + sym : sym);
+}
+
+const fmt = (v, d = 2) => v == null ? "–" : Number(v).toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtCap = v => v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, v >= 1e10 ? 0 : 1) + " Mrd. $";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+const COLUMNS = [
+  { key: "score", label: "Score", num: true, get: r => r.score,
+    html: r => `<div class="score"><b>${fmt(r.score, 0)}</b><span class="bar"><i style="width:${r.score}%"></i></span></div>` },
+  { key: "ticker", label: "Aktie", get: r => r.ticker,
+    html: r => `<a href="${tvUrl(r.ticker)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">${esc(r.ticker)}</a><div class="name">${esc(r.name)}</div>` },
+  { key: "region", label: "Region", get: r => r.region, html: r => `<span class="pill">${REGION[r.region] || r.region}</span>` },
+  { key: "cap", label: "Börsenwert", num: true, get: r => r.market_cap_usd ?? -1,
+    html: r => r.market_cap_usd == null ? "–" : fmtCap(r.market_cap_usd) },
+  { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999,
+    html: r => r.upside_pct == null ? `<span class="m">–</span>`
+      : `<span class="${r.upside_pct >= 40 ? "g" : "m"}" title="Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten)">+${fmt(r.upside_pct, 0)} %</span>` },
+  { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
+  { key: "drawdown_pct", label: "vom Hoch", num: true, get: r => -r.drawdown_pct,
+    html: r => `<span class="${r.drawdown_pct >= 20 ? "r" : "m"}" title="Rücksetzer-Tief: −${fmt(r.pullback_drawdown_pct, 1)} %">−${fmt(r.drawdown_pct, 1)} %</span>` },
+  { key: "rsi", label: "RSI", num: true, get: r => r.rsi, html: r => fmt(r.rsi, 1) },
+  { key: "div", label: "Divergenz", get: r => r.cluster ? r.cluster.divergence_age : 999,
+    html: r => {
+      const kinds = [...new Set(r.divergences.map(d => d.kind))].sort().join(" + ");
+      return `${kinds || "–"} <span class="m">${r.cluster ? "vor " + r.cluster.divergence_age + " T." : ""}</span>`;
+    } },
+  { key: "macd", label: "MACD", get: r => r.macd_status,
+    html: r => `<span class="${r.macd_status.startsWith("rot") ? "a" : "g"}">${esc(r.macd_status)}</span>` },
+  { key: "mbi", label: "MBI", get: r => r.cluster ? r.cluster.mbi_age : 999,
+    html: r => `<span class="g">✕</span> ${esc(r.mbi_status.replace(/^X /, ""))}` },
+  { key: "fib", label: "Fib", num: true, get: r => r.fib_retracement ?? -1,
+    html: r => r.fib_retracement == null ? "–"
+      : r.fib_retracement > 1 ? `<span class="m">unter Tief</span>`
+      : `<span class="${r.fib_zone ? "g" : "m"}">${fmt(r.fib_retracement, 3)}${r.fib_zone ? " ★" : ""}</span>` },
+  { key: "ema", label: "EMA 20", get: r => r.ema_breakout_age ?? 999,
+    html: r => r.ema_breakout_age == null ? `<span class="m">darunter</span>`
+      : `<span class="${r.ema_breakout_age < 5 ? "g" : "m"}">↑ seit ${r.ema_breakout_age} T.</span>` },
+  { key: "extra", label: "Uber-Muster", get: r => (r.reversal_candle_age != null) * 4 + (r.green_x_count >= 2) * 2
+      + (r.rsi_signal_gap >= -2 && r.rsi_signal_gap <= 5),
+    html: r => [r.reversal_candle_age != null ? `<span class="g">Umkehrkerze ${r.reversal_candle_age ? "vor " + r.reversal_candle_age + " T." : "heute"}</span>` : "",
+                r.green_x_count >= 2 ? `${r.green_x_count}× X` : "",
+                r.rsi_signal_gap >= -2 && r.rsi_signal_gap <= 5 ? "RSI an Signallinie" : ""].filter(Boolean).join(" · ") || "–" },
+  { key: "vol", label: "Volumen", get: r => r.volume_spike + r.volume_breakout,
+    html: r => [r.volume_spike ? "Spike am Tief" : "", r.volume_breakout ? "Ausbruch" : ""].filter(Boolean).join(", ") || "–" },
+  { key: "date", label: "Stand", get: r => r.date, html: r => `<span class="m">${esc(r.date)}</span>` },
+];
+
+let data = null, sortKey = "score", sortAsc = false, open = new Set();
+const $ = id => document.getElementById(id);
+
+function readControls() {
+  return { region: $("region").value, minUpside: +$("minUpside").value, minCap: +$("minCap").value, minScore: +$("minScore").value, onlyRed: $("onlyRed").checked,
+           onlyBreakout: $("onlyBreakout").checked, onlyFib: $("onlyFib").checked,
+           q: $("search").value.trim().toLowerCase() };
+}
+
+function detailHtml(r) {
+  const c = r.cluster;
+  const divs = r.divergences.map(d =>
+    `<li>${d.kind}: ${d.prev_pivot_date} (Tief ${fmt(d.prev_price_low)}, RSI ${fmt(d.prev_rsi_low, 1)}) → ${d.pivot_date} (Tief ${fmt(d.price_low)}, RSI ${fmt(d.rsi_low, 1)}), bestätigt ${d.confirmed_date}</li>`).join("");
+  return `<b>Signal-Bündel:</b> Divergenz vor ${c.divergence_age}, MACD vor ${c.macd_age}, grünes X vor ${c.mbi_age} Handelstagen (Spanne ${c.span} T.)
+    <ul>${divs}</ul>`;
+}
+
+function render() {
+  const f = readControls();
+  $("minScoreVal").textContent = f.minScore;
+  const col = COLUMNS.find(c => c.key === sortKey);
+  const rows = data.results.filter(r =>
+      r.passed && (!f.region || r.region === f.region) &&
+      (!f.minCap || (r.market_cap_usd ?? 0) >= f.minCap) &&
+      (f.minUpside <= -999 || (r.upside_pct ?? -999) >= f.minUpside) && r.score >= f.minScore &&
+      (!f.onlyRed || r.macd_status.startsWith("rot")) &&
+      (!f.onlyBreakout || (r.ema_breakout_age != null && r.ema_breakout_age < 5)) &&
+      (!f.onlyFib || r.fib_zone) &&
+      (!f.q || r.ticker.toLowerCase().includes(f.q) || (r.name || "").toLowerCase().includes(f.q)))
+    .sort((a, b) => {
+      const x = col.get(a), y = col.get(b);
+      const cmp = typeof x === "string" ? x.localeCompare(y) : x - y;
+      return sortAsc ? cmp : -cmp;
+    });
+
+  $("head").innerHTML = COLUMNS.map(c =>
+    `<th class="${c.num ? "num " : ""}${c.key === sortKey ? "sorted" + (sortAsc ? " asc" : "") : ""}" data-key="${c.key}">${c.label}</th>`).join("");
+  $("body").innerHTML = rows.length ? rows.map(r =>
+    `<tr class="main" data-t="${esc(r.ticker)}">${COLUMNS.map(c => `<td class="${c.num ? "num" : ""}">${c.html(r)}</td>`).join("")}</tr>` +
+    (open.has(r.ticker) ? `<tr class="detail"><td colspan="${COLUMNS.length}">${detailHtml(r)}</td></tr>` : "")).join("")
+    : `<tr><td class="empty" colspan="${COLUMNS.length}">Keine Treffer mit diesen Filtern.</td></tr>`;
+  $("count").textContent = rows.length;
+}
+
+function renderStats() {
+  const s = data.stats || {};
+  const when = new Date(data.generated).toLocaleString("de-DE", { dateStyle: "medium", timeStyle: "short" });
+  const stat = (v, l, id) => `<div class="stat"><b${id ? ` id="${id}"` : ""}>${v}</b><span>${l}</span></div>`;
+  $("stats").innerHTML = stat(when, "Scan-Zeitpunkt") + stat((s.universe || 0).toLocaleString("de-DE"), "Aktien im Universum")
+    + stat((s.liquid || 0).toLocaleString("de-DE"), "liquide geprüft") + stat((s.passed || 0).toLocaleString("de-DE"), "Treffer gesamt")
+    + stat("–", "angezeigt", "count");
+  const cfg = data.config || {};
+  $("sources").textContent = (data.universe_log || []).join("\n") + "\n\nDauer: " + (data.duration_s || 0) + " s\n\n"
+    + Object.entries(cfg).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join("\n");
+}
+
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem("aktienfinder-filter") || "{}");
+    if (p.region != null) $("region").value = p.region;
+    if (p.minCap != null) $("minCap").value = String(p.minCap);
+    if (p.minUpside != null) $("minUpside").value = String(p.minUpside);
+    if (p.minScore != null) $("minScore").value = p.minScore;
+    ["onlyRed", "onlyBreakout", "onlyFib"].forEach(k => { if (p[k] != null) $(k).checked = p[k]; });
+  } catch (e) { /* Speicher nicht verfügbar */ }
+}
+function savePrefs() {
+  try { const { q, ...p } = readControls(); localStorage.setItem("aktienfinder-filter", JSON.stringify(p)); } catch (e) {}
+}
+
+document.addEventListener("input", e => { if (e.target.closest(".controls")) { savePrefs(); render(); } });
+$("head").addEventListener("click", e => {
+  const th = e.target.closest("th"); if (!th) return;
+  if (th.dataset.key === sortKey) sortAsc = !sortAsc; else { sortKey = th.dataset.key; sortAsc = false; }
+  render();
+});
+$("body").addEventListener("click", e => {
+  const tr = e.target.closest("tr.main"); if (!tr) return;
+  const t = tr.dataset.t; open.has(t) ? open.delete(t) : open.add(t); render();
+});
+
+loadPrefs();
+fetch("data/results.json", { cache: "no-store" })
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => { data = d; renderStats(); render(); })
+  .catch(err => { $("body").innerHTML = `<tr><td class="empty" colspan="16">Noch keine Scan-Ergebnisse vorhanden (${esc(err.message)}).</td></tr>`; });
+</script>
+</body>
+</html>

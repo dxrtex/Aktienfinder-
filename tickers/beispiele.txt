@@ -1,0 +1,6 @@
+# Referenz-Trades (Einstiege Ende Sep./Anfang Okt. 2026) – der Scanner sollte diese finden
+QBTS     # D-Wave Quantum
+RKLB     # Rocket Lab
+IFX.DE   # Infineon
+UBER     # Uber
+TUI1.DE  # TUI
