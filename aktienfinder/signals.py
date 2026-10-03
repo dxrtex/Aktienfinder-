@@ -356,14 +356,14 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     elif 0 < macd_green_days <= 3:
         score += 3                                   # schon grün – etwas spät
     span = cfg.entry_zero - cfg.entry_full
-    score += 14 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    score += 10 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
     score += 3 * ("klassisch" in kinds)
     score += 4 * (green_x_count >= 2)
     score += 4 * sellers_fading                      # rote MBI-Balken rückläufig
     score += 6 * (reversal_age is not None)          # Umkehrkerze mit Volumen an Fib-Linie
     score += 6 * (-cfg.rsi_signal_gap <= rsi_gap <= 5)   # RSI (fast) auf der Signallinie
     score += 3 * fib_zone                            # in der Golden Zone (statt darunter)
-    score += 2 * (pullback_drawdown >= 0.30)
+    score += 6 * (pullback_drawdown >= 0.30)        # Backtest: tiefer Rücksetzer → +20 % deutlich häufiger
     if cluster:
         newest = min(cluster.divergence_age, cluster.macd_age, cluster.mbi_age)
         score += 5 * (1 - newest / cfg.max_signal_age)

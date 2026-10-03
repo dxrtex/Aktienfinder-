@@ -46,12 +46,13 @@ Wird für jede Aktie berechnet (auch Watchlist-Aktien ohne vollständiges Setup)
 | **Gesamtpaket:** je Kernkriterium 5 Punkte – Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz (klassisch/versteckt), MACD-Histogramm rot & schrumpfend mit nicht mehr fallenden Linien, grünes MBI-X | 25 |
 | **Bonus, wenn alle 5 Kernkriterien erfüllt sind** | 16 |
 | MACD-Histogramm noch rot: je näher an 0 (Anteil des tiefsten roten Balkens der letzten 20 T., der aufgeholt ist) / schon seit ≤ 3 T. grün | bis 12 / 3 |
-| Einstiegsnähe: Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 14 |
+| Einstiegsnähe: Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 10 |
 | Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 6 |
 | RSI an der gelben Signallinie (−2 … +5 Punkte) | 6 |
 | Frische des jüngsten Signals | bis 5 |
 | Zwei oder mehr grüne MBI-X / rote MBI-Balken rückläufig | 4 / 4 |
-| Klassische Divergenz / in der Golden Zone / Rücksetzer ≥ 30 % | 3 / 3 / 2 |
+| Rücksetzer ≥ 30 % vom Hoch (im Backtest der stärkste Einzelfaktor: +20 % in 60 T. bei 53 % statt 40 %) | 6 |
+| Klassische Divergenz / in der Golden Zone | 3 / 3 |
 
 Damit landet eine Aktie, der ein Kernkriterium fehlt, immer deutlich hinter vollständigen Setups.
 
@@ -99,3 +100,19 @@ und Link zum TradingView-Chart.
 5. GitHub Actions + GitHub Pages (täglicher Auto-Scan, Link)
 5b. Abgleich mit den Referenz-Trades auf echten Daten, Trefferquote kalibrieren
 6. Ausbau des Universums (Stufe 2–4)
+
+## Backtest-Ergebnis Swing-Trading (Okt. 2026, 5 Jahre, ~4.900 Aktien)
+Gemessen: Wird innerhalb von 60 Handelstagen (Tageshoch) +10 / +20 / +30 % erreicht?
+
+| Gruppe | +10 % | +20 % | +30 % |
+|---|---|---|---|
+| Zufall, alle Aktien | 58 % | 30 % | 16 % |
+| Zufall nach ≥ 20 % Rückgang + Fib-Zone | 66 % | 40 % | 24 % |
+| Scanner-Signal (vollständiger Trichter) | 66 % | 40 % | 24 % |
+| 5 von 5 Kernkriterien | 68 % | 41 % | 25 % |
+| Rücksetzer ≥ 30 % vom Hoch | 74 % | 53 % | 37 % |
+| Status Einstiegsbereit / Schon gelaufen | 62 % / 72 % | 35 % / 47 % | 19 % / 32 % |
+
+Fazit: Der Vorteil kommt vor allem aus „deutlich gefallen + Fibonacci“ und einem tiefen Rücksetzer.
+RSI/MACD/MBI verbessern die Trefferquote im Schnitt kaum; Aktien, die schon vom Tief steigen,
+liefen statistisch eher besser. Der Scanner bleibt ein Vorfilter für die eigene Chartprüfung.
