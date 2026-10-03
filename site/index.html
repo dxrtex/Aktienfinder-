@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Aktienfinder</title>
-<meta name="description" content="Tägliche Setups: Rückgang, Fibonacci, RSI-Divergenz, MACD, Momentum Bias Index, Kursziel">
+<title>Reversal-Setup-Finder</title>
+<meta name="description" content="Täglicher Scan aller Aktien ab 2 Mrd. USD (USA + Europa) auf das Long-Reversal-Setup">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -163,6 +163,45 @@
          font-size: 15px; cursor: pointer; }
   .opt.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .sheet .btn { width: 100%; margin-top: 26px; display: block; }
+
+  .tabs { max-width: 720px; grid-template-columns: repeat(5, 1fr); }
+  .card h2 a { color: inherit; text-decoration: none; }
+  .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .dot.no { background: var(--red); }
+  .btn.ghost { background: var(--surface-2); color: var(--text); }
+  .flag { display: inline-block; margin: 8px 8px 0 0; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
+          color: var(--gold); background: var(--gold-bg); }
+
+  /* Detailseite */
+  .detail { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; display: none;
+            padding: calc(env(safe-area-inset-top) + 16px) 0 calc(env(safe-area-inset-bottom) + 32px); }
+  .detail.open { display: block; }
+  .detail .wrap { padding-top: 0; }
+  .d-head { display: flex; align-items: flex-start; gap: 14px; justify-content: space-between; }
+  .d-head h2 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
+  .close { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--surface-2); color: var(--text);
+           font-size: 22px; cursor: pointer; }
+  .pane { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; margin-top: 14px; }
+  .pane-label { color: var(--muted); font-size: 13px; padding: 2px 6px 6px; display: flex; gap: 14px; flex-wrap: wrap; }
+  .pane-label i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: 3px; margin-right: 5px; }
+  .lw { width: 100%; }
+  .two { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 900px) { .two { grid-template-columns: 3fr 2fr; } }
+  .check { width: 100%; border-collapse: collapse; min-width: 0; font-size: 14px; }
+  .check td { padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: normal; vertical-align: top; }
+  .check tr:last-child td { border-bottom: 0; }
+  .check .ok { color: var(--accent); font-weight: 700; } .check .no { color: var(--red); font-weight: 700; }
+  .check .th { color: var(--faint); font-size: 12px; }
+  .plan { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .plan .fig b { font-size: 18px; }
+  .note { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.45; }
+  .cfg { font-size: 14px; }
+  .cfg h4 { margin: 18px 0 6px; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
+  .cfg table { min-width: 0; font-size: 14px; }
+  .cfg td { padding: 7px 10px; }
+  .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .links .btn { flex: 1 1 220px; }
 </style>
 </head>
 <body>
@@ -180,9 +219,9 @@
   <main id="main"></main>
 
   <footer>
-    Vorfilter für die eigene Chart-Analyse – keine Anlageberatung. Daten: Yahoo Finance (Tageskerzen, Analysten-Kursziele).
-    Momentum Bias Index nach AlgoAlpha (MPL 2.0). Scan werktags nach US-Börsenschluss.
-    <details><summary>Datenquellen &amp; Einstellungen</summary><pre id="sources"></pre></details>
+    <b>Keine Anlageberatung. Signale sind rein technisch und ersetzen keine eigene Prüfung.</b><br>
+    Daten: Yahoo Finance (Tageskerzen, Börsenwert, Earnings-Termine). Momentum Bias Index nach AlgoAlpha (MPL 2.0). Charts: <a href="https://www.tradingview.com/" target="_blank" rel="noopener" style="color:inherit">TradingView Lightweight Charts™</a>.
+    Scan werktags um 22:30 Uhr (Berlin).
   </footer>
 </div>
 
@@ -190,15 +229,18 @@
   <div class="tabs">
     <button class="tab on" data-tab="cards">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2.5"/><rect x="13" y="3" width="8" height="8" rx="2.5"/><rect x="3" y="13" width="8" height="8" rx="2.5"/><rect x="13" y="13" width="8" height="8" rx="2.5"/></svg>
-      Setups</button>
+      Treffer</button>
     <button class="tab" data-tab="table">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
       Tabelle</button>
     <button class="tab" data-tab="watch">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
-      Watchlist<span class="badge" id="wlBadge" hidden></span></button>
+      Fast-Treffer<span class="badge" id="wlBadge" hidden></span></button>
+    <button class="tab" data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Einstellungen</button>
     <button class="tab" data-tab="filter">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
       Filter</button>
   </div>
 </nav>
@@ -206,356 +248,371 @@
 <div class="backdrop" id="backdrop"></div>
 <section class="sheet" id="sheet" aria-label="Filter">
   <div class="grabber"></div>
-  <h3>Filter</h3>
-  <div class="group"><div class="group-label">Auswahl</div>
-    <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
-    <p class="hint">Top-Auswahl = alle 5 Kriterien erfüllt: Rückgang ≥ 20 % vom Hoch der letzten 3 Monate · Fibonacci (Golden Zone oder bis zum Schwungtief) · MACD-Histogramm rot und schrumpfend Richtung 0, Linien fallen nicht mehr stark · bullische RSI-Divergenz (klassisch oder versteckt) · mind. 1 grünes X im MBI. Sortiert nach Score (wie gut die Kriterien zutreffen).</p></div>
+  <h3>Filter &amp; Export</h3>
+  <div class="group"><div class="group-label">Mindest-Score</div>
+    <div class="opts" data-key="minScore"><button class="opt" data-v="0">alle</button><button class="opt" data-v="40">ab 40</button><button class="opt" data-v="60">ab 60</button><button class="opt" data-v="80">ab 80</button></div></div>
   <div class="group"><div class="group-label">Region</div>
-    <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
-  <div class="group"><div class="group-label">Analysten-Kursziel</div>
-    <div class="opts" data-key="minUpside"><button class="opt" data-v="-999">alle</button><button class="opt" data-v="20">ab +20 %</button><button class="opt" data-v="30">ab +30 %</button><button class="opt" data-v="40">ab +40 %</button><button class="opt" data-v="60">ab +60 %</button></div></div>
-  <div class="group"><div class="group-label">Börsenwert</div>
-    <div class="opts" data-key="minCap"><button class="opt" data-v="0">alle (ab 2 Mrd. $)</button><button class="opt" data-v="10000000000">ab 10 Mrd. $</button><button class="opt" data-v="50000000000">ab 50 Mrd. $</button><button class="opt" data-v="200000000000">ab 200 Mrd. $</button></div></div>
-  <div class="group"><div class="group-label">Setup-Status</div>
-    <div class="opts" data-key="status"><button class="opt" data-v="">alle</button><button class="opt" data-v="bereit">nur Einstiegsbereit</button><button class="opt" data-v="nicht_gelaufen">noch nicht gelaufen</button></div></div>
-  <div class="group"><div class="group-label">Fibonacci</div>
-    <div class="opts" data-key="fib"><button class="opt" data-v="">egal</button><button class="opt" data-v="zone">in der Golden Zone</button><button class="opt" data-v="unter">unter die Zone gefallen</button></div></div>
-  <div class="group"><div class="group-label">RSI-Divergenz</div>
+    <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button></div></div>
+  <div class="group"><div class="group-label">Zonen-Typ</div>
+    <div class="opts" data-key="zone"><button class="opt" data-v="">egal</button><button class="opt" data-v="Fib">Fibonacci</button><button class="opt" data-v="Support">Support</button></div></div>
+  <div class="group"><div class="group-label">Divergenz</div>
     <div class="opts" data-key="div"><button class="opt" data-v="">egal</button><button class="opt" data-v="klassisch">klassisch</button><button class="opt" data-v="versteckt">versteckt</button></div></div>
-  <div class="group"><div class="group-label">MACD</div>
-    <div class="opts" data-key="macd"><button class="opt" data-v="">egal</button><button class="opt" data-v="rot">Balken noch rot, schrumpfend</button><button class="opt" data-v="gruen">gerade grün geworden</button></div></div>
-  <div class="group"><div class="group-label">MBI grüne X</div>
-    <div class="opts" data-key="mbi"><button class="opt" data-v="">egal</button><button class="opt" data-v="2">mind. 2 grüne X</button></div></div>
+  <div class="group"><div class="group-label">Sektor</div>
+    <div class="opts" data-key="sector" id="sectorOpts"><button class="opt" data-v="">alle</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="upside">Kursziel</button><button class="opt" data-v="entry">nächstes am Tief</button><button class="opt" data-v="fresh">frischestes Signal</button><button class="opt" data-v="drawdown">stärkster Rückgang</button><button class="opt" data-v="crv">Chance/Risiko</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button></div></div>
+  <div class="group"><div class="group-label">Export der angezeigten Liste</div>
+    <div class="links"><button class="btn ghost" id="csv">CSV</button><button class="btn ghost" id="xlsx">Excel</button></div></div>
   <button class="btn" id="done">Fertig</button>
   <button class="opt" id="reset" style="width:100%;margin-top:10px">Filter zurücksetzen</button>
 </section>
 
+<section class="detail" id="detail" aria-label="Detailseite"><div class="wrap" id="detailBody"></div></section>
+
+<script src="lib/lightweight-charts.standalone.production.js"></script>
 <script>
-const REGION = { us: "USA", europe: "Europa", global: "Welt" };
-const TV_EXCHANGE = { DE: "XETR", L: "LSE", PA: "EURONEXT", AS: "EURONEXT", BR: "EURONEXT", LS: "EURONEXT",
-  MI: "MIL", MC: "BME", SW: "SIX", ST: "OMXSTO", CO: "OMXCOP", HE: "OMXHEX", OL: "OSL", VI: "VIE",
-  IR: "EURONEXT", WA: "GPW", T: "TSE", HK: "HKEX", TO: "TSX", V: "TSXV", AX: "ASX", NS: "NSE", BO: "BSE",
-  KS: "KRX", KQ: "KRX", TW: "TWSE", TWO: "TPEX", SI: "SGX", SA: "BMFBOVESPA", MX: "BMV", JO: "JSE", TA: "TASE",
-  NZ: "NZX", SS: "SSE", SZ: "SZSE" };
-
 const $ = id => document.getElementById(id);
-const fmt = (v, d = 2) => v == null ? "–" : Number(v).toLocaleString("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
-const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, 0) + " Mrd. $";
-const fmtUp = v => v == null ? "–" : (v > 0 ? "+" : "") + fmt(v, 0) + " %";
+const REPO = "https://github.com/dxrtex/Aktienfinder-";
+const REGION = { us: "USA", europe: "Europa" };
+const nf = (d = 2) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : nf(d).format(v);
+const pct = (v, d = 1) => v == null ? "–" : fmt(100 * v, d) + " %";
+const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, v >= 1e10 ? 0 : 1) + " Mrd. $";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const dateDE = s => s ? new Date(s + "T12:00:00").toLocaleDateString("de-DE") : "–";
+const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter EMAs", flattening: "Abflachung",
+  zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
+  mbi: "MBI grünes X", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
+const SETUP_KEYS = ["drawdown", "no_crash", "structure", "flattening", "zone", "rsi_div", "rsi_range", "macd_below0", "macd_turn", "mbi", "crv"];
+const tvUrl = t => {
+  const m = t.match(/^(.*)\.(DE|L|PA|AS|SW|MC|MI|ST|CO|OL|HE|BR|VI|IR|LS|WA|AT)$/);
+  const ex = { DE: "XETR", L: "LSE", PA: "EURONEXT", AS: "EURONEXT", SW: "SIX", MC: "BME", MI: "MIL", ST: "OMXSTO", CO: "OMXCOP",
+               OL: "OSL", HE: "OMXHEX", BR: "EURONEXT", VI: "VIE", IR: "EURONEXT", LS: "EURONEXT", WA: "GPW", AT: "ATHEX" };
+  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(m ? `${ex[m[2]]}:${m[1]}` : t.replace("-", "."));
+};
 
-// Tage bis zu den nächsten Quartalszahlen (null = unbekannt)
-function earningsDays(r) {
-  if (!r.earnings_date) return null;
-  const d = new Date(r.earnings_date + "T12:00:00"), now = new Date();
-  return Math.round((d - now) / 864e5);
-}
-const earningsSoon = r => { const d = earningsDays(r); return d != null && d >= 0 && d <= 10; };
-const fmtCrv = v => v == null ? "–" : `${fmt(v, 1)} : 1`;
-// Top-Auswahl: alle 5 Kernkriterien, Chance/Risiko ≥ 2, keine Quartalszahlen in den nächsten 10 Tagen
-// (Regeln im Scanner: Config.top_*, per Backtest-Optimierer festgelegt)
-const isTop = r => r.top ?? false;
-function macdNear(r) {
-  return r.macd_status.startsWith("rot") && r.macd_closeness ? ` · ${Math.round(r.macd_closeness * 100)} % an 0` : "";
-}
-function tvUrl(ticker) {
-  let sym = ticker, ex = "";
-  const m = ticker.match(/^(.+)\.([A-Z]{1,3})$/);
-  if (m && TV_EXCHANGE[m[2]]) { sym = m[1]; ex = TV_EXCHANGE[m[2]]; }
-  if (ex === "HKEX") sym = String(parseInt(sym, 10));
-  sym = sym.replace("-", ".");
-  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(ex ? ex + ":" + sym : sym);
-}
-function scalableUrl(r) {
-  return r.isin ? "https://de.scalable.capital/broker/security?isin=" + encodeURIComponent(r.isin)
-                : "https://de.scalable.capital/broker";
-}
+let data = null;
+const DEFAULTS = { minScore: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
+const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
+const PREF = "reversal-finder-v1";
+try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
+const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
-// ---------- Watchlist ----------
-let watch = new Set();
-const inWatch = r => r.in_watchlist || watch.has(r.ticker);
+const SORTS = {
+  score: (a, b) => b.score - a.score || (b.crv ?? 0) - (a.crv ?? 0),
+  crv: (a, b) => (b.crv ?? -1) - (a.crv ?? -1),
+  drawdown: (a, b) => (b.drawdown ?? 0) - (a.drawdown ?? 0),
+  cap: (a, b) => (b.market_cap_usd ?? 0) - (a.market_cap_usd ?? 0),
+};
 
-const STATUS = { bereit: "Einstiegsbereit", abwarten: "Abwarten", gelaufen: "Schon gelaufen", kein_setup: "Kein Setup" };
-const statusBadge = r => `<span class="status st-${r.status}">${STATUS[r.status] || r.status}</span>`;
-
-// ---------- Kriterien als Etiketten ----------
-function watchTraits(r) {
-  // Watchlist: jedes Pflichtkriterium mit erfüllt / fehlt
-  const c = r.criteria || {};
-  const fib = r.fib_retracement == null ? "Fibonacci –" : `Fibonacci ${fmt(r.fib_retracement, 2)}`;
-  return [
-    { ok: c.rueckgang, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
-    { ok: c.fibonacci, star: c.fibonacci && r.fib_zone, text: fib },
-    { ok: c.divergenz, star: !c.divergenz && !!r.divergence_forming,
-      text: c.divergenz ? "RSI-Divergenz" : r.divergence_forming ? `Divergenz ${r.divergence_forming} in Bildung (unbestätigt)` : "keine RSI-Divergenz" },
-    { ok: c.macd, text: `MACD ${r.macd_status}${macdNear(r)}` },
-    { ok: c.mbi, text: c.mbi ? `MBI ${r.green_x_count}× grünes X` : "kein grünes X" },
-    { ok: c.buendel, text: c.buendel ? "Signale zeitlich zusammen" : "Signale nicht zusammen" },
-    { ok: r.rise_from_low_pct <= 8, text: `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
-    { ok: (r.crv ?? 0) >= 2, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
-  ];
+function rows(kind) {
+  const q = $("search").value.trim().toLowerCase();
+  return data.results.filter(r => (kind === "fast" ? r.fast_hit : r.passed)
+    && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
+    && (r.score >= +state.minScore || kind === "fast")
+    && (!state.region || r.region === state.region)
+    && (!state.zone || r.zone_type.includes(state.zone))
+    && (!state.div || r.divergence === state.div)
+    && (!state.sector || r.sector === state.sector)).sort(SORTS[state.sort]);
 }
 
-function traits(r) {
-  if (!r.passed) return watchTraits(r);
-  const kinds = [...new Set(r.divergences.map(d => d.kind))].sort();
-  const c = r.cluster || {};
-  const rsiNear = r.rsi_signal_gap >= -2 && r.rsi_signal_gap <= 5;
-  const fib = r.fib_retracement == null ? "Fib –"
-    : r.fib_zone ? `Fib ${fmt(r.fib_retracement, 2)} · Golden Zone`
-    : r.fib_retracement > 0.79 ? `Fib ${fmt(r.fib_retracement, 2)} · unter Zone` : `Fib ${fmt(r.fib_retracement, 2)}`;
-  return [
-    { ok: true, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
-    { ok: true, star: r.fib_zone, text: fib },
-    { ok: true, text: `Divergenz ${kinds.join(" + ")} · vor ${c.divergence_age} T.` },
-    { ok: true, star: r.macd_status.startsWith("rot"), text: `MACD ${r.macd_status}${macdNear(r)}` },
-    { ok: true, star: r.green_x_count >= 2, text: `MBI ${r.green_x_count}× grünes X` },
-    { ok: rsiNear, text: rsiNear ? "RSI an Signallinie" : `RSI ${fmt(r.rsi, 0)}` },
-    { ok: r.reversal_candle_age != null, star: r.reversal_candle_age != null,
-      text: r.reversal_candle_age != null ? `Umkehrkerze ${r.reversal_candle_age ? "vor " + r.reversal_candle_age + " T." : "heute"}` : "keine Umkehrkerze" },
-    { ok: !r.still_falling, text: r.still_falling ? "fällt noch (neues Tief)" : `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
-    { ok: r.volume_spike || r.volume_breakout, text: r.volume_spike ? "Volumen-Spike am Tief" : r.volume_breakout ? "hohes Volumen" : "Volumen normal" },
-    ...(r.rel_strength != null ? [{ ok: r.rel_strength > 0, star: r.rel_strength > 0,
-      text: r.rel_strength > 0 ? "stärker als der Markt" : "schwächer als der Markt" }] : []),
-    { ok: true, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
-    ...(r.divergence_forming ? [{ ok: true, text: `neue Divergenz ${r.divergence_forming} in Bildung` }] : []),
-  ];
+// ---------- Karte ----------
+function ampel(r) {
+  return `<div class="ampel" title="Pflichtkriterien">${SETUP_KEYS.map(k => {
+    const c = r.criteria.find(x => x.key === k); return c ? `<span class="dot ${c.ok ? "" : "no"}" title="${esc(SHORT[k])}: ${c.ok ? "erfüllt" : "fehlt"}"></span>` : "";
+  }).join("")}</div>`;
 }
-
-// ---------- Kerzen-Mini-Chart mit Golden Zone ----------
-function candleChart(r) {
-  const k = r.candles || [];
-  if (k.length < 2) return "";
-  const W = 600, H = 220, padY = 10, padX = 8;
-  const hi = r.fib_high, lo = r.fib_low;
-  const zone = hi != null && lo != null ? [hi - 0.618 * (hi - lo), hi - 0.79 * (hi - lo)] : null;
-  let min = Math.min(...k.map(c => c[2])), max = Math.max(...k.map(c => c[1]));
-  if (zone) { min = Math.min(min, zone[1], lo); max = Math.max(max, zone[0]); }
-  const span = max - min || 1;
-  const y = v => padY + (1 - (v - min) / span) * (H - 2 * padY);
-  const step = (W - 2 * padX) / k.length, bw = Math.max(1.5, step * 0.62);
-  const bodies = k.map(([o, h, l, c], i) => {
-    const x = padX + i * step + step / 2, col = c >= o ? "var(--candle-up)" : "var(--candle-down)";
-    const top = y(Math.max(o, c)), bh = Math.max(1, Math.abs(y(o) - y(c)));
-    return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(h).toFixed(1)}" y2="${y(l).toFixed(1)}" stroke="${col}" stroke-width="1.2"/>`
-         + `<rect x="${(x - bw / 2).toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${col}" rx="1"/>`;
+function chips(r) {
+  return SETUP_KEYS.map(k => {
+    const c = r.criteria.find(x => x.key === k); if (!c) return "";
+    return `<span class="chip ${c.ok ? "ok" : "miss"}">${c.ok ? "✓" : "✗"} ${esc(SHORT[k])}</span>`;
   }).join("");
-  const zoneSvg = zone ? `<rect class="zone" x="0" width="${W}" y="${y(zone[0]).toFixed(1)}" height="${(y(zone[1]) - y(zone[0])).toFixed(1)}"/>
-      <line class="lvl" x1="0" x2="${W}" y1="${y(lo).toFixed(1)}" y2="${y(lo).toFixed(1)}"/>` : "";
-  const legend = zone ? `<div class="legend"><span><i></i>Golden Zone 0,618–0,79</span><span><i class="dash"></i>Schwungtief</span></div>` : "";
-  return `<div class="chart"><svg class="candles" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img"
-      aria-label="Kerzen der letzten ${k.length} Handelstage, Golden Zone markiert">${zoneSvg}${bodies}</svg>${legend}</div>`;
 }
-
-function detailHtml(r) {
-  const c = r.cluster;
-  const divs = r.divergences.map(d =>
-    `<li>${d.kind}: ${d.prev_pivot_date} (Tief ${fmt(d.prev_price_low)}, RSI ${fmt(d.prev_rsi_low, 1)}) → ${d.pivot_date} (Tief ${fmt(d.price_low)}, RSI ${fmt(d.rsi_low, 1)})</li>`).join("");
-  const bundle = c ? `Signal-Bündel: Divergenz vor ${c.divergence_age}, MACD vor ${c.macd_age}, grünes X vor ${c.mbi_age} Handelstagen.`
-                   : "Noch kein vollständiges Signal-Bündel.";
-  return `${bundle}
-    ${r.stop_price != null && r.target_price_fib != null ? `<br>Technisch: Stop ${fmt(r.stop_price)} (−${fmt(r.risk_pct ?? 0, 0)} %, knapp unter dem Rücksetzer-Tief), Ziel ${fmt(r.target_price_fib)} (+${fmt(r.chance_pct ?? 0, 0)} %, Fib 0,382 bzw. letztes Hoch) → Chance/Risiko ${fmtCrv(r.crv)}.<br>` : ""}
-    ${r.earnings_date ? `Nächste Quartalszahlen: ${new Date(r.earnings_date + "T12:00:00").toLocaleDateString("de-DE")}.` : ""}
-    ${r.rel_strength != null ? `Relative Stärke (3 Monate gegenüber dem Index): ${r.rel_strength >= 0 ? "+" : ""}${fmt(100 * r.rel_strength, 0)} %-Punkte.` : ""}
-    ${r.target_price ? `Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten).` : ""}
-    ${r.isin ? `ISIN ${esc(r.isin)}.` : ""}<ul>${divs}</ul>`;
-}
-
-const CHEVRON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`;
-
-function card(r, hero = false) {
-  const up = r.upside_pct;
-  return `<article class="card${hero ? " hero" : ""}">
-    ${hero ? `<div class="hero-label">⭐ Top-Setup des Tages${isTop(r) ? " · Top-Auswahl" : ""}${r.status === "bereit" ? " · einstiegsbereit" : ""}</div>` : ""}
+function card(r) {
+  return `<article class="card">
     <div class="card-top">
       <div class="card-title">
         <h2 title="${esc(r.name)}">${esc(r.name || r.ticker)}</h2>
-        <div class="meta">${esc(r.ticker)} · ${REGION[r.region] || r.region}</div>
-        ${statusBadge(r)}${isTop(r) ? `<span class="top">Top-Auswahl</span>` : ""}${r.passed && (r.top_missing || []).length === 1 ? `<span class="warn">Fast-Treffer · fehlt: ${esc(r.top_missing[0])}</span>` : ""}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
+        <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
+        ${r.passed ? `<span class="status st-bereit">Treffer</span>` : `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`}
+        <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}</span>
+        ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
-      <div class="score" style="--p:${r.score}" title="Score ${fmt(r.score, 0)} von 100"><span>${fmt(r.score, 0)}</span></div>
+      <div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>
     </div>
     <div class="figures">
-      <div class="fig"><span>Kursziel</span><b class="${up >= 30 ? "up" : "muted"}">${fmtUp(up)}</b></div>
+      <div class="fig"><span>Rückgang</span><b class="down">−${pct(r.drawdown, 0)}</b></div>
       <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
-      <div class="fig"><span>vom 3-Mon.-Hoch</span><b class="down">−${fmt(r.drawdown_pct, 0)} %</b></div>
+      <div class="fig"><span>CRV</span><b class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmt(r.crv, 1)}</b></div>
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
     </div>
-    ${candleChart(r)}
-    <div class="chips">${traits(r).map(t => `<span class="chip ${t.star ? "star" : t.ok ? "ok" : r.passed ? "" : "miss"}">${t.ok ? "✓ " : r.passed ? "" : "✗ "}${esc(t.text)}</span>`).join("")}</div>
+    <div class="chart" data-mini="${esc(r.ticker)}"><svg class="candles" viewBox="0 0 600 220" preserveAspectRatio="none"></svg></div>
+    <div class="chips">${chips(r)}</div>
     <div class="actions">
-      <a class="btn" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
-      <a class="btn" href="${scalableUrl(r)}" target="_blank" rel="noopener">Scalable</a>
-      <button class="more${open.has(r.ticker) ? " open" : ""}" data-t="${esc(r.ticker)}" aria-label="Details">${CHEVRON}</button>
+      <button class="btn" data-open="${esc(r.ticker)}">Details &amp; Chart</button>
+      <a class="btn ghost" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
     </div>
-    ${open.has(r.ticker) ? `<div class="details">${detailHtml(r)}</div>` : ""}
   </article>`;
 }
 
+// Mini-Kerzenchart (letzte 60 Kerzen) mit Zone – wird beim Scrollen nachgeladen
+const chartCache = {};
+async function loadChart(t) {
+  if (!chartCache[t]) chartCache[t] = fetch(`data/charts/${encodeURIComponent(t)}.json`).then(r => r.json());
+  return chartCache[t];
+}
+function miniSvg(c, r) {
+  const n = c.t.length, from = Math.max(0, n - 60), W = 600, H = 220, pad = 10;
+  const idx = [...Array(n - from).keys()].map(i => i + from);
+  let lo = Math.min(...idx.map(i => c.l[i])), hi = Math.max(...idx.map(i => c.h[i]));
+  const band = zoneBand(r);
+  if (band) { lo = Math.min(lo, band[0]); hi = Math.max(hi, band[1]); }
+  const y = v => pad + (1 - (v - lo) / (hi - lo || 1)) * (H - 2 * pad), step = (W - 16) / idx.length, bw = Math.max(1.5, step * .62);
+  let s = band ? `<rect class="zone" x="0" width="${W}" y="${y(band[1]).toFixed(1)}" height="${(y(band[0]) - y(band[1])).toFixed(1)}"/>` : "";
+  idx.forEach((i, k) => {
+    const x = 8 + k * step + step / 2, col = c.c[i] >= c.o[i] ? "var(--candle-up)" : "var(--candle-down)";
+    s += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(c.h[i]).toFixed(1)}" y2="${y(c.l[i]).toFixed(1)}" stroke="${col}" stroke-width="1.2"/>`
+       + `<rect x="${(x - bw / 2).toFixed(1)}" y="${y(Math.max(c.o[i], c.c[i])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(y(c.o[i]) - y(c.c[i]))).toFixed(1)}" fill="${col}" rx="1"/>`;
+  });
+  return s;
+}
+function zoneBand(r) {
+  const f = r.zone && r.zone.fib, s = r.zone && r.zone.support;
+  if (f && f.ok) return [f.levels["0.79"], f.levels["0.618"]];
+  if (s) return s.band;
+  return null;
+}
+const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(async e => {
+  if (!e.isIntersecting) return; io.unobserve(e.target);
+  const t = e.target.dataset.mini, r = data.results.find(x => x.ticker === t);
+  try { e.target.querySelector("svg").innerHTML = miniSvg(await loadChart(t), r); } catch (err) {}
+}), { rootMargin: "200px" }) : null;
+
 // ---------- Tabelle ----------
-const COLUMNS = [
-  { key: "score", label: "Score", num: true, get: r => r.score, html: r => `<b>${fmt(r.score, 0)}</b>` },
-  { key: "status", label: "Status", get: r => ({ bereit: 0, abwarten: 1, gelaufen: 2, kein_setup: 3 })[r.status] ?? 9,
-    html: r => `<span class="status st-${r.status}" style="margin:0">${STATUS[r.status] || ""}</span>` },
-  { key: "name", label: "Aktie", get: r => r.name || r.ticker,
-    html: r => `<a href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">${esc((r.name || r.ticker).slice(0, 30))}</a>${inWatch(r) ? " ★" : ""} <span class="muted">${esc(r.ticker)}</span>` },
-  { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999, html: r => `<span class="${r.upside_pct >= 30 ? "up" : "muted"}">${fmtUp(r.upside_pct)}</span>` },
-  { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
-  { key: "entry", label: "über Tief", num: true, get: r => -r.rise_from_low_pct,
-    html: r => r.still_falling ? `<span class="down">fällt noch</span>` : `+${fmt(r.rise_from_low_pct, 0)} %` },
-  { key: "dd", label: "vom 3-M.-Hoch", num: true, get: r => r.drawdown_pct, html: r => `<span class="down">−${fmt(r.drawdown_pct, 0)} %</span>` },
-  { key: "cap", label: "Börsenwert", num: true, get: r => r.market_cap_usd ?? -1, html: r => fmtCap(r.market_cap_usd) },
-  { key: "fib", label: "Fib", num: true, get: r => r.fib_retracement ?? -1, html: r => fmt(r.fib_retracement, 2) + (r.fib_zone ? " ★" : "") },
-  { key: "div", label: "Divergenz", get: r => r.cluster.divergence_age,
-    html: r => [...new Set(r.divergences.map(d => d.kind))].join(" + ") + ` <span class="muted">${r.cluster.divergence_age} T.</span>` },
-  { key: "macd", label: "MACD", get: r => r.macd_status, html: r => esc(r.macd_status) },
-  { key: "mbi", label: "MBI", get: r => r.green_x_count, html: r => `${r.green_x_count}× X` },
-  { key: "crv", label: "Chance/Risiko", num: true, get: r => r.crv ?? -1, html: r => `<span class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmtCrv(r.crv)}</span>` },
-  { key: "rev", label: "Umkehrkerze", get: r => r.reversal_candle_age ?? 99, html: r => r.reversal_candle_age == null ? "–" : `vor ${r.reversal_candle_age} T.` },
+const COLS = [
+  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>` },
+  { k: "name", l: "Name", g: r => r.name, h: r => esc((r.name || "").slice(0, 28)) },
+  { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
+  { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
+  { k: "close", l: "Kurs", n: 1, g: r => r.close, h: r => fmt(r.close) },
+  { k: "dd", l: "Rückgang", n: 1, g: r => r.drawdown ?? 0, h: r => `<span class="down">−${pct(r.drawdown)}</span>` },
+  { k: "zone", l: "Zone", g: r => r.zone_type, h: r => esc(r.zone_type) },
+  { k: "rsi", l: "RSI", n: 1, g: r => r.rsi, h: r => fmt(r.rsi, 1) },
+  { k: "div", l: "Divergenz", g: r => r.divergence || "", h: r => esc(r.divergence || "–") },
+  { k: "macd", l: "MACD", g: r => r.macd_status, h: r => esc(r.macd_status) },
+  { k: "mbi", l: "MBI", g: r => r.mbi_status, h: r => esc(r.mbi_status) },
+  { k: "crv", l: "CRV", n: 1, g: r => r.crv ?? -1, h: r => `<span class="${(r.crv ?? 0) >= 2 ? "up" : "down"}">${fmt(r.crv, 1)}</span>` },
+  { k: "score", l: "Score", n: 1, g: r => r.score, h: r => `<b>${r.score}</b>` },
+  { k: "earn", l: "Earnings", g: r => r.earnings_date || "9", h: r => `<span class="${r.earnings_risk ? "down" : ""}">${dateDE(r.earnings_date)}</span>` },
+  { k: "amp", l: "Kriterien", g: r => -r.missing.length, h: r => ampel(r) },
 ];
 
-// ---------- Zustand ----------
-let data = null;
-const open = new Set();
-const DEFAULTS = { pick: "top", region: "", minUpside: "-999", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
-const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
-const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
-const SORTS = {
-  score: (a, b) => b.score - a.score,
-  upside: (a, b) => (b.upside_pct ?? -999) - (a.upside_pct ?? -999),
-  fresh: (a, b) => newestAge(a) - newestAge(b) || b.score - a.score,
-  drawdown: (a, b) => b.pullback_drawdown_pct - a.pullback_drawdown_pct,
-  entry: (a, b) => a.rise_from_low_pct - b.rise_from_low_pct || b.score - a.score,
-  crv: (a, b) => (b.crv ?? -1) - (a.crv ?? -1),
-};
-const STATUS_RANK = { bereit: 0, abwarten: 1, gelaufen: 2, kein_setup: 3 };
-
-function filtered({ ignoreWatch = false } = {}) {
-  const q = $("search").value.trim().toLowerCase();
-  const search = r => !q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q);
-  // Watchlist-Tab: alle eigenen Aktien, mit oder ohne Setup – nur die Suche greift
-  if (state.tab === "watch" && !ignoreWatch) return data.results.filter(r => inWatch(r) && search(r));
-  const minUp = +state.minUpside, minCap = +state.minCap;
-  const kinds = r => new Set(r.divergences.map(d => d.kind));
-  return data.results.filter(r => r.passed && search(r)
-    && (!state.pick || isTop(r))
-    && (!state.region || r.region === state.region)
-    && (minUp <= -999 || (r.upside_pct ?? -999) >= minUp)
-    && (!minCap || (r.market_cap_usd ?? 0) >= minCap)
-    && (!state.status || (state.status === "bereit" ? r.status === "bereit" : r.status !== "gelaufen"))
-    && (!state.fib || (state.fib === "zone" ? r.fib_zone : !r.fib_zone && r.fib_retracement > 0.79))
-    && (!state.div || kinds(r).has(state.div))
-    && (!state.macd || (state.macd === "rot" ? r.macd_status.startsWith("rot") : /grün seit [1-3] T/.test(r.macd_status)))
-    && (!state.mbi || r.green_x_count >= +state.mbi));
+// ---------- Einstellungen ----------
+const CFG_LABELS = { universe: "Universum (2.1)", correction: "Korrektur (2.2)", fib: "Fibonacci – Variante A (2.3)",
+  support: "Support – Variante B (2.3)", rsi: "RSI (2.4)", macd: "MACD (2.5)", mbi: "Momentum Bias Index (2.6)",
+  risk: "Risiko & Trade-Plan (2.7 / 3)", score: "Score (4)", pivots: "Pivots", history: "Historie" };
+function settingsHtml() {
+  const cfg = data.config || {};
+  const groups = Object.entries(CFG_LABELS).filter(([k]) => cfg[k]).map(([k, label]) =>
+    `<h4>${label}</h4><div class="table-wrap"><table><tbody>${Object.entries(cfg[k]).map(([p, v]) =>
+      `<tr><td>${esc(p)}</td><td class="num">${esc(Array.isArray(v) ? v.join(" – ") : typeof v === "number" ? fmt(v, Number.isInteger(v) ? 0 : 3) : v)}</td></tr>`).join("")}</tbody></table></div>`).join("");
+  return `<div class="section-title"><span>Einstellungen</span><span>aus config.yaml</span></div>
+    <div class="card cfg">
+      <div>Alle Parameter stehen zentral in <b>config.yaml</b>. Zum Ändern die Datei auf GitHub bearbeiten und danach den Scan neu starten – die Website zeigt dann die Ergebnisse mit den neuen Parametern.</div>
+      <div class="links">
+        <a class="btn" href="${REPO}/edit/main/config.yaml" target="_blank" rel="noopener">config.yaml bearbeiten</a>
+        <a class="btn ghost" href="${REPO}/actions/workflows/scan.yml" target="_blank" rel="noopener">Scan jetzt starten</a>
+      </div>
+      <div class="note">„Scan jetzt starten“ öffnet GitHub Actions → „Run workflow“. Ein kompletter Scan dauert ca. 20–30 Minuten.</div>
+      ${groups}
+    </div>`;
 }
 
+// ---------- Rendern ----------
 function render() {
   if (!data) return;
-  const rows = filtered().sort(state.tab === "watch"
-    ? (a, b) => (b.passed - a.passed) || b.score - a.score : SORTS[state.sort]);
-  const wlCount = data.results.filter(r => inWatch(r) && r.passed).length;
-  $("wlBadge").hidden = !wlCount; $("wlBadge").textContent = wlCount;
-  const all = state.pick === "top" ? "Top-Auswahl · alle Kriterien erfüllt" : "Alle Setups";
-  const title = { cards: all, table: all, watch: "Deine Watchlist · nach Score" }[state.tab] || "Setups";
-  const head = n => `<div class="section-title"><span>${title}</span><span>${n} ${n === 1 ? "Aktie" : "Aktien"}</span></div>`;
-
-  if (!rows.length && state.pick === "top" && state.tab !== "watch") {
-    // Keine Aktie erfüllt alles: ehrlich sagen und die Fast-Treffer (genau 1 Kriterium fehlt) zeigen
-    const saved = state.pick; state.pick = "";
-    const near = filtered().filter(r => (r.top_missing || []).length === 1).sort((a, b) => b.score - a.score).slice(0, 12);
-    state.pick = saved;
-    $("main").innerHTML = head(0) + `<div class="empty">Heute erfüllt keine Aktie wirklich alle Kriterien.<br>Lieber kein Trade als ein halbes Setup.</div>`
-      + (near.length ? `<div class="section-title"><span>Am nächsten dran · genau 1 Kriterium fehlt</span><span>${near.length}</span></div>
-         <div class="grid">${near.map(r => card(r)).join("")}</div>` : "");
-    return;
-  }
-  if (!rows.length) {
-    $("main").innerHTML = head(0) + `<div class="empty">${state.tab === "watch"
-      ? "Keine Watchlist-Aktie gefunden."
-      : state.pick === "top"
-        ? "Heute erfüllt keine Aktie wirklich alle Kriterien.<br>Lieber kein Trade als ein halbes Setup. Unter „Filter → Auswahl → alle Setups“ siehst du die Kandidaten, denen noch etwas fehlt."
-        : "Keine Setups mit diesen Filtern.<br>Tipp: Unter „Filter“ das Kursziel auf „alle“ stellen."}</div>`;
+  const hits = data.results.filter(r => r.passed).length, fast = data.results.filter(r => r.fast_hit).length;
+  $("wlBadge").hidden = !fast; $("wlBadge").textContent = fast;
+  if (state.tab === "settings") { $("main").innerHTML = settingsHtml(); return; }
+  const kind = state.tab === "watch" ? "fast" : "hit";
+  const list = rows(kind);
+  const title = kind === "fast" ? "Fast-Treffer · genau 1 Pflichtkriterium fehlt" : "Treffer · alle Pflichtkriterien erfüllt";
+  const head = `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  if (!list.length) {
+    $("main").innerHTML = head + `<div class="empty">${kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
+      : `Heute erfüllt keine Aktie alle Pflichtkriterien${hits ? " mit diesen Filtern" : ""}.<br>Die Fast-Treffer (unten in der Leiste) zeigen, wem nur ein Kriterium fehlt.`}</div>`;
     return;
   }
   if (state.tab === "table") {
-    const col = COLUMNS.find(c => c.key === state.tableSort);
-    rows.sort((a, b) => { const x = col.get(a), y = col.get(b);
-      const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
-    $("main").innerHTML = head(rows.length) + `<div class="table-wrap"><table><thead><tr>${COLUMNS.map(c =>
-        `<th class="${c.num ? "num " : ""}${c.key === state.tableSort ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.key}">${c.label}</th>`).join("")}</tr></thead>
-      <tbody>${rows.map(r => `<tr>${COLUMNS.map(c => `<td class="${c.num ? "num" : ""}">${c.html(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    const col = COLS.find(c => c.k === state.tableSort) || COLS[12];
+    list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
+    $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${COLS.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
+      <tbody>${list.map(r => `<tr>${COLS.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
   }
-  // Top-Setup: bevorzugt ein einstiegsbereites Setup
-  const pref = [r => isTop(r) && r.status === "bereit", isTop, r => r.status === "bereit"];
-  const topIdx = pref.map(f => rows.findIndex(f)).find(i => i >= 0) ?? 0;
-  const top = rows[topIdx], rest = rows.filter((_, i) => i !== topIdx);
-  $("main").innerHTML = (state.tab === "cards" ? card(top, true) + head(rest.length) : head(rows.length))
-    + `<div class="grid">${(state.tab === "cards" ? rest : rows).map(r => card(r)).join("")}</div>`;
+  $("main").innerHTML = head + `<div class="grid">${list.map(card).join("")}</div>`;
+  document.querySelectorAll("[data-mini]").forEach(el => io ? io.observe(el) : null);
 }
 
 function renderHead() {
   const h = new Date().getHours();
   $("greet").textContent = (h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + " 👋";
-  const when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  const n = data.results.filter(r => r.passed).length;
-  const ready = data.results.filter(r => r.passed && r.status === "bereit").length;
-  const top = data.results.filter(isTop).length;
-  $("sub").innerHTML = `<b>${n.toLocaleString("de-DE")} Setups</b> heute, davon <b>${top} in der Top-Auswahl</b> und <b>${ready} einstiegsbereit</b> · ${(data.stats.liquid || 0).toLocaleString("de-DE")} Aktien geprüft · Scan ${esc(when)} Uhr`;
-  $("sources").textContent = (data.universe_log || []).join("\n") + "\n\nDauer: " + (data.duration_s || 0) + " s\n\n"
-    + Object.entries(data.config || {}).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join("\n");
+  const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b> und <b>${s.fast_hits ?? 0} Fast-Treffer</b> · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
+  const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
+  $("sectorOpts").innerHTML = `<button class="opt" data-v="">alle</button>` + sectors.map(x => `<button class="opt" data-v="${esc(x)}">${esc(x)}</button>`).join("");
 }
-
-// ---------- Filter-Panel ----------
 function syncOpts() {
-  document.querySelectorAll(".opts").forEach(g => g.querySelectorAll(".opt").forEach(b =>
-    b.classList.toggle("on", b.dataset.v === String(state[g.dataset.key]))));
+  document.querySelectorAll(".opts").forEach(g => g.querySelectorAll(".opt").forEach(b => b.classList.toggle("on", b.dataset.v === String(state[g.dataset.key] ?? ""))));
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === state.tab));
 }
-const openFilters = v => document.body.classList.toggle("filters-open", v);
 
-// ---------- Einstellungen merken (nur auf diesem Gerät) ----------
-const PREF_KEY = "aktienfinder-v6";
-function savePrefs() {
-  try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch (e) {}
-}
-function loadPrefs() {
-  try { Object.assign(state, JSON.parse(localStorage.getItem(PREF_KEY) || "{}")); } catch (e) {}
+// ---------- Detailseite ----------
+let charts = [];
+function closeDetail() { $("detail").classList.remove("open"); charts.forEach(c => c.remove()); charts = []; document.body.style.overflow = ""; if (location.hash) history.replaceState(null, "", location.pathname); }
+async function openDetail(t) {
+  const r = data.results.find(x => x.ticker === t); if (!r) return;
+  const p = r.plan || {}, f = r.flags || {};
+  const fib = r.zone && r.zone.fib, sup = r.zone && r.zone.support;
+  $("detailBody").innerHTML = `
+    <div class="d-head"><div><h2>${esc(r.name)}</h2>
+      <div class="meta muted">${esc(r.ticker)} · ${esc(r.exchange)} · ${REGION[r.region] || ""} · ${esc(r.sector || "")} · Stand ${dateDE(r.date)}</div>
+      ${r.passed ? `<span class="status st-bereit">Treffer · Score ${r.score}</span>` : `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`}
+      ${r.earnings_risk ? `<span class="warn">⚠ Earnings-Risiko (${dateDE(r.earnings_date)})</span>` : ""}
+      <span class="flag">MBI: ${esc(f.mbi_source || "")}</span></div>
+      <button class="close" id="closeDetail" aria-label="Schließen">✕</button></div>
+    <div class="pane"><div class="pane-label"><span><i style="background:#f4b740"></i>EMA 20</span><span><i style="background:#4aa3ff"></i>EMA 50</span><span><i style="background:#b07cff"></i>EMA 100</span><span><i style="background:#ff8a65"></i>EMA 200</span><span>Fib-Level / Zone gestrichelt · Entry/Stop/Ziele durchgezogen</span></div><div class="lw" id="cMain" style="height:420px"></div></div>
+    <div class="pane"><div class="pane-label">RSI 14 · SMA 14 · 30/50/70${r.div && r.div.kind ? " · Divergenz " + esc(r.div.kind) : ""}</div><div class="lw" id="cRsi" style="height:150px"></div></div>
+    <div class="pane"><div class="pane-label">MACD 12/26/9 · Linie, Signal, Histogramm</div><div class="lw" id="cMacd" style="height:150px"></div></div>
+    <div class="pane"><div class="pane-label">Momentum Bias Index [AlgoAlpha] · grün/rot · Referenzlinie · X-Signale</div><div class="lw" id="cMbi" style="height:150px"></div></div>
+    <div class="two">
+      <div class="pane"><div class="pane-label">Checkliste – alle Kriterien</div>
+        <table class="check"><tbody>${r.criteria.map(c => `<tr><td class="${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</td><td><b>${esc(c.label)}</b><br>${esc(c.value)}<div class="th">Schwelle: ${esc(c.threshold)}</div></td></tr>`).join("")}</tbody></table>
+        ${r.bonuses && r.bonuses.length ? `<div class="pane-label" style="margin-top:12px">Score-Bausteine</div><table class="check"><tbody>${r.bonuses.map(b => `<tr><td class="${b.points >= 0 ? "ok" : "no"}">${b.points > 0 ? "+" : ""}${b.points}</td><td>${esc(b.label)}</td></tr>`).join("")}</tbody></table>` : ""}
+      </div>
+      <div class="pane"><div class="pane-label">Trade-Plan</div>
+        ${p.entry ? `<div class="plan">
+          <div class="fig"><span>Entry (Schluss)</span><b>${fmt(p.entry)}</b></div>
+          <div class="fig"><span>alternativ Buy-Stop</span><b>${fmt(p.buy_stop)}</b></div>
+          <div class="fig"><span>Stop-Loss</span><b class="down">${fmt(p.stop)}</b></div>
+          <div class="fig"><span>Abstand zum Stop</span><b class="down">−${pct(p.stop_pct)}</b></div>
+          <div class="fig"><span>Ziel 1</span><b class="up">${fmt(p.target1)}</b></div>
+          <div class="fig"><span>Ziel 2 (Swing-High)</span><b class="up">${fmt(p.target2)}</b></div>
+          <div class="fig"><span>CRV</span><b class="${(p.crv ?? 0) >= 2 ? "up" : "down"}">${fmt(p.crv, 2)}</b></div>
+          <div class="fig"><span>max. sinnvoller Hebel</span><b>${fmt(p.max_leverage, 1)}</b></div></div>
+          <div class="note">Hebel-Hinweis: max. sinnvoller Hebel = 1 / (Stop-Abstand × 1,5). Ziel 1 = EMA 50 bzw. Fib 0,382, Ziel 2 = Swing-High (Fib 0).</div>`
+          : `<div class="note">Kein Trade-Plan – keine gültige Unterstützungszone.</div>`}
+        <div class="pane-label" style="margin-top:14px">Zone</div>
+        <div class="note" style="margin-top:0">${fib ? `Fibonacci: H ${fmt(r.zone.H)} (${dateDE(r.zone.H_date)}) → L ${fmt(fib.L)} (${dateDE(fib.L_date)}), Impuls ${pct(fib.impulse)}, Retracement ${fmt(fib.retracement, 3)}${fib.ok ? " ✓" : ""}<br>` : ""}
+          ${sup ? `Support: Mitte ${fmt(sup.center)}, ${sup.touches} Touches (${sup.touch_dates.map(dateDE).join(", ")})` : "Kein horizontaler Mehrfachboden."}</div>
+        <div class="links"><a class="btn" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">In TradingView öffnen</a></div>
+      </div>
+    </div>`;
+  $("detail").classList.add("open"); document.body.style.overflow = "hidden"; $("detail").scrollTop = 0;
+  $("closeDetail").onclick = closeDetail;
+  history.replaceState(null, "", "#" + encodeURIComponent(t));
+  try { drawCharts(await loadChart(t), r); } catch (e) { $("cMain").innerHTML = `<div class="note">Chart konnte nicht geladen werden.</div>`; }
 }
 
+function drawCharts(c, r) {
+  if (!window.LightweightCharts) return;
+  const LW = window.LightweightCharts, css = getComputedStyle(document.documentElement);
+  const opts = el => ({ width: el.clientWidth, height: el.clientHeight, layout: { background: { color: "transparent" }, textColor: "#8d96a7",
+    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
+    grid: { vertLines: { color: "#1b2028" }, horzLines: { color: "#1b2028" } }, rightPriceScale: { borderColor: "#262d38" },
+    timeScale: { borderColor: "#262d38" }, crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) } });
+  const T = c.t, pts = (k, f = v => v) => T.map((t, i) => c[k][i] == null ? null : { time: t, value: f(c[k][i]) }).filter(Boolean);
+  const main = LW.createChart($("cMain"), opts($("cMain")));
+  const candles = main.addCandlestickSeries({ upColor: "#22d39b", downColor: "#ff5f57", borderVisible: false, wickUpColor: "#22d39b", wickDownColor: "#ff5f57" });
+  candles.setData(T.map((t, i) => ({ time: t, open: c.o[i], high: c.h[i], low: c.l[i], close: c.c[i] })));
+  [["e20", "#f4b740"], ["e50", "#4aa3ff"], ["e100", "#b07cff"], ["e200", "#ff8a65"]].forEach(([k, col]) =>
+    main.addLineSeries({ color: col, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false }).setData(pts(k)));
+  const vol = main.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
+  main.priceScale("vol").applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
+  vol.setData(T.map((t, i) => ({ time: t, value: c.v[i] || 0, color: c.c[i] >= c.o[i] ? "rgba(34,211,155,.35)" : "rgba(255,95,87,.35)" })));
+  const line = (price, title, color, style = 2) => price != null && candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true });
+  const fib = r.zone && r.zone.fib, sup = r.zone && r.zone.support, p = r.plan || {};
+  if (fib) [["0", "Fib 0"], ["0.618", "0,618"], ["0.706", "0,706"], ["0.79", "0,79"], ["1", "Fib 1"]].forEach(([k, l]) => line(fib.levels[k], l, "#f4b740"));
+  if (sup) { line(sup.band[1], "Support oben", "#4aa3ff"); line(sup.center, "Support", "#4aa3ff", 0); line(sup.band[0], "Support unten", "#4aa3ff"); }
+  line(p.entry, "Entry", "#eceef2", 0); line(p.stop, "Stop", "#ff5f57", 0); line(p.target1, "Ziel 1", "#22d39b", 0); line(p.target2, "Ziel 2", "#22d39b", 0);
+
+  const rsiC = LW.createChart($("cRsi"), opts($("cRsi")));
+  const rs = rsiC.addLineSeries({ color: "#b07cff", lineWidth: 1.5, priceLineVisible: false });
+  rs.setData(pts("rsi"));
+  rsiC.addLineSeries({ color: "#f4b740", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }).setData(pts("rsi_sma"));
+  [30, 50, 70].forEach(v => rs.createPriceLine({ price: v, color: "#5d6676", lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
+  if (r.div && r.div.t1) rsiC.addLineSeries({ color: "#22d39b", lineWidth: 2, priceLineVisible: false, lastValueVisible: false })
+    .setData([{ time: r.div.t1, value: r.div.rsi_t1 }, { time: r.div.t2, value: r.div.rsi_t2 }]);
+
+  const macdC = LW.createChart($("cMacd"), opts($("cMacd")));
+  macdC.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false }).setData(T.map((t, i) => c.hist[i] == null ? null :
+    ({ time: t, value: c.hist[i], color: c.hist[i] >= 0 ? (i && c.hist[i] < c.hist[i - 1] ? "rgba(34,211,155,.5)" : "#22d39b") : (i && c.hist[i] > c.hist[i - 1] ? "rgba(255,95,87,.5)" : "#ff5f57") })).filter(Boolean));
+  macdC.addLineSeries({ color: "#4aa3ff", lineWidth: 1.5, priceLineVisible: false }).setData(pts("macd"));
+  macdC.addLineSeries({ color: "#f4b740", lineWidth: 1.5, priceLineVisible: false }).setData(pts("sig"));
+
+  const mbiC = LW.createChart($("cMbi"), opts($("cMbi")));
+  mbiC.addHistogramSeries({ color: "rgba(34,211,155,.75)", priceLineVisible: false, lastValueVisible: false }).setData(pts("mbi_up"));
+  const lo = mbiC.addHistogramSeries({ color: "rgba(255,95,87,.75)", priceLineVisible: false, lastValueVisible: false });
+  lo.setData(pts("mbi_lo"));
+  mbiC.addLineSeries({ color: "#8d96a7", lineWidth: 1, lineStyle: 1, priceLineVisible: false, lastValueVisible: false }).setData(pts("mbi_ref"));
+  lo.setMarkers(T.flatMap((t, i) => [
+    ...(c.gx[i] ? [{ time: t, position: "aboveBar", color: "#22d39b", shape: "circle", text: "X" }] : []),
+    ...(c.rx[i] ? [{ time: t, position: "aboveBar", color: "#ff5f57", shape: "circle", text: "X" }] : [])]));
+
+  charts = [main, rsiC, macdC, mbiC];
+  // Zeitachsen koppeln
+  let syncing = false;
+  charts.forEach(ch => ch.timeScale().subscribeVisibleLogicalRangeChange(range => {
+    if (syncing || !range) return; syncing = true; charts.forEach(o => o !== ch && o.timeScale().setVisibleLogicalRange(range)); syncing = false;
+  }));
+  main.timeScale().setVisibleLogicalRange({ from: T.length - 130, to: T.length + 3 });
+  new ResizeObserver(() => charts.forEach((ch, k) => { const el = [$("cMain"), $("cRsi"), $("cMacd"), $("cMbi")][k]; el && ch.applyOptions({ width: el.clientWidth }); })).observe($("detailBody"));
+}
+
+// ---------- Export ----------
+function exportRows() {
+  const kind = state.tab === "watch" ? "fast" : "hit";
+  return rows(kind).map(r => ({ Ticker: r.ticker, Name: r.name, "Börse": r.exchange, Region: REGION[r.region] || "", Sektor: r.sector,
+    "Market Cap (Mrd. USD)": r.market_cap_usd ? +(r.market_cap_usd / 1e9).toFixed(2) : "", Kurs: r.close,
+    "Rückgang %": r.drawdown != null ? +(100 * r.drawdown).toFixed(1) : "", Zone: r.zone_type, RSI: r.rsi != null ? +r.rsi.toFixed(1) : "",
+    Divergenz: r.divergence || "", MACD: r.macd_status, MBI: r.mbi_status, CRV: r.crv != null ? +r.crv.toFixed(2) : "", Score: r.score,
+    Earnings: r.earnings_date || "", Entry: r.plan && r.plan.entry, Stop: r.plan && r.plan.stop, "Ziel 1": r.plan && r.plan.target1,
+    "Ziel 2": r.plan && r.plan.target2, Status: r.passed ? "Treffer" : "Fast-Treffer: " + r.missing[0] }));
+}
+function download(blob, name) { const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000); }
+$("csv").onclick = () => {
+  const list = exportRows(); if (!list.length) return;
+  const cols = Object.keys(list[0]), cell = v => { const s = v == null ? "" : typeof v === "number" ? String(v).replace(".", ",") : String(v); return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  download(new Blob(["﻿" + [cols.join(";"), ...list.map(r => cols.map(c => cell(r[c])).join(";"))].join("\n")], { type: "text/csv" }), `reversal-setups-${data.generated.slice(0, 10)}.csv`);
+};
+$("xlsx").onclick = async () => {
+  const list = exportRows(); if (!list.length) return;
+  if (!window.XLSX) await new Promise((ok, fail) => { const s = document.createElement("script"); s.src = "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"; s.onload = ok; s.onerror = fail; document.head.appendChild(s); });
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(list), "Setups");
+  XLSX.writeFile(wb, `reversal-setups-${data.generated.slice(0, 10)}.xlsx`);
+};
+
+// ---------- Ereignisse ----------
 document.querySelector(".tabs").addEventListener("click", e => {
   const t = e.target.closest(".tab"); if (!t) return;
-  if (t.dataset.tab === "filter") { openFilters(true); return; }
-  state.tab = t.dataset.tab; syncOpts(); savePrefs(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+  if (t.dataset.tab === "filter") { document.body.classList.add("filters-open"); return; }
+  state.tab = t.dataset.tab; syncOpts(); save(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
 });
-$("sheet").addEventListener("click", e => {
-  const b = e.target.closest(".opt"); if (!b) return;
-  state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); savePrefs(); render();
-});
-$("done").addEventListener("click", () => openFilters(false));
-$("reset").addEventListener("click", () => { Object.assign(state, DEFAULTS); syncOpts(); savePrefs(); render(); });
-$("backdrop").addEventListener("click", () => openFilters(false));
+$("sheet").addEventListener("click", e => { const b = e.target.closest(".opt"); if (!b || !b.closest(".opts")) return; state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); save(); render(); });
+$("done").onclick = () => document.body.classList.remove("filters-open");
+$("backdrop").onclick = () => document.body.classList.remove("filters-open");
+$("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", render);
-$("main").addEventListener("click", e => {
-  const th = e.target.closest("th");
-  if (th) { if (th.dataset.k === state.tableSort) state.tableAsc = !state.tableAsc; else { state.tableSort = th.dataset.k; state.tableAsc = false; } render(); return; }
-  const b = e.target.closest("button.more");
-  if (b) { const t = b.dataset.t; open.has(t) ? open.delete(t) : open.add(t); render(); }
+document.addEventListener("click", e => {
+  const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openDetail(o.dataset.open); return; }
+  const th = e.target.closest("th[data-k]"); if (th) { if (th.dataset.k === state.tableSort) state.tableAsc = !state.tableAsc; else { state.tableSort = th.dataset.k; state.tableAsc = false; } render(); }
 });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
 
-loadPrefs(); syncOpts();
-Promise.all([
-  fetch("data/results.json", { cache: "no-store" }).then(r => { if (!r.ok) throw new Error(r.status); return r.json(); }),
-  fetch("watchlist.json", { cache: "no-store" }).then(r => r.ok ? r.json() : {}).catch(() => ({})),
-]).then(([d, wl]) => {
-  data = d;
-  watch = new Set(Object.entries(wl).filter(([k]) => !k.startsWith("_")).flatMap(([, v]) => v));
-  renderHead(); render();
-}).catch(err => {
-  $("main").innerHTML = `<div class="empty">Noch keine Scan-Ergebnisse vorhanden (${esc(err.message)}).</div>`;
-});
+fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
+  data = d; renderHead(); syncOpts(); render();
+  if (location.hash) openDetail(decodeURIComponent(location.hash.slice(1)));
+}).catch(() => { $("sub").textContent = "Noch keine Scan-Ergebnisse vorhanden."; });
 </script>
 </body>
 </html>

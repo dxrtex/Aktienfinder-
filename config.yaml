@@ -1,0 +1,113 @@
+# Reversal-Setup-Finder – alle Parameter an einer Stelle (Abschnittsnummern wie im Prompt).
+
+history:
+  min_bars: 300              # Mindesthistorie (Handelstage)
+  period: "2y"               # so viel Kurshistorie wird geladen
+  warmup_bars: 250           # RSI/EMA erst nach so vielen Kerzen als „eingeschwungen“ werten
+
+universe:                    # 2.1
+  min_market_cap_usd: 2000000000
+  min_dollar_volume: 5000000   # Ø Tagesvolumen (20 T.) × Kurs, in USD
+  volume_avg_days: 20
+  min_price: 1.0
+
+pivots:
+  pivot_len: 5               # Pivot-High/-Low: je 5 Kerzen links und rechts
+
+correction:                  # 2.2
+  swing_high_min_age: 20     # Swing-High H: höchstes Pivot-High vor 20 … 180 Handelstagen
+  swing_high_max_age: 180
+  min_drawdown: 0.12         # (H − Schluss) / H
+  crash_lookback: 10         # kein einzelner Tagesverlust > 25 % in den letzten 10 Tagen
+  crash_max_daily_loss: 0.25
+  ema_fast: 20
+  ema_slow: 50
+  ema_fast_falling_days: 5   # EMA20 heute < EMA20 vor 5 Tagen
+  flat_days: 10              # Abflachung der letzten 10 Kerzen
+  flat_atr_mult: 1.5         # Spanne < 1,5 × ATR(14) × √10
+  atr_len: 14
+  wick_min_ratio: 0.5        # lange untere Lunte: ≥ 50 % der Kerzenspanne
+  wick_min_count: 2          # … mindestens 2 solcher Kerzen in der Zone
+
+fib:                         # 2.3 Variante A
+  impulse_lookback: 120      # tiefstes Pivot-Low L innerhalb von 120 Tagen vor H
+  min_impulse: 0.15          # (H − L) / L
+  zone: [0.618, 0.79]
+  core_zone: [0.706, 0.79]   # „Golden Pocket“ (Bonus)
+  invalid_below: 0.886       # Schluss unter level(0,886) → ungültig
+  touch_bars: 3              # Schluss ODER Tief der letzten 3 Kerzen in der Zone
+
+support:                     # 2.3 Variante B
+  lookback: 250              # in diesem Zeitraum nach früheren Pivots suchen
+  tolerance: 0.03            # Pivots innerhalb ± 3 % bilden einen Cluster
+  min_touches: 2
+  min_oldest_age: 15         # ältester Touch mind. 15 Tage zurück
+  exclude_recent: 5          # die jüngsten 5 Kerzen zählen nicht als „frühere“ Pivots
+  max_above: 0.03            # Kurs max. 3 % über …
+  max_below: 0.05            # … bzw. 5 % unter der Zonenmitte
+  break_days: 5              # ungültig, wenn in den letzten 5 Tagen ein Schluss …
+  break_below: 0.07          # … mehr als 7 % unter der Zonenmitte lag
+  ema200_tolerance: 0.02     # Bonus: EMA 200 innerhalb der Zone (± 2 %)
+
+rsi:                         # 2.4
+  length: 14
+  pivot_len: 3
+  lookback: 60
+  t2_max_age: 10
+  t1_min_gap: 10             # T1 liegt 10 … 60 Tage vor T2
+  t1_max_gap: 60
+  classic_price_tol: 1.01    # Kurs T2 ≤ Kurs T1 × 1,01
+  min_rsi_diff: 3.0          # RSI-Abstand in Punkten
+  current_min: 28
+  current_max: 48
+  oversold: 32               # Bonus: RSI ≤ 32 in den letzten 60 Tagen
+  sma_len: 14
+  sma_cross_days: 5
+
+macd:                        # 2.5
+  fast: 12
+  slow: 26
+  signal: 9
+  cross_max_age: 7           # (a) bullisches Kreuz in den letzten ≤ 7 Kerzen
+  rising_bars: 4             # (b) Histogramm negativ, seit ≥ 4 Kerzen steigend …
+  trough_lookback: 30        # … und |Histogramm| ≤ 25 % des Tiefstwerts der letzten 30 Tage
+  trough_ratio: 0.25
+  fail_bars: 3               # Ausschluss: nach einem Kreuz 3 Kerzen fallend und < 0
+
+mbi:                         # 2.6 – Original-Port des AlgoAlpha-Pine-Scripts
+  momentum_length: 10
+  bias_length: 5
+  smooth_length: 10
+  impulse_length: 30
+  std_mult: 3.0
+  x_max_age: 15              # grünes X in den letzten ≤ 15 Kerzen
+  max_peak_ratio: 0.70       # seitdem rote Balken ≤ 70 % der Spitze (oder Histogramm grün)
+
+risk:                        # 2.7 / 3.
+  earnings_days: 5           # Earnings in den nächsten 5 Handelstagen → Flag, Score −15
+  min_crv: 2.0
+  stop_atr_fib: 1.5          # Variante A: 1 % unter L, wenn level(0,886) näher als 1,5 × ATR
+  stop_below_l: 0.01
+  stop_below_zone: 0.02      # Variante B: 2 % unter Zonenunterkante
+  stop_min_atr: 1.0          # Stop mind. 1 × ATR(14) vom Entry
+  leverage_factor: 1.5       # max. sinnvoller Hebel = 1 / (Stop-Abstand × 1,5)
+  buy_stop_bars: 3           # alternativer Entry: Buy-Stop über dem Hoch der letzten 3 Kerzen
+
+score:                       # 4.
+  base: 40
+  fib_core_or_3_touches: 10
+  fib_and_support_overlap: 5
+  ema200_in_zone: 5
+  classic_divergence: 5
+  rsi_was_oversold: 5
+  rsi_above_sma: 3
+  macd_cross_done: 7
+  macd_divergence: 5
+  mbi_green: 5
+  volume_climax: 5
+  crv_3: 5
+  earnings_penalty: -15
+
+regression:                  # 6.1
+  end_date: "2026-10-02"
+  tickers: ["TUI1.DE", "UBER", "IFX.DE", "RKLB", "QBTS"]

@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from aktienfinder.mbi import hma, momentum_bias_index, wma
+from backend.mbi import hma, momentum_bias_index, wma
 
 
 def test_wma_weights_newest_most():

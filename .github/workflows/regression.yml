@@ -1,0 +1,27 @@
+name: Tests & Regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m pytest -q backend/tests
+      - run: python -m backend.regression --out regression.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: regression
+          path: regression.md
