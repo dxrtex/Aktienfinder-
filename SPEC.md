@@ -12,13 +12,15 @@ bullischen Umkehrsignalen. Die Ergebnisse erscheinen als sortierbare Tabelle auf
 - **Website:** GitHub Pages (statische Seite, fester Link), sortierbare Tabelle
 - **Benachrichtigung:** keine
 
-## Universum (stufenweiser Ausbau)
-1. USA, große Werte (S&P 500, Nasdaq 100)
-2. Gesamter US-Markt
-3. Deutschland/Europa (DAX, MDAX, SDAX, STOXX 600 …)
-4. Weitere globale Börsen
+## Universum
+Nur **Mid und Large Caps**: Börsenwert ab 2 Mrd. US-Dollar (umgerechnet), keine Small Caps.
+Quelle ist der Yahoo-Finance-Screener, je Land nur die Heimatbörse (keine Zweitlistings an
+Nebenbörsen, keine OTC-Werte). Länder und Börsen stehen in `aktienfinder/markets.py`:
+USA, 16 europäische Länder, Japan, Hongkong, Kanada, Australien, Indien, Südkorea, Taiwan,
+Singapur, Brasilien, Mexiko, Südafrika, Israel, Neuseeland.
 
-Grundfilter: Mindestkurs und Mindest-Tagesumsatz (keine Pennystocks/illiquiden Werte).
+Grundfilter im Scanner: Kurs ≥ 1 $ und durchschnittlicher Tagesumsatz ≥ 1 Mio. $ (umgerechnet).
+Auf der Website lässt sich die Börsenwert-Grenze weiter anheben (10 / 50 / 200 Mrd. $).
 
 ## Kriterien
 

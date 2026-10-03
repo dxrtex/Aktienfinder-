@@ -1,25 +1,45 @@
+import sys
+import types
+
 import pandas as pd
 
-from aktienfinder import universe
-from aktienfinder.universe import IndexSource, _normalize
-
-DAX = IndexSource("DAX", "", "europe", ".DE")
-FTSE = IndexSource("FTSE", "", "europe", ".L", dot_to_dash=True)
-HK = IndexSource("HSI", "", "global", ".HK", zero_pad=4)
-MIXED = IndexSource("SX5E", "", "europe", "")
+from aktienfinder import markets, universe
 
 
-def test_normalize():
-    assert _normalize("ADS", DAX) == "ADS.DE"
-    assert _normalize("ADS.DE", DAX) == "ADS.DE"
-    assert _normalize("XETRA: ifx", DAX) == "IFX.DE"
-    assert _normalize("BT.A", FTSE) == "BT-A.L"
-    assert _normalize("5", HK) == "0005.HK"
-    assert _normalize("SEHK: 700", HK) == "0700.HK"
-    assert _normalize("SAP.DE", MIXED) == "SAP.DE"
-    assert _normalize("SAP", MIXED) is None
-    assert _normalize(float("nan"), DAX) is None
-    assert _normalize("ADS[1]", DAX) == "ADS.DE"
+def _fake_yf(monkeypatch, pages):
+    def screen(query, offset, size, sortField, sortAsc):
+        page = pages.get(offset, [])
+        return {"quotes": page, "total": sum(len(p) for p in pages.values())}
+
+    class EquityQuery:
+        def __init__(self, *a):
+            pass
+
+    monkeypatch.setitem(sys.modules, "yfinance", types.SimpleNamespace(screen=screen, EquityQuery=EquityQuery))
+
+
+def q(sym, cap, cur="EUR", exchange="GER", qt="EQUITY"):
+    return {"symbol": sym, "longName": sym, "marketCap": cap, "currency": cur, "exchange": exchange, "quoteType": qt}
+
+
+def test_screener_home_exchange_and_min_cap(monkeypatch):
+    _fake_yf(monkeypatch, {0: [q("SAP.DE", 2e11), q("SAP.F", 2e11), q("SIE.DE", 1.5e11),
+                               q("RHM.DE", 4e10), q("SMALL.DE", 1e9), q("LATE.DE", 3e9)]})
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("de", (".DE",), "europe", 1.1, 100)])
+    df = universe.screener("europe", min_cap_usd=2e9)
+    # Zweitlisting SAP.F verworfen, Abbruch beim ersten Wert unter 2 Mrd. $
+    assert list(df["ticker"]) == ["SAP.DE", "SIE.DE", "RHM.DE"]
+    assert df["market_cap_usd"].iloc[0] == round(2e11 * 1.10)
+
+
+def test_screener_us_skips_otc_and_converts_pence(monkeypatch):
+    _fake_yf(monkeypatch, {0: [q("NVDA", 4e12, "USD", "NMS"), q("NSRGY", 3e11, "USD", "PNK"),
+                               q("BRK-B", 1e12, "USD", "NYQ")]})
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("us", ("",), "us", 1.0, 100)])
+    assert list(universe.screener("us")["ticker"]) == ["NVDA", "BRK-B"]
+    # London: Kurs in Pence, Börsenwert in Pfund
+    assert markets.market_cap_usd(1e10, "GBp") == 1e10 * 1.30
+    assert markets.market_cap_usd(None, "USD") is None
 
 
 def test_us_all_filters_non_common(monkeypatch):
@@ -34,44 +54,16 @@ def test_us_all_filters_non_common(monkeypatch):
         "File Creation Time: 1003202600:00|||||||||||",
     ])
     monkeypatch.setattr(universe, "_get", lambda url: text)
-    df = universe.us_all()
-    assert list(df["ticker"]) == ["AAPL", "BRK-B"]
+    assert list(universe.us_all()["ticker"]) == ["AAPL", "BRK-B"]
 
 
-def test_build_survives_failing_source(monkeypatch):
-    monkeypatch.setattr(universe, "us_all", lambda: pd.DataFrame(
-        {"ticker": ["AAPL", "AAPL"], "name": ["Apple", "Apple"], "region": "us", "source": "x"}))
-    def boom(src):
+def test_build_falls_back_for_us_and_survives_errors(monkeypatch):
+    def screener(region, min_cap):
         raise RuntimeError("offline")
-    monkeypatch.setattr(universe, "index_members", boom)
+    monkeypatch.setattr(universe, "screener", screener)
+    monkeypatch.setattr(universe, "us_all", lambda: pd.DataFrame(
+        {"ticker": ["AAPL", "AAPL"], "name": "Apple", "region": "us", "source": "x", "market_cap_usd": None}))
     df, log = universe.build(["us", "europe"])
     assert list(df["ticker"]) == ["AAPL"]
-    assert any("FEHLER" in line for line in log)
+    assert sum("FEHLER" in line for line in log) == 2
     assert log[-1] == "GESAMT: 1 Aktien"
-
-
-def test_normalize_keeps_foreign_home_exchange():
-    assert _normalize("AIR.PA", DAX) == "AIR.PA"     # Airbus im DAX, Heimatbörse Paris
-    assert _normalize("MT.AS", IndexSource("CAC", "", "europe", ".PA")) == "MT.AS"
-
-
-def test_screener_keeps_only_home_exchange_and_top_n(monkeypatch):
-    import sys, types
-    from aktienfinder import markets
-    calls = []
-
-    def screen(query, offset, size, sortField, sortAsc):
-        calls.append(offset)
-        quotes = [{"symbol": s, "longName": s, "quoteType": "EQUITY"}
-                  for s in ["SAP.DE", "SAP.F", "SIE.DE", "ALV.SG", "DTE.DE", "BAS.DE"]]
-        return {"quotes": quotes if offset == 0 else [], "total": 6}
-
-    class EquityQuery:
-        def __init__(self, *a):
-            pass
-
-    fake = types.SimpleNamespace(screen=screen, EquityQuery=EquityQuery)
-    monkeypatch.setitem(sys.modules, "yfinance", fake)
-    monkeypatch.setattr(universe, "MARKETS", [markets.Market("de", (".DE",), "europe", 1.1, 3)])
-    df = universe.screener("europe")
-    assert list(df["ticker"]) == ["SAP.DE", "SIE.DE", "DTE.DE"]

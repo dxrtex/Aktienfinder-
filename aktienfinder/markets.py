@@ -14,10 +14,12 @@ class Market:
     suffixes: tuple       # Yahoo-Suffixe der Heimatbörse(n)
     region: str           # "europe" oder "global"
     usd: float            # US-Dollar je Kurseinheit
-    top_n: int            # so viele größte Unternehmen werden gescannt
+    top_n: int            # Obergrenze, falls der Mindest-Börsenwert sehr viele Werte zulässt
 
 
 MARKETS = [
+    # USA (Yahoo-Ticker ohne Suffix)
+    Market("us", ("",), "us", 1.0, 4000),
     # Europa
     Market("de", (".DE",), "europe", 1.10, 600),
     Market("gb", (".L",), "europe", 0.0130, 800),
@@ -51,7 +53,7 @@ MARKETS = [
     Market("nz", (".NZ",), "global", 0.60, 40),
 ]
 
-_BY_SUFFIX = {s: m for m in MARKETS for s in m.suffixes}
+_BY_SUFFIX = {s: m for m in MARKETS for s in m.suffixes if s}
 KNOWN_SUFFIXES = set(_BY_SUFFIX)
 
 
@@ -60,6 +62,27 @@ def market_for(ticker: str) -> Market | None:
     if "." not in ticker:
         return None
     return _BY_SUFFIX.get("." + ticker.rsplit(".", 1)[1])
+
+
+# US-Dollar je Währungseinheit (grob, nur für Schwellenwerte). Yahoo nennt bei manchen
+# Börsen die Kurswährung in Untereinheiten (GBp, ZAc, ILA); der Börsenwert ist dann in der
+# Hauptwährung angegeben.
+FX_USD = {
+    "USD": 1.0, "EUR": 1.10, "GBP": 1.30, "CHF": 1.15, "SEK": 0.095, "DKK": 0.15, "NOK": 0.095,
+    "PLN": 0.25, "JPY": 0.0068, "HKD": 0.13, "CAD": 0.73, "AUD": 0.65, "INR": 0.012,
+    "KRW": 0.00073, "TWD": 0.031, "SGD": 0.74, "BRL": 0.18, "MXN": 0.055, "ZAR": 0.055,
+    "ILS": 0.27, "NZD": 0.60, "CNY": 0.14,
+}
+_MINOR_UNITS = {"GBp": "GBP", "GBX": "GBP", "ZAc": "ZAR", "ZAC": "ZAR", "ILA": "ILS"}
+
+
+def market_cap_usd(market_cap: float | None, currency: str | None) -> float | None:
+    """Börsenwert aus dem Yahoo-Screener in US-Dollar; None, wenn unbekannt."""
+    if not market_cap:
+        return None
+    cur = _MINOR_UNITS.get(currency or "USD", currency or "USD")
+    fx = FX_USD.get(cur)
+    return market_cap * fx if fx else None
 
 
 def usd_factor(ticker: str) -> float:

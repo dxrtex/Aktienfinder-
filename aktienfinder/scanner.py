@@ -115,6 +115,7 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             info = meta.get(ticker, {})
             rows.append({"ticker": ticker, "name": info.get("name", ""),
                          "region": info.get("region") or region_of(ticker),
+                         "market_cap_usd": info.get("market_cap_usd"),
                          "date": str(df.index[-1].date()), **res.to_dict()})
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
@@ -160,7 +161,9 @@ def main(argv: list[str] | None = None) -> int:
             tickers += [line.split("#")[0].strip() for line in f if line.split("#")[0].strip()]
     if args.universe:
         uni = pd.read_csv(args.universe, dtype=str).fillna("")
-        meta = {r.ticker: {"name": r.name, "region": r.region} for r in uni.itertuples()}
+        meta = {r.ticker: {"name": r.name, "region": r.region,
+                           "market_cap_usd": float(r.market_cap_usd) if getattr(r, "market_cap_usd", "") else None}
+                for r in uni.itertuples()}
         tickers += list(uni["ticker"])
         log_path = args.universe + ".log"
         try:
