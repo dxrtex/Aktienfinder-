@@ -251,6 +251,10 @@
   <h3>Filter &amp; Export</h3>
   <div class="group"><div class="group-label">Mindest-Score</div>
     <div class="opts" data-key="minScore"><button class="opt" data-v="0">alle</button><button class="opt" data-v="40">ab 40</button><button class="opt" data-v="60">ab 60</button><button class="opt" data-v="80">ab 80</button></div></div>
+  <div class="group"><div class="group-label">Marktkapitalisierung ab</div>
+    <div class="opts" data-key="minCap"><button class="opt" data-v="0">2 Mrd. $ (alle)</button><button class="opt" data-v="5">5 Mrd. $</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
+  <div class="group"><div class="group-label">Marktkapitalisierung bis</div>
+    <div class="opts" data-key="maxCap"><button class="opt" data-v="0">egal</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button></div></div>
   <div class="group"><div class="group-label">Zonen-Typ</div>
@@ -292,7 +296,7 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { minScore: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
+const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
 const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
@@ -310,6 +314,8 @@ function rows(kind) {
   return data.results.filter(r => (kind === "fast" ? r.fast_hit : r.passed)
     && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
     && (r.score >= +state.minScore || kind === "fast")
+    && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9)
+    && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9)
     && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone))
     && (!state.div || r.divergence === state.div)
