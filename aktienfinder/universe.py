@@ -92,7 +92,11 @@ def screener(region: str, min_cap_usd: float = MIN_MARKET_CAP_USD, page_size: in
         query = EquityQuery("and", parts)
         offset = 0
         for _ in range(MAX_PAGES):
-            res = yf.screen(query, offset=offset, size=page_size, sortField="intradaymarketcap", sortAsc=False)
+            try:   # ein Land, das Yahoo (zeitweise) nicht liefert, soll die anderen nicht stoppen
+                res = yf.screen(query, offset=offset, size=page_size, sortField="intradaymarketcap", sortAsc=False)
+            except Exception as exc:
+                print(f"  Screener {m.country}: Fehler {exc!r}")
+                break
             quotes = res.get("quotes", [])
             for q in quotes:
                 cap = market_cap_usd(q.get("marketCap"), q.get("currency"))

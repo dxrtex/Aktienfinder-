@@ -51,6 +51,18 @@ MARKETS = [
     Market("za", (".JO",), "global", 0.00055, "ZAR"),
     Market("il", (".TA",), "global", 0.0027, "ILS"),
     Market("nz", (".NZ",), "global", 0.60, "NZD"),
+    # China (Festland), weitere Schwellen- und Golfmärkte
+    Market("cn", (".SS", ".SZ"), "global", 0.14, "CNY"),
+    Market("sa", (".SR",), "global", 0.27, "SAR"),
+    Market("th", (".BK",), "global", 0.029, "THB"),
+    Market("id", (".JK",), "global", 0.000062, "IDR"),
+    Market("my", (".KL",), "global", 0.22, "MYR"),
+    Market("tr", (".IS",), "global", 0.025, "TRY"),
+    Market("gr", (".AT",), "europe", 1.10, "EUR"),
+    Market("cl", (".SN",), "global", 0.00105, "CLP"),
+    Market("ph", (".PS",), "global", 0.017, "PHP"),
+    Market("qa", (".QA",), "global", 0.27, "QAR"),
+    Market("ae", (".AE",), "global", 0.27, "AED"),
 ]
 
 _BY_SUFFIX = {s: m for m in MARKETS for s in m.suffixes if s}
@@ -72,6 +84,8 @@ FX_USD = {
     "PLN": 0.25, "JPY": 0.0068, "HKD": 0.13, "CAD": 0.73, "AUD": 0.65, "INR": 0.012,
     "KRW": 0.00073, "TWD": 0.031, "SGD": 0.74, "BRL": 0.18, "MXN": 0.055, "ZAR": 0.055,
     "ILS": 0.27, "NZD": 0.60, "CNY": 0.14,
+    "SAR": 0.27, "THB": 0.029, "IDR": 0.000062, "MYR": 0.22, "TRY": 0.025, "CLP": 0.00105,
+    "PHP": 0.017, "QAR": 0.27, "AED": 0.27,
 }
 _MINOR_UNITS = {"GBp": "GBP", "GBX": "GBP", "ZAc": "ZAR", "ZAC": "ZAR", "ILA": "ILS"}
 
