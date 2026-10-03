@@ -15,9 +15,12 @@ Kursrückgang, Fibonacci-Zone, Ausbruch über die EMA 20 und Volumen fließen nu
    - `aktienfinder/universe.py` stellt die Aktienliste zusammen (USA komplett, Europa, global)
    - `aktienfinder/scanner.py` lädt die Tageskerzen von Yahoo Finance und prüft jede Aktie
    - das Ergebnis (`site/data/results.json`) wird mit der Website auf GitHub Pages veröffentlicht
-2. **Website** (`site/index.html`): sortierbare Tabelle mit Filtern (Region, Mindest-Score,
-   MACD noch rot, Ausbruch über EMA 20, Fibonacci-Zone); Ticker öffnen den TradingView-Chart.
-3. **Manuell starten:** GitHub → Actions → „Täglicher Scan“ → „Run workflow“.
+2. **Website** (`site/index.html`): Setup-Karten mit Mini-Chart (Golden Zone markiert) und
+   Checkliste der Kriterien, alternativ Tabelle; Filter für Region, Kursziel-Upside und Börsenwert;
+   „Chart öffnen“ führt zu TradingView.
+3. **Als App nutzen (iPad/iPhone):** Link in Safari öffnen → Teilen-Symbol → „Zum Home-Bildschirm“.
+   Die Seite öffnet sich dann im Vollbild wie eine eigene App.
+4. **Manuell starten:** GitHub → Actions → „Täglicher Scan“ → „Run workflow“.
 
 ## Lokal ausführen
 

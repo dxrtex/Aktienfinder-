@@ -67,3 +67,10 @@ def test_report_runs_on_scan_output(monkeypatch, tmp_path):
     out = tmp_path / "r.json"
     scanner.main(["--universe", str(uni), "--out", str(out), "--quiet"])
     assert report.main(["--universe", str(uni), "--results", str(out), "--refs", "T1,NOPE"]) == 0
+
+
+def test_chart_data_for_website():
+    df = _fake_download_dict(["X"], "2y")["X"]
+    data = scanner.chart_data(df)
+    assert len(data["spark"]) == scanner.CHART_BARS
+    assert data["fib_high"] is None or data["fib_high"] > data["fib_low"]
