@@ -40,21 +40,10 @@ jobs:
         run: python -m aktienfinder.universe --out universe.csv --regions "${{ inputs.regions || 'us,europe,global' }}"
       - name: Scan
         run: python -m aktienfinder.scanner --universe universe.csv --out site/data/results.json --quiet
-      - name: Treffer-Übersicht
-        run: |
-          python - <<'PY'
-          import json, collections
-          d = json.load(open("site/data/results.json"))
-          print(d["stats"])
-          res = d["results"]
-          print("Treffer je Region:", dict(collections.Counter(r["region"] for r in res)))
-          for lo in (40, 50, 60, 70, 80):
-              print(f"Score >= {lo}: {sum(r['score'] >= lo for r in res)}")
-          ref = {"QBTS", "RKLB", "IFX.DE", "UBER", "TUI1.DE"}
-          print("Referenz-Trades:", {r["ticker"]: r["score"] for r in res if r["ticker"] in ref})
-          for r in res[:25]:
-              print(f"{r['score']:5.1f} {r['ticker']:<10} {r['name'][:30]:<30} {r['region']}")
-          PY
+      - name: Diagnose-Bericht
+        run: python -m aktienfinder.report --universe universe.csv --results site/data/results.json --refs QBTS,RKLB,IFX.DE,UBER,TUI1.DE
+      - name: Referenz-Aktien im Detail
+        run: python -m aktienfinder.scanner --all --debug --file tickers/beispiele.txt
       - uses: actions/upload-artifact@v4
         with:
           name: scan-ergebnis

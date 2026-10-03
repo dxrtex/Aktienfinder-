@@ -67,3 +67,27 @@ def test_build_falls_back_for_us_and_survives_errors(monkeypatch):
     assert list(df["ticker"]) == ["AAPL"]
     assert sum("FEHLER" in line for line in log) == 2
     assert log[-1] == "GESAMT: 1 Aktien"
+
+
+def test_company_key_and_dedupe(monkeypatch):
+    assert universe.company_key("Lundin Mining Corporation") == universe.company_key("Lundin Mining Corp.")
+    assert universe.company_key("Alphabet Inc.") == universe.company_key("Alphabet Inc. Class C")
+    assert universe.company_key("SAP SE") != universe.company_key("Siemens AG")
+
+    def screener(region, min_cap):
+        rows = {"us": [("GOOGL", "Alphabet Inc."), ("AVGO", "Broadcom Inc.")],
+                "europe": [("LUMI.ST", "Lundin Mining Corporation")],
+                "global": [("LUN.TO", "Lundin Mining Corp."), ("GOOG.TO", "Alphabet Inc."),
+                           ("AVGO34.SA", "Broadcom Inc."), ("7203.T", "Toyota Motor Corporation")]}[region]
+        return pd.DataFrame([(t, n, region, "x", 1e10) for t, n in rows], columns=universe.COLUMNS)
+    monkeypatch.setattr(universe, "screener", screener)
+    df, log = universe.build(["us", "europe", "global"])
+    assert list(df["ticker"]) == ["GOOGL", "AVGO", "LUMI.ST", "7203.T"]
+    assert "Doppelte Firmen entfernt: 3" in log
+
+
+def test_screener_skips_trusts(monkeypatch):
+    _fake_yf(monkeypatch, {0: [dict(q("U-UN.TO", 5e9, "CAD", "TOR"), longName="Sprott Physical Uranium Trust"), q("SHOP.TO", 1e11, "CAD", "TOR")]})
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("ca", (".TO",), "global", 0.73, 100)])
+    q0 = universe.screener("global")
+    assert "U-UN.TO" not in list(q0["ticker"])

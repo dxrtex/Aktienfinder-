@@ -34,6 +34,19 @@ _NON_COMMON = re.compile(
 )
 
 
+# Fonds/Trusts statt Unternehmen (z. B. "Sprott Physical Uranium Trust")
+_NOT_A_COMPANY = re.compile(r"\b(?:trust|fund|etf|etn)\b", re.IGNORECASE)
+_LEGAL_FORMS = re.compile(
+    r"\b(?:inc|incorporated|corp|corporation|co|company|plc|ltd|limited|ag|se|sa|nv|n\.v|asa|ab|"
+    r"oyj|spa|s\.p\.a|holdings?|group|the|class [a-z])\b\.?", re.IGNORECASE)
+
+
+def company_key(name: str) -> str:
+    """Vereinfachter Firmenname, um dieselbe Firma an mehreren Börsen zu erkennen."""
+    key = _LEGAL_FORMS.sub(" ", str(name).lower())
+    return re.sub(r"[^a-z0-9]+", "", key)
+
+
 def _get(url: str) -> str:
     resp = requests.get(url, headers=HEADERS, timeout=30)
     resp.raise_for_status()
@@ -80,9 +93,10 @@ def screener(region: str, min_cap_usd: float = MIN_MARKET_CAP_USD, page_size: in
                     done = True
                     break
                 sym = q.get("symbol", "")
+                name = q.get("longName") or q.get("shortName", "")
                 if (cap is not None and q.get("quoteType", "EQUITY") == "EQUITY"
-                        and _is_home_listing(sym, q, m.suffixes)):
-                    rows.append((sym, q.get("longName") or q.get("shortName", ""), region,
+                        and _is_home_listing(sym, q, m.suffixes) and not _NOT_A_COMPANY.search(name)):
+                    rows.append((sym, name, region,
                                  f"Yahoo-Screener {m.country}", round(cap)))
                     found += 1
                     if found >= m.top_n:
@@ -122,6 +136,13 @@ def build(regions: list[str], min_cap_usd: float = MIN_MARKET_CAP_USD) -> tuple[
     df = pd.concat(frames, ignore_index=True)
     df["ticker"] = df["ticker"].str.strip()
     df = df[df["ticker"].str.len() > 0].drop_duplicates("ticker", keep="first")
+    # Dieselbe Firma an mehreren Börsen (z. B. Lundin Mining in Stockholm und Toronto,
+    # Alphabet als kanadisches Zertifikat): nur der erste Eintrag (USA > Europa > Rest) bleibt.
+    keys = df["name"].map(company_key)
+    dup = keys.duplicated(keep="first") & (keys.str.len() > 2)
+    if dup.any():
+        log.append(f"Doppelte Firmen entfernt: {int(dup.sum())}")
+    df = df[~dup]
     log.append(f"GESAMT: {len(df)} Aktien")
     return df.reset_index(drop=True), log
 

@@ -49,3 +49,14 @@ def test_main_writes_json(monkeypatch, tmp_path):
     assert data["stats"]["universe"] == 2
     names = {r["ticker"]: r["name"] for r in data["results"]}
     assert names.get("AAA") == "Alpha AG"
+
+
+def test_report_runs_on_scan_output(monkeypatch, tmp_path):
+    from aktienfinder import report
+    monkeypatch.setattr(scanner, "download", _fake_download)
+    uni = tmp_path / "u.csv"
+    rows = "\n".join(f"T{i},Firma {i},us,x,5e9" for i in range(40))
+    uni.write_text("ticker,name,region,source,market_cap_usd\n" + rows + "\n")
+    out = tmp_path / "r.json"
+    scanner.main(["--universe", str(uni), "--out", str(out), "--quiet"])
+    assert report.main(["--universe", str(uni), "--results", str(out), "--refs", "T1,NOPE"]) == 0
