@@ -19,3 +19,6 @@ jobs:
       - run: python -m pytest -q
       - name: Referenz-Trades mit echten Kursen prüfen
         run: python -m aktienfinder.scanner --all --file tickers/beispiele.txt --debug
+      - name: Screener-Test (einmalig)
+        continue-on-error: true
+        run: python tools_probe_screener.py
