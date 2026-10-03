@@ -1,0 +1,79 @@
+name: Täglicher Scan
+
+on:
+  schedule:
+    - cron: "30 20,21 * * 1-5"   # 22:30 Uhr Berlin (Sommer- und Winterzeit, siehe Prüfung unten)
+  workflow_dispatch:              # „Scan jetzt starten“
+  push:
+    branches: ["claude/**"]
+    paths: ["backend/**", "config.yaml", "site/**", ".github/workflows/scan.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scan-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Nur um 22 Uhr Berlin (Cron läuft wegen Sommer-/Winterzeit zweimal)
+        id: time
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(TZ=Europe/Berlin date +%H)" != "22" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/checkout@v4
+        if: steps.time.outputs.skip == 'false'
+      - uses: actions/setup-python@v5
+        if: steps.time.outputs.skip == 'false'
+        with:
+          python-version: "3.11"
+          cache: pip
+      - if: steps.time.outputs.skip == 'false'
+        run: pip install -r requirements.txt
+      - name: Kurs-Cache (SQLite) wiederherstellen
+        if: steps.time.outputs.skip == 'false'
+        uses: actions/cache@v4
+        with:
+          path: data/cache.sqlite
+          key: kurse-${{ github.run_id }}
+          restore-keys: kurse-
+      - name: Universum aktualisieren
+        if: steps.time.outputs.skip == 'false'
+        run: python -m backend.universe
+      - name: Scan
+        if: steps.time.outputs.skip == 'false'
+        run: python -m backend.run_scan
+      - uses: actions/upload-pages-artifact@v3
+        if: steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
+        with:
+          path: site
+      - uses: actions/upload-artifact@v4
+        if: steps.time.outputs.skip == 'false'
+        with:
+          name: scan-ergebnis
+          path: |
+            site/data/results.json
+            data/universe_us.csv
+            data/universe_eu.csv
+    outputs:
+      skip: ${{ steps.time.outputs.skip }}
+
+  deploy:
+    needs: scan
+    if: github.ref == 'refs/heads/main' && needs.scan.outputs.skip == 'false'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

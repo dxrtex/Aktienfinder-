@@ -18,8 +18,8 @@ from .indicators import atr, ema, macd, pivot_highs, pivot_lows, rsi, sma
 from .mbi import momentum_bias_index
 from .scoring import score_setup
 
-FX_USD = {"USD": 1.0, "EUR": 1.10, "GBP": 1.30, "GBp": 0.013, "CHF": 1.15, "SEK": 0.095, "DKK": 0.15,
-          "NOK": 0.095, "PLN": 0.25, "CZK": 0.044, "HUF": 0.0028}
+FX_USD = {"USD": 1.0, "EUR": 1.10, "GBP": 1.30, "GBp": 0.013, "GBX": 0.013, "CHF": 1.15, "SEK": 0.095,
+          "DKK": 0.15, "NOK": 0.095, "PLN": 0.25, "CZK": 0.044, "HUF": 0.0028}
 
 
 def de(x: float | None, digits: int = 2) -> str:
@@ -120,7 +120,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     u = cfg.universe
     cur = info.get("currency") or "USD"
     fx = FX_USD.get(cur, 1.0)
-    cap_usd = info.get("market_cap") * fx if info.get("market_cap") else None
+    cap_usd = info.get("market_cap_usd") or (info.get("market_cap") * fx if info.get("market_cap") else None)
     add("cap", "Marktkapitalisierung ≥ 2 Mrd. USD", cap_usd is None or cap_usd >= u.min_market_cap_usd,
         "unbekannt" if cap_usd is None else de(cap_usd / 1e9, 1) + " Mrd. USD", "≥ 2,0 Mrd. USD")
     dollar_vol = float(np.mean(v[-u.volume_avg_days:] * c[-u.volume_avg_days:])) * fx
