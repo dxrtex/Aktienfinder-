@@ -114,6 +114,7 @@ def load() -> pd.DataFrame:
 
 def main() -> int:
     lists = build()
+    (ROOT / "data").mkdir(exist_ok=True)
     for region, df in lists.items():
         df.to_csv(ROOT / "data" / f"universe_{region}.csv", index=False)
         print(f"{region.upper()}: {len(df)} Aktien ab 2 Mrd. USD")
