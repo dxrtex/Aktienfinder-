@@ -198,6 +198,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
     tickers = list(dict.fromkeys(list(tickers) + list(watchlist)))
     stats = stats if stats is not None else Counter()
     stats["universe"] += len(tickers)
+    from .backtest import INDEX_OF_REGION, _context, _ctx_fields
+    try:   # Leitindizes für Marktumfeld und relative Stärke
+        indices = {t: d["Close"] for t, d in download(sorted(set(INDEX_OF_REGION.values())),
+                                                         cfg.history_period, log=lambda *a: None)}
+    except Exception:
+        indices = {}
     rows = []
     for ticker, df in download(tickers, cfg.history_period, log=log):
         stats["loaded"] += 1
@@ -220,7 +226,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             stats["passed"] += res.passed
         if res.passed or include_all or in_watch:
             info = meta.get(ticker, {})
-            rows.append({"ticker": ticker, "name": info.get("name") or watchlist.get(ticker, ""),
+            region = info.get("region") or region_of(ticker)
+            try:
+                ctx = _ctx_fields(_context(df.dropna(subset=["Close"]), indices.get(INDEX_OF_REGION.get(region, "^GSPC"))), -1)
+            except Exception:
+                ctx = {}
+            rows.append({**ctx,"ticker": ticker, "name": info.get("name") or watchlist.get(ticker, ""),
                          "in_watchlist": in_watch,
                          "region": info.get("region") or region_of(ticker),
                          "market_cap_usd": info.get("market_cap_usd"),
@@ -233,8 +244,36 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         for r in rows:
             r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
                                                "isin": None, "earnings_date": None}))
+    for r in rows:
+        r["top"] = is_top(r, cfg)
+    stats["top"] = sum(r["top"] for r in rows)
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
+
+
+def is_top(r: dict, cfg: Config = DEFAULT) -> bool:
+    """Top-Auswahl: wirklich alle Kriterien erfüllt (Schwellen in `Config.top_*`)."""
+    if not r.get("passed"):
+        return False
+    if cfg.top_core5 and len(r.get("core_met") or []) < 5:
+        return False
+    if (r.get("upside_pct") is None or r["upside_pct"] < cfg.top_min_upside) and cfg.top_min_upside > -999:
+        return False
+    if (r.get("crv") or 0) < cfg.top_min_crv or r.get("pullback_drawdown_pct", 0) < cfg.top_min_pullback:
+        return False
+    if (cfg.top_market and not r.get("market_ok")) or (cfg.top_trend and not r.get("ema200_rising")):
+        return False
+    if cfg.top_rel_strength and not (r.get("rel_strength") or -1) > 0:
+        return False
+    if not cfg.top_rise_min <= r.get("rise_from_low_pct", 0) <= cfg.top_rise_max:
+        return False
+    if r.get("green_x_count", 0) < cfg.top_min_green_x:
+        return False
+    if r.get("earnings_date"):
+        days = (pd.Timestamp(r["earnings_date"]) - pd.Timestamp.now().normalize()).days
+        if 0 <= days <= cfg.top_no_earnings_days:
+            return False
+    return True
 
 
 def _print_table(rows: list[dict]) -> None:

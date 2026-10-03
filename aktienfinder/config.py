@@ -54,6 +54,18 @@ class Config:
     volume_avg_length: int = 20
     volume_spike: float = 1.5      # Volumen ≥ 1,5 × Durchschnitt
     fib_lookback: int = 150        # Suchbereich für den letzten Aufwärtsschwung
+    # Top-Auswahl („alle Kriterien erfüllt“) – Schwellen werden per Optimierer (Backtest) festgelegt
+    top_core5: bool = True                 # alle 5 Kernkriterien
+    top_min_upside: float = 40.0           # Analysten-Kursziel mind. so viel % über dem Kurs
+    top_min_crv: float = 2.0               # Chance/Risiko mindestens
+    top_min_pullback: float = 20.0         # Rücksetzer vom 52-Wochen-Hoch in %
+    top_market: bool = False               # Gesamtmarkt über EMA 200
+    top_trend: bool = False                # EMA 200 der Aktie steigt
+    top_rel_strength: bool = False         # relative Stärke 3 Monate > 0
+    top_rise_min: float = 0.0              # Kurs mind. so viel % über dem Tief
+    top_rise_max: float = 100.0            # … und höchstens so viel
+    top_min_green_x: int = 1
+    top_no_earnings_days: int = 10         # keine Quartalszahlen in so vielen Tagen
     stop_buffer: float = 0.03      # Stop so weit unter dem Rücksetzer-Tief
     fib_low_lookback: int = 300    # großer Schwung: Schwungtief bis so viele Tage vor dem Hoch
     # Golden Zone 0,618–0,79 (Anzeige „★“ auf der Website, mit Toleranz)

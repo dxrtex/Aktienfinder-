@@ -209,7 +209,7 @@
   <h3>Filter</h3>
   <div class="group"><div class="group-label">Auswahl</div>
     <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
-    <p class="hint">Top-Auswahl = alle 5 Kernkriterien erfüllt, Chance/Risiko mind. 2 : 1, keine Quartalszahlen in den nächsten 10 Tagen.</p></div>
+    <p class="hint">Top-Auswahl = alle 5 Kernkriterien erfüllt, Kursziel mind. +40 %, Chance/Risiko mind. 2 : 1, keine Quartalszahlen in den nächsten 10 Tagen – plus die Filter, die sich im Backtest bewährt haben.</p></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
   <div class="group"><div class="group-label">Analysten-Kursziel</div>
@@ -257,7 +257,8 @@ function earningsDays(r) {
 const earningsSoon = r => { const d = earningsDays(r); return d != null && d >= 0 && d <= 10; };
 const fmtCrv = v => v == null ? "–" : `${fmt(v, 1)} : 1`;
 // Top-Auswahl: alle 5 Kernkriterien, Chance/Risiko ≥ 2, keine Quartalszahlen in den nächsten 10 Tagen
-const isTop = r => r.passed && (r.core_met || []).length === 5 && (r.crv ?? 0) >= 2 && !earningsSoon(r);
+// (Regeln im Scanner: Config.top_*, per Backtest-Optimierer festgelegt)
+const isTop = r => r.top ?? (r.passed && (r.core_met || []).length === 5 && (r.crv ?? 0) >= 2 && !earningsSoon(r));
 function macdNear(r) {
   return r.macd_status.startsWith("rot") && r.macd_closeness ? ` · ${Math.round(r.macd_closeness * 100)} % an 0` : "";
 }
@@ -421,7 +422,7 @@ const COLUMNS = [
 // ---------- Zustand ----------
 let data = null;
 const open = new Set();
-const DEFAULTS = { pick: "", region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "", earn: "" };
+const DEFAULTS = { pick: "top", region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "", earn: "" };
 const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
 const SORTS = {
@@ -460,13 +461,16 @@ function render() {
     ? (a, b) => (b.passed - a.passed) || b.score - a.score : SORTS[state.sort]);
   const wlCount = data.results.filter(r => inWatch(r) && r.passed).length;
   $("wlBadge").hidden = !wlCount; $("wlBadge").textContent = wlCount;
-  const title = { cards: "Alle Setups", table: "Alle Setups", watch: "Deine Watchlist · nach Score" }[state.tab] || "Setups";
+  const all = state.pick === "top" ? "Top-Auswahl · alle Kriterien erfüllt" : "Alle Setups";
+  const title = { cards: all, table: all, watch: "Deine Watchlist · nach Score" }[state.tab] || "Setups";
   const head = n => `<div class="section-title"><span>${title}</span><span>${n} ${n === 1 ? "Aktie" : "Aktien"}</span></div>`;
 
   if (!rows.length) {
     $("main").innerHTML = head(0) + `<div class="empty">${state.tab === "watch"
       ? "Keine Watchlist-Aktie gefunden."
-      : "Keine Setups mit diesen Filtern.<br>Tipp: Unter „Filter“ das Kursziel auf „alle“ stellen."}</div>`;
+      : state.pick === "top"
+        ? "Heute erfüllt keine Aktie wirklich alle Kriterien.<br>Lieber kein Trade als ein halbes Setup. Unter „Filter → Auswahl → alle Setups“ siehst du die Kandidaten, denen noch etwas fehlt."
+        : "Keine Setups mit diesen Filtern.<br>Tipp: Unter „Filter“ das Kursziel auf „alle“ stellen."}</div>`;
     return;
   }
   if (state.tab === "table") {

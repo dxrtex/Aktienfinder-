@@ -90,3 +90,15 @@ def test_watchlist_always_included(monkeypatch, tmp_path):
     assert by["T1"]["in_watchlist"] and by["PENNY"]["in_watchlist"]
     assert by["PENNY"]["name"] == "Pennystock AG"
     assert all(r["passed"] or r["in_watchlist"] for r in rows)
+
+
+def test_is_top_requires_all_criteria():
+    from aktienfinder.scanner import is_top
+    r = {"passed": True, "core_met": ["a", "b", "c", "d", "e"], "upside_pct": 50, "crv": 2.5,
+         "pullback_drawdown_pct": 30, "rise_from_low_pct": 3, "green_x_count": 2, "earnings_date": None}
+    assert is_top(r)
+    assert not is_top({**r, "upside_pct": 30})
+    assert not is_top({**r, "crv": 1.2})
+    assert not is_top({**r, "core_met": ["a", "b", "c", "d"]})
+    soon = (__import__("pandas").Timestamp.now() + __import__("pandas").Timedelta(days=4)).date().isoformat()
+    assert not is_top({**r, "earnings_date": soon})

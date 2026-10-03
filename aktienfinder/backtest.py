@@ -167,6 +167,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT,
             "reversal": res.reversal_candle_age is not None, "green_x_count": res.green_x_count,
             "rsi_signal_gap": res.rsi_signal_gap, "status": res.status,
             "rise_from_low_pct": res.rise_from_low_pct, "crv": res.crv,
+            "pullback_drawdown_pct": res.pullback_drawdown_pct, "macd_closeness": res.macd_closeness,
+            "divergence_forming": res.divergence_forming,
             "core_count": len(res.core_met), **_ctx_fields(ctx, day),
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
