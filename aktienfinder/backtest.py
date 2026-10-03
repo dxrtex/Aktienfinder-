@@ -27,8 +27,10 @@ from .indicators import ema, macd, rsi
 from .mbi import momentum_bias_index
 from .signals import evaluate, fib_retracement, find_divergences, macd_condition
 
-HORIZONS = (10, 20, 40)
+HORIZONS = (20, 40, 60)
 TARGET, STOP = 0.10, -0.07
+SWING_DAYS = 60            # Swing-Trading: Haltedauer wenige Wochen bis max. ~3 Monate
+SWING_TARGETS = (0.10, 0.20, 0.30)
 MIN_HISTORY = 260          # so viele Kerzen vor dem ersten möglichen Signal (für 52-Wochen-Hoch)
 DEDUPE_BARS = 10           # neues Bündel derselben Aktie erst nach so vielen Tagen erneut zählen
 
@@ -85,6 +87,19 @@ def _forward(df: pd.DataFrame, entry: int) -> dict:
                 outcome = 1.0
                 break
     out["target_first"] = outcome
+    # Swing-Trading: wird +10/+20/+30 % innerhalb von 60 Handelstagen erreicht (Tageshoch)?
+    # Und wie tief lag die Aktie zwischendurch, bevor +10 % kamen?
+    if entry + SWING_DAYS <= len(df):
+        hi = high[entry : entry + SWING_DAYS] / o - 1
+        lo = low[entry : entry + SWING_DAYS] / o - 1
+        out["max_gain"] = float(hi.max())
+        for t in SWING_TARGETS:
+            hit = np.flatnonzero(hi >= t)
+            out[f"hit_{int(t * 100)}"] = float(len(hit) > 0)
+            out[f"days_{int(t * 100)}"] = float(hit[0] + 1) if len(hit) else np.nan
+        first = np.flatnonzero(hi >= SWING_TARGETS[0])
+        upto = first[0] + 1 if len(first) else SWING_DAYS
+        out["dip_before"] = float(lo[:upto].min())
     return out
 
 
@@ -165,17 +180,23 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
 
 
 def _stats(frame: pd.DataFrame, prefix: str) -> str:
-    if frame.empty:
+    """Kennzahlen für Swing-Trading (Ziel +10–30 %, Haltedauer bis 60 Handelstage)."""
+    if frame.empty or f"{prefix}hit_10" not in frame:
         return "n=0"
-    parts = [f"n={len(frame)}"]
-    for h in HORIZONS:
-        col = frame[f"{prefix}ret_{h}"].dropna()
-        if len(col):
-            parts.append(f"{h}T: Ø {100 * col.mean():+.1f} % / Median {100 * col.median():+.1f} % / "
-                         f"positiv {100 * (col > 0).mean():.0f} %")
-    tf = frame[f"{prefix}target_first"].dropna()
-    if len(tf):
-        parts.append(f"+10 % vor −7 %: {100 * (tf == 1).mean():.0f} % (−7 % zuerst {100 * (tf == -1).mean():.0f} %)")
+    f = frame.dropna(subset=[f"{prefix}hit_10"])
+    if f.empty:
+        return "n=0"
+    parts = [f"n={len(f)}"]
+    hits = " / ".join(f"+{t}: {100 * f[f'{prefix}hit_{t}'].mean():.0f} %" for t in (10, 20, 30))
+    parts.append(f"erreicht in 60 T. {hits}")
+    d20 = f[f"{prefix}days_20"].dropna()
+    if len(d20):
+        parts.append(f"Tage bis +20 % (Median) {d20.median():.0f}")
+    parts.append(f"Höchstgewinn Median {100 * f[f'{prefix}max_gain'].median():+.0f} %")
+    parts.append(f"Rücksetzer vor +10 % Median {100 * f[f'{prefix}dip_before'].median():.0f} %")
+    r60 = f[f"{prefix}ret_60"].dropna()
+    if len(r60):
+        parts.append(f"Kurs nach 60 T. Median {100 * r60.median():+.1f} %")
     return " | ".join(parts)
 
 
