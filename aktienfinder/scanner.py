@@ -245,7 +245,8 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
                                                "isin": None, "earnings_date": None}))
     for r in rows:
-        r["top"] = is_top(r, cfg)
+        r["top_missing"] = top_missing(r, cfg) if r["passed"] else []
+        r["top"] = bool(r["passed"]) and not r["top_missing"]
         # „Einstiegsbereit“ nur noch, wenn die Aktie in der Top-Auswahl ist (Backtest: frühere
         # Definition – Kurs ganz am Tief – lief schlechter als der Durchschnitt)
         if r.get("status") == "bereit" and not r["top"]:
@@ -257,29 +258,42 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
     return rows
 
 
-def is_top(r: dict, cfg: Config = DEFAULT) -> bool:
-    """Top-Auswahl: wirklich alle Kriterien erfüllt (Schwellen in `Config.top_*`)."""
+def top_missing(r: dict, cfg: Config = DEFAULT) -> list[str]:
+    """Welche Kriterien der Top-Auswahl fehlen (leer = alle erfüllt). Schwellen in `Config.top_*`."""
+    miss = []
     if not r.get("passed"):
-        return False
+        return ["vollständiges Setup"]
     if cfg.top_core5 and len(r.get("core_met") or []) < 5:
-        return False
-    if (r.get("upside_pct") is None or r["upside_pct"] < cfg.top_min_upside) and cfg.top_min_upside > -999:
-        return False
-    if (r.get("crv") or 0) < cfg.top_min_crv or r.get("pullback_drawdown_pct", 0) < cfg.top_min_pullback:
-        return False
-    if (cfg.top_market and not r.get("market_ok")) or (cfg.top_trend and not r.get("ema200_rising")):
-        return False
-    if cfg.top_rel_strength and not (r.get("rel_strength") or -1) > 0:
-        return False
-    if not cfg.top_rise_min <= r.get("rise_from_low_pct", 0) <= cfg.top_rise_max:
-        return False
+        miss.append("MACD heute rot & schrumpfend")
+    if cfg.top_min_upside > -999 and (r.get("upside_pct") is None or r["upside_pct"] < cfg.top_min_upside):
+        miss.append(f"Kursziel ≥ {cfg.top_min_upside:.0f} %")
+    if cfg.top_min_crv > 0 and (r.get("crv") or 0) < cfg.top_min_crv:
+        miss.append(f"Chance/Risiko ≥ {cfg.top_min_crv:g}")
+    if r.get("pullback_drawdown_pct", 0) < cfg.top_min_pullback:
+        miss.append(f"Rücksetzer ≥ {cfg.top_min_pullback:.0f} %")
+    if cfg.top_market and not r.get("market_ok"):
+        miss.append("Markt über EMA 200")
+    if cfg.top_trend and not r.get("ema200_rising"):
+        miss.append("Aufwärtstrend (EMA 200)")
+    if cfg.top_rel_strength and not (r.get("rel_strength") is not None and r["rel_strength"] > 0):
+        miss.append("stärker als der Markt")
+    rise = r.get("rise_from_low_pct", 0)
+    if rise < cfg.top_rise_min:
+        miss.append(f"Erholung ≥ {cfg.top_rise_min:.0f} % über dem Tief")
+    elif rise > cfg.top_rise_max:
+        miss.append(f"höchstens {cfg.top_rise_max:.0f} % über dem Tief")
     if r.get("green_x_count", 0) < cfg.top_min_green_x:
-        return False
+        miss.append(f"{cfg.top_min_green_x} grüne X")
     if r.get("earnings_date"):
         days = (pd.Timestamp(r["earnings_date"]) - pd.Timestamp.now().normalize()).days
         if 0 <= days <= cfg.top_no_earnings_days:
-            return False
-    return True
+            miss.append(f"keine Quartalszahlen in {cfg.top_no_earnings_days} T.")
+    return miss
+
+
+def is_top(r: dict, cfg: Config = DEFAULT) -> bool:
+    """Top-Auswahl: wirklich alle Kriterien erfüllt."""
+    return bool(r.get("passed")) and not top_missing(r, cfg)
 
 
 def _print_table(rows: list[dict]) -> None:

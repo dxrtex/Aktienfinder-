@@ -377,7 +377,7 @@ function card(r, hero = false) {
       <div class="card-title">
         <h2 title="${esc(r.name)}">${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${REGION[r.region] || r.region}</div>
-        ${statusBadge(r)}${isTop(r) ? `<span class="top">Top-Auswahl</span>` : ""}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
+        ${statusBadge(r)}${isTop(r) ? `<span class="top">Top-Auswahl</span>` : ""}${r.passed && (r.top_missing || []).length === 1 ? `<span class="warn">Fast-Treffer · fehlt: ${esc(r.top_missing[0])}</span>` : ""}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
         ${earningsSoon(r) ? `<span class="warn">⚠ Zahlen ${earningsDays(r) === 0 ? "heute" : `in ${earningsDays(r)} T.`}</span>` : ""}
       </div>
       <div class="score" style="--p:${r.score}" title="Score ${fmt(r.score, 0)} von 100"><span>${fmt(r.score, 0)}</span></div>
@@ -469,6 +469,16 @@ function render() {
   const title = { cards: all, table: all, watch: "Deine Watchlist · nach Score" }[state.tab] || "Setups";
   const head = n => `<div class="section-title"><span>${title}</span><span>${n} ${n === 1 ? "Aktie" : "Aktien"}</span></div>`;
 
+  if (!rows.length && state.pick === "top" && state.tab !== "watch") {
+    // Keine Aktie erfüllt alles: ehrlich sagen und die Fast-Treffer (genau 1 Kriterium fehlt) zeigen
+    const saved = state.pick; state.pick = "";
+    const near = filtered().filter(r => (r.top_missing || []).length === 1).sort((a, b) => b.score - a.score).slice(0, 12);
+    state.pick = saved;
+    $("main").innerHTML = head(0) + `<div class="empty">Heute erfüllt keine Aktie wirklich alle Kriterien.<br>Lieber kein Trade als ein halbes Setup.</div>`
+      + (near.length ? `<div class="section-title"><span>Am nächsten dran · genau 1 Kriterium fehlt</span><span>${near.length}</span></div>
+         <div class="grid">${near.map(r => card(r)).join("")}</div>` : "");
+    return;
+  }
   if (!rows.length) {
     $("main").innerHTML = head(0) + `<div class="empty">${state.tab === "watch"
       ? "Keine Watchlist-Aktie gefunden."
