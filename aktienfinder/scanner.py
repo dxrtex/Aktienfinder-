@@ -19,7 +19,7 @@ from .config import DEFAULT, Config
 from .indicators import macd, rsi
 from .markets import region_of, usd_factor
 from .mbi import momentum_bias_index
-from .signals import evaluate, find_divergences, macd_condition
+from .signals import evaluate, fib_swing, find_divergences, macd_condition
 
 MIN_BARS = 120
 
@@ -58,6 +58,20 @@ def download(tickers: list[str], period: str, batch_size: int = 200, retries: in
         done = min(start + batch_size, total)
         if done % 1000 < batch_size or done == total:
             log(f"  {done}/{total} Ticker geladen")
+
+
+CHART_BARS = 120   # ca. 6 Monate für den Mini-Chart auf der Website
+
+
+def chart_data(df: pd.DataFrame, cfg: Config = DEFAULT) -> dict:
+    """Schlusskurse der letzten Monate und der Fibonacci-Schwung für den Mini-Chart."""
+    closes = df["Close"].dropna().iloc[-CHART_BARS:]
+    swing = fib_swing(df.dropna(subset=["Close", "Low", "High"]), cfg)
+    return {
+        "spark": [float(f"{v:.4g}") for v in closes],
+        "fib_high": round(swing[0], 4) if swing else None,
+        "fib_low": round(swing[1], 4) if swing else None,
+    }
 
 
 def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
@@ -158,7 +172,8 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             rows.append({"ticker": ticker, "name": info.get("name", ""),
                          "region": info.get("region") or region_of(ticker),
                          "market_cap_usd": info.get("market_cap_usd"),
-                         "date": str(df.index[-1].date()), **res.to_dict()})
+                         "date": str(df.index[-1].date()), **res.to_dict(),
+                         **chart_data(df, cfg)})
     passed = [r["ticker"] for r in rows if r["passed"]]
     if passed:
         log(f"  Analysten-Kursziele für {len(passed)} Treffer abfragen …")

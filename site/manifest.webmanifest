@@ -1,0 +1,16 @@
+{
+  "name": "Aktienfinder",
+  "short_name": "Aktienfinder",
+  "description": "Tägliche Setups: Rückgang, Fibonacci, RSI-Divergenz, MACD, Momentum Bias Index, Kursziel",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0d0f13",
+  "theme_color": "#0d0f13",
+  "lang": "de",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}
