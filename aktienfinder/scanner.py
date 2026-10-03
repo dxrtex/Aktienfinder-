@@ -251,7 +251,7 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         # Definition – Kurs ganz am Tief – lief schlechter als der Durchschnitt)
         if r.get("status") == "bereit" and not r["top"]:
             r["status"] = "abwarten"
-        elif r["top"]:
+        elif r["top"] and r.get("status") != "gelaufen":
             r["status"] = "bereit"
     stats["top"] = sum(r["top"] for r in rows)
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
@@ -278,13 +278,13 @@ def top_missing(r: dict, cfg: Config = DEFAULT) -> list[str]:
     if cfg.top_rel_strength and not (r.get("rel_strength") is not None and r["rel_strength"] > 0):
         miss.append("stärker als der Markt")
     rise = r.get("rise_from_low_pct", 0)
-    if rise < cfg.top_rise_min:
+    if cfg.top_rise_min > 0 and rise < cfg.top_rise_min:
         miss.append(f"Erholung ≥ {cfg.top_rise_min:.0f} % über dem Tief")
     elif rise > cfg.top_rise_max:
         miss.append(f"höchstens {cfg.top_rise_max:.0f} % über dem Tief")
     if r.get("green_x_count", 0) < cfg.top_min_green_x:
         miss.append(f"{cfg.top_min_green_x} grüne X")
-    if r.get("earnings_date"):
+    if cfg.top_no_earnings_days >= 0 and r.get("earnings_date"):
         days = (pd.Timestamp(r["earnings_date"]) - pd.Timestamp.now().normalize()).days
         if 0 <= days <= cfg.top_no_earnings_days:
             miss.append(f"keine Quartalszahlen in {cfg.top_no_earnings_days} T.")

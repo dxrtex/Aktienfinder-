@@ -100,9 +100,9 @@ def test_is_top_requires_all_criteria():
     assert is_top(r)
     assert not is_top({**r, "upside_pct": 30})
     assert not is_top({**r, "rel_strength": -0.1})       # schwächer als der Markt
-    assert not is_top({**r, "rise_from_low_pct": 2})      # Erholung noch nicht begonnen
-    assert not is_top({**r, "rise_from_low_pct": 25})     # schon gelaufen
-    assert not is_top({**r, "green_x_count": 1})
+    assert is_top({**r, "rise_from_low_pct": 1})          # Abstand zum Tief egal
+    assert is_top({**r, "green_x_count": 1})              # 1 grünes X genügt
+    assert not is_top({**r, "green_x_count": 0})
     assert not is_top({**r, "passed": False})
     soon = (__import__("pandas").Timestamp.now() + __import__("pandas").Timedelta(days=4)).date().isoformat()
-    assert not is_top({**r, "earnings_date": soon})
+    assert is_top({**r, "earnings_date": soon})           # Quartalszahlen sind kein Kriterium

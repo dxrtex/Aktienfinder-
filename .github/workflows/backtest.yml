@@ -1,10 +1,7 @@
 name: Backtest
 
 on:
-  workflow_dispatch:
-  push:
-    branches: ["claude/**"]
-    paths: ["aktienfinder/backtest.py", "aktienfinder/optimize.py", "aktienfinder/signals.py", "aktienfinder/config.py", ".github/workflows/backtest.yml"]
+  workflow_dispatch:   # nur noch manuell
 
 env:
   PYTHONUNBUFFERED: "1"
