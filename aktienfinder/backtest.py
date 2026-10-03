@@ -120,6 +120,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
             "span": res.cluster.span, "macd_red_now": res.macd_status.startswith("rot"),
             "fib_zone": res.fib_zone, "fib": res.fib_retracement, "ema_breakout_age": res.ema_breakout_age,
             "volume_spike": res.volume_spike, "volume_breakout": res.volume_breakout,
+            "reversal": res.reversal_candle_age is not None, "green_x_count": res.green_x_count,
+            "rsi_signal_gap": res.rsi_signal_gap,
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
         # Variante: Einstieg erst beim Schlusskurs über der EMA 20 (innerhalb von 30 Tagen)
@@ -205,6 +207,14 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     variant("Fib: in der Golden Zone (0,618–0,79)", events["fib_zone"])
     variant("Fib: darunter gefallen (0,79–1,0)", ~events["fib_zone"] & (events["fib"] > 0.79))
     variant("Volumen-Spike am Tief", events["volume_spike"])
+    variant("Umkehrkerze mit Volumen an Fib-Linie", events["reversal"])
+    variant("zwei oder mehr grüne MBI-X", events["green_x_count"] >= 2)
+    variant("RSI an der Signallinie (−2 … +5)", events["rsi_signal_gap"].between(-2, 5))
+    variant("Uber-Muster: MACD rot + 2× X + RSI an Signallinie",
+            events["macd_red_now"] & (events["green_x_count"] >= 2) & events["rsi_signal_gap"].between(-2, 5))
+    variant("Uber-Muster + Umkehrkerze",
+            events["macd_red_now"] & (events["green_x_count"] >= 2) & events["rsi_signal_gap"].between(-2, 5)
+            & events["reversal"])
     variant("RSI ≤ 35 und Abstand ≥ 20 %", (events["div_rsi_min"] <= 35) & (events["drawdown_pct"] >= 20))
 
     # Robustheit: gleiche Auswertung für erste und zweite Hälfte des Zeitraums

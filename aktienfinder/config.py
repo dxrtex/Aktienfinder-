@@ -19,7 +19,8 @@ class Config:
     # Pflicht-Filter aus dem eigenen Analyse-Ablauf (zusätzlich zu den drei Signalen)
     require_fib_zone: bool = True     # Rücksetzer hat mind. die Golden Zone erreicht (s. fib_required)
     min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem 52-Wochen-Hoch
-    macd_line_rising: bool = True     # MACD-Linie steigt bereits (nicht nur das Histogramm)
+    macd_line_rising: bool = True     # MACD-Linie fällt nicht mehr (seitwärts oder steigend)
+    macd_line_lookback: int = 3       # … verglichen mit dem Wert vor so vielen Tagen
     min_analyst_upside: float = 0.40  # Analysten-Kursziel mind. 40 % über Kurs (Website-Filter)
 
     # RSI und Divergenz
@@ -57,6 +58,11 @@ class Config:
     # Pflicht: Rücksetzer mind. bis 0,618; tiefer ist erlaubt (Rocket Lab: unter die Zone
     # gefallen, gleichzeitig Divergenzen), nur unter das Schwungtief (> 1,0) nicht
     fib_required: tuple = (0.618, 1.0)
+    fib_levels: tuple = (0.618, 0.706, 0.79, 0.886, 1.0)   # Linien für die Umkehrkerze
+    fib_level_tolerance: float = 0.02   # Kerzentief höchstens 2 % (der Schwunghöhe) neben einer Linie
+    reversal_lookback: int = 3          # Umkehrkerze in den letzten N Tagen
+    rsi_signal_length: int = 14         # gelbe Signallinie des RSI (TradingView: SMA 14)
+    rsi_signal_gap: float = 2.0         # RSI höchstens so viele Punkte unter der Signallinie
     ema_trigger_length: int = 20   # Ausbruch über die EMA 20 als Einstiegs-Trigger
     trigger_max_age: int = 5
 

@@ -97,3 +97,29 @@ def test_fib_retracement():
     idx = pd.bdate_range("2026-01-01", periods=len(closes))
     df = pd.DataFrame({"High": closes, "Low": closes, "Close": closes}, index=idx)
     assert fib_retracement(df) == pytest.approx(0.7)
+
+
+def test_reversal_candle_at_fib_level():
+    from aktienfinder.signals import reversal_candle
+    # Schwung 50 → 100, Rücksetzer bis 61,8 (= 0,764 Retracement ≈ 0,79-Linie bei 60,5)
+    up = np.linspace(50, 100, 40)
+    down = np.linspace(99, 62, 20)
+    closes = np.concatenate([up, down])
+    idx = pd.bdate_range("2026-01-01", periods=len(closes) + 1)
+    df = pd.DataFrame({"Open": np.append(closes, 61.0), "High": np.append(closes + 0.5, 66.0),
+                       "Low": np.append(closes - 0.5, 60.6), "Close": np.append(closes, 65.5),
+                       "Volume": 1e6}, index=idx)
+    vol_ratio = pd.Series(1.0, index=idx)
+    vol_ratio.iloc[-1] = 2.5
+    assert reversal_candle(df, vol_ratio) == 0
+    vol_ratio.iloc[-1] = 1.0                       # ohne Volumen keine Umkehrkerze
+    assert reversal_candle(df, vol_ratio) is None
+
+
+def test_macd_line_sideways_is_enough():
+    hist = pd.Series([-1, -4, -8, -6, -4, -3, -2])
+    falling = pd.Series([0, -1, -2, -3, -4, -5, -6.0])
+    flat = pd.Series([0, -1, -2, -3, -3.1, -3.0, -3.0])
+    cfg = Config(macd_rising_bars=3, macd_near_zero=0.5, macd_line_lookback=3)
+    assert not macd_condition(hist, cfg, falling).iloc[-1]
+    assert macd_condition(hist, cfg, flat).iloc[-1]

@@ -70,7 +70,9 @@ def report(universe: pd.DataFrame, data: dict, refs: list[str]) -> str:
             out.append(f"{t}: im Universum (Börsenwert {cap}), aber kein Treffer")
         else:
             out.append(f"{t}: Score {r['score']}, Bündel {r['cluster']}, RSI-Tief {_min_rsi(r)}, "
-                       f"Abstand {r['drawdown_pct']} %")
+                       f"Abstand {r['drawdown_pct']} %, Fib {r['fib_retracement']}, "
+                       f"Umkehrkerze {r.get('reversal_candle_age')}, grüne X {r.get('green_x_count')}, "
+                       f"RSI−Signal {r.get('rsi_signal_gap')}, Kursziel {r.get('upside_pct')} %")
     return "\n".join(out)
 
 

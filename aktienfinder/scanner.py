@@ -67,19 +67,37 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
     """
     import yfinance as yf
 
-    out = {}
+    def fetch(t: str) -> tuple[float | None, float | None, int | None]:
+        tk = yf.Ticker(t)
+        for attempt in range(3):
+            try:
+                info = tk.info
+                target = info.get("targetMeanPrice")
+                price = info.get("currentPrice") or info.get("regularMarketPrice")
+                if target and price:
+                    return target, price, info.get("numberOfAnalystOpinions")
+            except Exception:  # Yahoo blockt gelegentlich (401/429): kurz warten, erneut versuchen
+                pass
+            try:
+                apt = tk.analyst_price_targets or {}
+                if apt.get("mean") and apt.get("current"):
+                    return apt["mean"], apt["current"], None
+            except Exception:
+                pass
+            time.sleep(2 * (attempt + 1))
+        return None, None, None
+
+    out, missing = {}, 0
     for t in tickers:
-        try:
-            info = yf.Ticker(t).info
-        except Exception as exc:  # fehlende Daten sind kein Abbruchgrund
-            log(f"  Kursziel {t}: {exc!r}")
+        target, price, analysts = fetch(t)
+        if not (target and price):
+            missing += 1
             continue
-        target = info.get("targetMeanPrice")
-        price = info.get("currentPrice") or info.get("regularMarketPrice")
-        if target and price:
-            out[t] = {"target_price": round(float(target), 2),
-                      "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
-                      "analysts": info.get("numberOfAnalystOpinions")}
+        out[t] = {"target_price": round(float(target), 2),
+                  "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
+                  "analysts": analysts}
+    if missing:
+        log(f"  Kursziel nicht verfügbar für {missing} von {len(tickers)} Aktien")
     return out
 
 

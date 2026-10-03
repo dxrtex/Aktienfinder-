@@ -51,6 +51,9 @@ class Result:
     ema_breakout_age: int | None = None    # Tage seit Ausbruch über die EMA 20
     volume_spike: bool = False
     volume_breakout: bool = False
+    reversal_candle_age: int | None = None # bullische Umkehrkerze mit Volumen an Fib-Linie
+    green_x_count: int = 0                 # grüne MBI-X in den letzten 30 Tagen
+    rsi_signal_gap: float = 0.0            # RSI minus gelbe Signallinie (≥ −2: „fast darauf“)
     dollar_volume: float = 0.0
 
     def to_dict(self) -> dict:
@@ -114,7 +117,8 @@ def find_divergences(df: pd.DataFrame, osc: pd.Series, cfg: Config = DEFAULT) ->
 def macd_condition(hist: pd.Series, cfg: Config = DEFAULT, line: pd.Series | None = None) -> pd.Series:
     """Rote Balken, die seit `macd_rising_bars` Tagen kleiner werden und nahe null sind.
 
-    Mit `line` (MACD-Linie) und `cfg.macd_line_rising` muss zusätzlich die Linie steigen.
+    Mit `line` (MACD-Linie) und `cfg.macd_line_rising` darf die Linie zusätzlich nicht mehr
+    fallen (seitwärts oder steigend, wie bei Uber am 2.10.2026).
     """
     rising = pd.Series(True, index=hist.index)
     for k in range(cfg.macd_rising_bars):
@@ -123,7 +127,8 @@ def macd_condition(hist: pd.Series, cfg: Config = DEFAULT, line: pd.Series | Non
     near_zero = hist >= trough * cfg.macd_near_zero
     cond = (hist < 0) & rising & near_zero & (trough < 0)
     if line is not None and cfg.macd_line_rising:
-        cond &= line > line.shift(1)
+        # Linie fällt nicht mehr: heute mind. so hoch wie vor `macd_line_lookback` Tagen
+        cond &= line >= line.shift(cfg.macd_line_lookback)
     return cond
 
 
@@ -157,11 +162,10 @@ def _ages(mask: pd.Series) -> list[int]:
     return [int(len(arr) - 1 - i) for i in np.flatnonzero(arr)]
 
 
-def fib_retracement(df: pd.DataFrame, cfg: Config = DEFAULT) -> float | None:
-    """Wie tief ist der Kurs seit dem letzten Hoch in den vorherigen Aufwärtsschwung zurückgelaufen?
+def fib_swing(df: pd.DataFrame, cfg: Config = DEFAULT) -> tuple[float, float, float] | None:
+    """Letzter Aufwärtsschwung: (Schwunghoch, Schwungtief, tiefster Kurs seit dem Hoch).
 
-    0 = am Hoch, 0.618/0.786 = klassische Fibonacci-Zone, 1 = zurück am Schwungtief.
-    Grundlage ist das höchste Hoch der letzten `fib_lookback` Tage und das tiefste Tief davor.
+    Schwunghoch = höchstes Hoch der letzten `fib_lookback` Tage, Schwungtief = tiefstes Tief davor.
     """
     window = df.iloc[-cfg.fib_lookback :]
     highs = window["High"].to_numpy(dtype=float)
@@ -169,12 +173,51 @@ def fib_retracement(df: pd.DataFrame, cfg: Config = DEFAULT) -> float | None:
     hi_pos = int(np.argmax(highs))
     if hi_pos < 5 or hi_pos >= len(window) - 3:
         return None
-    swing_low = lows[:hi_pos].min()
-    swing_high = highs[hi_pos]
+    swing_low = float(lows[:hi_pos].min())
+    swing_high = float(highs[hi_pos])
     if swing_high <= swing_low:
         return None
-    pullback_low = lows[hi_pos + 1 :].min()
-    return float((swing_high - pullback_low) / (swing_high - swing_low))
+    return swing_high, swing_low, float(lows[hi_pos + 1 :].min())
+
+
+def fib_retracement(df: pd.DataFrame, cfg: Config = DEFAULT) -> float | None:
+    """Wie tief ist der Kurs seit dem letzten Hoch in den vorherigen Aufwärtsschwung zurückgelaufen?
+
+    0 = am Hoch, 0.618/0.786 = klassische Fibonacci-Zone, 1 = zurück am Schwungtief.
+    """
+    swing = fib_swing(df, cfg)
+    if swing is None:
+        return None
+    high, low, pullback_low = swing
+    return (high - pullback_low) / (high - low)
+
+
+def reversal_candle(df: pd.DataFrame, vol_ratio: pd.Series, cfg: Config = DEFAULT) -> int | None:
+    """Alter (Tage) der jüngsten bullischen Umkehrkerze an einer Fibonacci-Linie, sonst None.
+
+    Bedingungen: grüne Kerze, Schluss im oberen Drittel der Spanne, Volumen ≥ `volume_spike` ×
+    Durchschnitt und Kerzentief höchstens `fib_level_tolerance` (Anteil der Schwunghöhe) neben
+    einer Fibonacci-Linie des letzten Aufwärtsschwungs.
+    """
+    swing = fib_swing(df, cfg)
+    if swing is None:
+        return None
+    high, low, _ = swing
+    levels = [high - lvl * (high - low) for lvl in cfg.fib_levels]
+    tol = cfg.fib_level_tolerance * (high - low)
+    n = len(df)
+    for age in range(min(cfg.reversal_lookback, n)):
+        row = df.iloc[n - 1 - age]
+        rng = row["High"] - row["Low"]
+        if not (rng > 0 and row["Close"] > row["Open"]):
+            continue
+        if (row["Close"] - row["Low"]) / rng < 2 / 3:
+            continue
+        if not vol_ratio.iloc[n - 1 - age] >= cfg.volume_spike:
+            continue
+        if any(abs(row["Low"] - lvl) <= tol for lvl in levels):
+            return age
+    return None
 
 
 def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
@@ -185,6 +228,8 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     # Pflicht 1: RSI-Divergenz
     r = rsi(close, cfg.rsi_length)
     divs = [d for d in find_divergences(df, r, cfg) if d.age <= cfg.max_signal_age]
+    rsi_ma = r.rolling(cfg.rsi_signal_length).mean()
+    rsi_gap = float(r.iloc[-1] - rsi_ma.iloc[-1])   # > 0: RSI über seiner Signallinie
 
     # Pflicht 2: MACD-Histogramm rot, aber kleiner werdend
     m = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)
@@ -257,31 +302,37 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         near = vol_ratio.iloc[max(0, pivot_pos - 2) : pivot_pos + 3]
         volume_spike = bool(near.max() >= cfg.volume_spike)
     volume_breakout = bool(vol_ratio.iloc[-cfg.trigger_max_age :].max() >= cfg.volume_spike)
+    reversal_age = reversal_candle(df, vol_ratio, cfg) if "Open" in df else None
 
     dollar_volume = float((close * vol).iloc[-cfg.volume_avg_length :].mean())
 
+    # Score (0–100), ausgerichtet am Musterbeispiel Uber vom 2.10.2026
+    green_x_count = int(mbi["green_x"].iloc[-cfg.max_signal_age :].sum())
+    sellers_fading = bool(mbi["lower_bias"].iloc[-1] < mbi["lower_bias"].iloc[-2])
     score = 0.0
     if passed:
         kinds = {d.kind for d in divs}
-        score += 15 if "klassisch" in kinds else 12
+        score += 10 if "klassisch" in kinds else 8
         newest = min(cluster.divergence_age, cluster.macd_age, cluster.mbi_age)
-        score += 7.5 * (1 - cluster.span / cfg.cluster_span)
-        score += 7.5 * (1 - newest / cfg.max_signal_age)
+        score += 10 * (1 - newest / cfg.max_signal_age)
         if last_hist < 0 and hist.iloc[-1] > hist.iloc[-2]:
-            score += 10          # Lieblings-Einstieg: rot, kurz vor Grün
+            score += 15          # rote Balken schrumpfen, kurz vor Grün
         elif 0 < macd_green_days <= 10:
-            score += 8
+            score += 10
         else:
-            score += 4
-        score += 5 * buyers_lead
-        span = cfg.drawdown_full - cfg.drawdown_min
-        score += 15 * float(np.clip((drawdown - cfg.drawdown_min) / span, 0, 1))
-        score += 15 * fib_zone
+            score += 5
+        score += 10 if green_x_count >= 2 else 5     # zwei grüne X hintereinander
+        score += 5 * sellers_fading                  # rote MBI-Balken rückläufig
+        if -cfg.rsi_signal_gap <= rsi_gap <= 5:
+            score += 10          # RSI liegt (fast) auf der Signallinie
+        elif rsi_gap > 5:
+            score += 5
+        score += 15 * (reversal_age is not None)     # Umkehrkerze mit Volumen an Fib-Linie
+        score += 5 * fib_zone                        # genau in der Golden Zone
+        score += 5 * (pullback_drawdown >= 0.30)
         if breakout_age is not None and breakout_age < cfg.trigger_max_age:
-            score += 15
-        elif breakout_age is not None:
-            score += 7
-        score += 5 * volume_spike + 5 * volume_breakout
+            score += 10
+        score += 5 * volume_spike
 
     return Result(
         passed=passed,
@@ -300,5 +351,8 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         ema_breakout_age=breakout_age,
         volume_spike=volume_spike,
         volume_breakout=volume_breakout,
+        reversal_candle_age=reversal_age,
+        green_x_count=green_x_count,
+        rsi_signal_gap=round(rsi_gap, 2),
         dollar_volume=round(dollar_volume, 0),
     )
