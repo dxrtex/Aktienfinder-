@@ -82,17 +82,24 @@ def momentum_bias_index(
     smooth_length: int = 10,
     impulse_length: int = 30,
     std_mult: float = 3.0,
+    boundary_std: float = 1.0,
+    boundary_tolerance: float = 0.95,
 ) -> pd.DataFrame:
     """Momentum Bias Index nach AlgoAlpha – VORLÄUFIGE Rekonstruktion.
 
-    Das Original-Pine-Skript war aus dieser Umgebung nicht abrufbar. Nachgebaut
-    ist das dokumentierte Prinzip: das normierte Momentum wird in einen positiven
-    und einen negativen Anteil zerlegt, beide werden über `bias_length`
-    aufsummiert und geglättet. Das grüne X (Take-Profit für Shorts bzw. "der
-    Verkaufsdruck lässt nach") erscheint, wenn der negative Bias dominiert und
-    von seinem Hochpunkt abdreht.
+    Das Original-Pine-Skript war aus dieser Umgebung nicht abrufbar. Nachgebaut ist
+    das dokumentierte Prinzip: Das normierte Momentum wird in einen positiven
+    (grüne Balken) und einen negativen Anteil (rote Balken) zerlegt, beide werden
+    über `bias_length` aufsummiert und geglättet.
 
-    Sobald der Original-Code vorliegt, wird diese Funktion 1:1 ersetzt.
+    Aus den TradingView-Charts abgeleitet:
+    - grünes X = Spitze eines roten Bergs (Verkaufsdruck dreht ab), aber nur wenn
+      die Spitze die gepunktete Linie (Impulse Boundary) erreicht
+    - rotes X = dasselbe für grüne Berge
+    - mehrere Spitzen in einem Berg können je ein X bekommen
+
+    `std_mult` ist der Parameter des Originals; die Linie selbst wird hier mit
+    `boundary_std` rekonstruiert, bis der Original-Code vorliegt.
     """
     momentum = close.diff(momentum_length)
     std = momentum.rolling(momentum_length).std(ddof=0)
@@ -104,19 +111,20 @@ def momentum_bias_index(
     lower = ema(negative, smooth_length)
 
     dominant = pd.concat([upper, lower], axis=1).max(axis=1)
-    boundary = ema(dominant, impulse_length) + dominant.rolling(impulse_length).std(ddof=0) * std_mult
+    boundary = ema(dominant, impulse_length) + dominant.rolling(impulse_length).std(ddof=0) * boundary_std
 
-    lower_turns_down = (lower < lower.shift(1)) & (lower.shift(1) >= lower.shift(2))
-    upper_turns_down = (upper < upper.shift(1)) & (upper.shift(1) >= upper.shift(2))
-    green_x = lower_turns_down & (lower > upper)
-    red_x = upper_turns_down & (upper > lower)
+    def _peak_signal(series: pd.Series, other: pd.Series) -> pd.Series:
+        prev = series.shift(1)
+        is_peak = (series < prev) & (prev >= series.shift(2))
+        strong = prev >= boundary.shift(1) * boundary_tolerance
+        return (is_peak & strong & (prev > other.shift(1))).fillna(False)
 
     return pd.DataFrame(
         {
             "upper_bias": upper,
             "lower_bias": lower,
             "impulse_boundary": boundary,
-            "green_x": green_x.fillna(False),
-            "red_x": red_x.fillna(False),
+            "green_x": _peak_signal(lower, upper),
+            "red_x": _peak_signal(upper, lower),
         }
     )

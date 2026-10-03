@@ -64,14 +64,21 @@ def _print_table(rows: list[dict]) -> None:
     if not rows:
         print("Keine Treffer.")
         return
-    print(f"{'Ticker':<10}{'Score':>6}{'Kurs':>10}{'vom Hoch':>10}{'RSI':>7}  "
-          f"{'Divergenz':<20}{'MACD':<16}{'MBI-X':<8}{'Vol':<5}")
+    print(f"{'Ticker':<10}{'Score':>6}{'Kurs':>10}{'vom Hoch':>10}{'RSI':>6}  "
+          f"{'Divergenz':<22}{'MACD':<18}{'MBI':<22}{'Fib':>6} {'EMA20':<7}{'Vol':<4}")
     for r in rows:
-        div = ", ".join(f"{d['kind']} ({d['age']} T.)" for d in r["divergences"]) or "-"
-        mbi = f"vor {r['mbi_age']} T." if r["mbi_age"] is not None else "-"
-        vol = ("S" if r["volume_spike"] else "") + ("E" if r["volume_recovery"] else "")
+        div = ", ".join(sorted({d["kind"] for d in r["divergences"]})) or "-"
+        c = r["cluster"]
+        if c:
+            div += f" ({c['divergence_age']} T.)"
+        fib = f"{r['fib_retracement']:.2f}" if r["fib_retracement"] is not None else "-"
+        fib += "*" if r["fib_zone"] else " "
+        ema = f"↑{r['ema_breakout_age']} T." if r["ema_breakout_age"] is not None else "darunter"
+        vol = ("S" if r["volume_spike"] else "") + ("A" if r["volume_breakout"] else "")
         print(f"{r['ticker']:<10}{r['score']:>6}{r['close']:>10.2f}{-r['drawdown_pct']:>9.1f}%"
-              f"{r['rsi']:>7.1f}  {div:<20}{r['macd_status']:<16}{mbi:<8}{vol or '-':<5}")
+              f"{r['rsi']:>6.1f}  {div:<22}{r['macd_status']:<18}{r['mbi_status']:<22}"
+              f"{fib:>6} {ema:<7}{vol or '-':<4}")
+    print("Fib* = Rücksetzer in der Fibonacci-Zone; Vol: S = Spike am Tief, A = Ausbruchsvolumen")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -85,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     tickers = list(args.tickers)
     if args.file:
         with open(args.file, encoding="utf-8") as f:
-            tickers += [line.strip() for line in f if line.strip() and not line.startswith("#")]
+            tickers += [line.split("#")[0].strip() for line in f if line.split("#")[0].strip()]
     if not tickers:
         p.error("keine Ticker angegeben")
 
