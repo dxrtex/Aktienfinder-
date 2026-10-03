@@ -239,6 +239,9 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, 0) + " Mrd. $";
 const fmtUp = v => v == null ? "–" : (v > 0 ? "+" : "") + fmt(v, 0) + " %";
 
+function macdNear(r) {
+  return r.macd_status.startsWith("rot") && r.macd_closeness ? ` · ${Math.round(r.macd_closeness * 100)} % an 0` : "";
+}
 function tvUrl(ticker) {
   let sym = ticker, ex = "";
   const m = ticker.match(/^(.+)\.([A-Z]{1,3})$/);
@@ -268,7 +271,7 @@ function watchTraits(r) {
     { ok: c.rueckgang, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
     { ok: c.fibonacci, star: c.fibonacci && r.fib_zone, text: fib },
     { ok: c.divergenz, text: c.divergenz ? "RSI-Divergenz" : "keine RSI-Divergenz" },
-    { ok: c.macd, text: `MACD ${r.macd_status}` },
+    { ok: c.macd, text: `MACD ${r.macd_status}${macdNear(r)}` },
     { ok: c.mbi, text: c.mbi ? `MBI ${r.green_x_count}× grünes X` : "kein grünes X" },
     { ok: c.buendel, text: c.buendel ? "Signale zeitlich zusammen" : "Signale nicht zusammen" },
     { ok: r.rise_from_low_pct <= 8, text: `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
@@ -287,7 +290,7 @@ function traits(r) {
     { ok: true, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
     { ok: true, star: r.fib_zone, text: fib },
     { ok: true, text: `Divergenz ${kinds.join(" + ")} · vor ${c.divergence_age} T.` },
-    { ok: true, star: r.macd_status.startsWith("rot"), text: `MACD ${r.macd_status}` },
+    { ok: true, star: r.macd_status.startsWith("rot"), text: `MACD ${r.macd_status}${macdNear(r)}` },
     { ok: true, star: r.green_x_count >= 2, text: `MBI ${r.green_x_count}× grünes X` },
     { ok: rsiNear, text: rsiNear ? "RSI an Signallinie" : `RSI ${fmt(r.rsi, 0)}` },
     { ok: r.reversal_candle_age != null, star: r.reversal_candle_age != null,

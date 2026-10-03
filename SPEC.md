@@ -43,14 +43,15 @@ Wird für jede Aktie berechnet (auch Watchlist-Aktien ohne vollständiges Setup)
 
 | Merkmal | Punkte |
 |---|---|
-| **Einstiegsnähe:** Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 20 |
-| MACD jetzt: rot und schrumpfend / seit ≤ 3 T. grün / Signal im Fenster | 15 / 10 / 3 |
+| **MACD-Histogramm noch rot und schrumpfend:** 9 + bis 10 je nach Nähe zur 0-Linie (Anteil des tiefsten roten Balkens der letzten 20 T., der schon aufgeholt ist) + 3, wenn die MACD-Linien nicht mehr fallen | bis 22 |
+| MACD schon grün (seit ≤ 3 T.) / nur Signal im Fenster | 6 / 2 |
+| **Einstiegsnähe:** Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 16 |
 | Divergenz klassisch / versteckt | 12 / 9 |
 | Grüne MBI-X im Fenster: ≥ 2 / 1 | 12 / 8 |
-| Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 10 |
+| Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 8 |
 | RSI an der gelben Signallinie (−2 … +5 Punkte) | 8 |
 | Fibonacci: in der Golden Zone / darunter (bis Schwungtief) | 8 / 6 |
-| Frische des jüngsten Signals | bis 6 |
+| Frische des jüngsten Signals | bis 5 |
 | Rücksetzer ≥ 30 % / ≥ 20 % | 5 / 3 |
 | Rote MBI-Balken rückläufig | 4 |
 
@@ -59,7 +60,7 @@ Der Ausbruch über die EMA 20 zählt nicht mehr (er belohnte bereits gestiegene 
 ### Setup-Status (regelbasiert, keine Kursprognose)
 | Status | Regel |
 |---|---|
-| 🟢 Einstiegsbereit | vollständiges Setup, Kurs ≤ +8 % über dem Tief, kein neues Tief in den letzten 2 Tagen, MACD rot und schrumpfend oder seit ≤ 3 Tagen grün, Verkaufsdruck im MBI rückläufig (oder Käufer vorne) |
+| 🟢 Einstiegsbereit | vollständiges Setup, Kurs ≤ +8 % über dem Tief, kein neues Tief in den letzten 2 Tagen, MACD-Histogramm **noch rot** und schrumpfend, MACD-Linien fallen nicht mehr, Verkaufsdruck im MBI rückläufig (oder Käufer vorne) |
 | 🟡 Abwarten | vollständiges Setup, aber noch nicht alle Einstiegsbedingungen – oder (Watchlist) mind. 3 von 6 Kriterien erfüllt |
 | 🔴 Schon gelaufen | Kurs ≥ +15 % über dem Tief oder MACD seit > 10 Tagen grün |
 | ⚪ Kein Setup | (nur Watchlist) weniger als 3 Kriterien erfüllt |

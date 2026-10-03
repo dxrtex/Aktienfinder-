@@ -57,6 +57,7 @@ class Result:
     still_falling: bool = False            # neues Tief in den letzten 2 Tagen
     criteria: dict = field(default_factory=dict)   # Einzelkriterien erfüllt ja/nein
     status: str = "kein_setup"             # bereit | abwarten | gelaufen | kein_setup
+    macd_closeness: float = 0.0            # rotes Histogramm: Anteil des tiefsten Balkens aufgeholt (1 = an 0)
     rsi_signal_gap: float = 0.0            # RSI minus gelbe Signallinie (≥ −2: „fast darauf“)
     dollar_volume: float = 0.0
 
@@ -329,27 +330,36 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         "buendel": signals_ok,
     }
 
-    # Score (0–100): bevorzugt vollständige Setups, die noch NICHT gestiegen sind
+    # MACD-Nähe zur Nulllinie: wie viel des tiefsten roten Balkens (20 T.) ist schon aufgeholt?
+    trough = float(hist.iloc[-cfg.macd_trough_lookback :].min())
+    macd_closeness = float(np.clip(1 - last_hist / trough, 0, 1)) if trough < 0 and last_hist < 0 else 0.0
+    line = m["macd"]
+    scale = float(line.abs().iloc[-60:].max() or 1)
+    macd_lines_ok = bool(line.iloc[-1] >= line.iloc[-1 - cfg.macd_line_lookback] - cfg.macd_line_tolerance * scale)
+
+    # Score (0–100): am höchsten, wenn das MACD-Histogramm noch rot, aber fast bei 0 ist und
+    # alle anderen Kriterien erfüllt sind – und der Kurs noch nicht gestiegen ist
     kinds = {d.kind for d in divs}
     score = 0.0
-    score += 12 if "klassisch" in kinds else 9 if kinds else 0
     if macd_red_shrinking:
-        score += 15                                  # rote Balken schrumpfen, kurz vor Grün
+        score += 9 + 10 * macd_closeness             # rot, schrumpfend – je näher an 0, desto besser
+        score += 3 * macd_lines_ok                   # MACD-Linien fallen nicht mehr
     elif 0 < macd_green_days <= 3:
-        score += 10                                  # gerade erst grün geworden
+        score += 6                                   # schon grün – Einstieg eigentlich etwas spät
     elif criteria["macd"]:
-        score += 3
+        score += 2
+    span = cfg.entry_zero - cfg.entry_full
+    score += 16 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    score += 12 if "klassisch" in kinds else 9 if kinds else 0
     score += 12 if green_x_count >= 2 else 8 if green_x_count == 1 else 0
     score += 4 * sellers_fading                      # rote MBI-Balken rückläufig
+    score += 8 * (reversal_age is not None)          # Umkehrkerze mit Volumen an Fib-Linie
     score += 8 * (-cfg.rsi_signal_gap <= rsi_gap <= 5)   # RSI (fast) auf der Signallinie
-    score += 10 * (reversal_age is not None)         # Umkehrkerze mit Volumen an Fib-Linie
     score += 8 if fib_zone else 6 if fib_ok else 0
     score += 5 if pullback_drawdown >= 0.30 else 3 if pullback_drawdown >= cfg.min_drawdown else 0
-    span = cfg.entry_zero - cfg.entry_full
-    score += 20 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
     if cluster:
         newest = min(cluster.divergence_age, cluster.macd_age, cluster.mbi_age)
-        score += 6 * (1 - newest / cfg.max_signal_age)
+        score += 5 * (1 - newest / cfg.max_signal_age)
 
     # Setup-Status (regelbasiert, keine Kursprognose)
     if not passed:
@@ -357,7 +367,7 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     elif rise_from_low >= cfg.status_ran_rise or macd_green_days > cfg.status_ran_green_days:
         status = "gelaufen"
     elif (rise_from_low <= cfg.status_ready_max_rise and not still_falling
-          and (macd_red_shrinking or 0 < macd_green_days <= 3)
+          and macd_red_shrinking and macd_lines_ok          # Histogramm noch rot, Linien fallen nicht mehr
           and (sellers_fading or buyers_lead)):
         status = "bereit"
     else:
@@ -388,4 +398,5 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         still_falling=still_falling,
         criteria=criteria,
         status=status,
+        macd_closeness=round(macd_closeness, 2),
     )

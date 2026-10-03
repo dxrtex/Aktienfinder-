@@ -150,3 +150,17 @@ def test_entry_proximity_prefers_not_yet_risen():
     assert far.rise_from_low_pct > 20
     if far.passed:
         assert far.status == "gelaufen"
+
+
+def test_score_prefers_red_macd_close_to_zero():
+    import numpy as np
+    import pandas as pd
+    from aktienfinder.signals import evaluate
+    rng = np.random.default_rng(0)
+    idx = pd.bdate_range("2024-10-01", periods=500)
+    for _ in range(300):
+        c = 100 * np.exp(np.cumsum(rng.normal(0, 0.02, 500)))
+        r = evaluate(pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": 1e6}, index=idx))
+        assert 0 <= r.macd_closeness <= 1
+        if r.status == "bereit":
+            assert r.macd_status.startswith("rot")
