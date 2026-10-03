@@ -93,18 +93,35 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
         except Exception:
             return None
 
+    def next_earnings(tk, info: dict) -> str | None:
+        """Nächster Termin für Quartalszahlen (ISO-Datum) oder None."""
+        today = pd.Timestamp.now(tz="UTC").normalize()
+        stamps = [info.get(k) for k in ("earningsTimestampStart", "earningsTimestamp")]
+        dates = [pd.Timestamp(v, unit="s", tz="UTC") for v in stamps if isinstance(v, (int, float))]
+        if not dates:
+            try:
+                cal = tk.calendar or {}
+                dates = [pd.Timestamp(d).tz_localize("UTC") for d in cal.get("Earnings Date", [])]
+            except Exception:
+                dates = []
+        future = sorted(d for d in dates if d >= today)
+        return str(future[0].date()) if future else None
+
     def fetch(t: str) -> tuple[float | None, float | None, int | None]:
         tk = yf.Ticker(t)
         isins[t] = isin_of(tk)
         for attempt in range(3):
             try:
                 info = tk.info
+                earnings[t] = next_earnings(tk, info)
                 target = info.get("targetMeanPrice")
                 price = info.get("currentPrice") or info.get("regularMarketPrice")
                 if target and price:
                     return target, price, info.get("numberOfAnalystOpinions")
             except Exception:  # Yahoo blockt gelegentlich (401/429): kurz warten, erneut versuchen
                 pass
+            if t not in earnings:
+                earnings[t] = next_earnings(tk, {})
             try:
                 apt = tk.analyst_price_targets or {}
                 if apt.get("mean") and apt.get("current"):
@@ -114,16 +131,17 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
             time.sleep(2 * (attempt + 1))
         return None, None, None
 
-    out, missing, isins = {}, 0, {}
+    out, missing, isins, earnings = {}, 0, {}, {}
     for t in tickers:
         target, price, analysts = fetch(t)
+        extra = {"isin": isins.get(t), "earnings_date": earnings.get(t)}
         if not (target and price):
             missing += 1
-            out[t] = {"target_price": None, "upside_pct": None, "analysts": None, "isin": isins.get(t)}
+            out[t] = {"target_price": None, "upside_pct": None, "analysts": None, **extra}
             continue
         out[t] = {"target_price": round(float(target), 2),
                   "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
-                  "analysts": analysts, "isin": isins.get(t)}
+                  "analysts": analysts, **extra}
     if missing:
         log(f"  Kursziel nicht verfügbar für {missing} von {len(tickers)} Aktien")
     return out
@@ -180,6 +198,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
     tickers = list(dict.fromkeys(list(tickers) + list(watchlist)))
     stats = stats if stats is not None else Counter()
     stats["universe"] += len(tickers)
+    from .backtest import INDEX_OF_REGION, _context, _ctx_fields
+    try:   # Leitindizes für Marktumfeld und relative Stärke
+        indices = {t: d["Close"] for t, d in download(sorted(set(INDEX_OF_REGION.values())),
+                                                         cfg.history_period, log=lambda *a: None)}
+    except Exception:
+        indices = {}
     rows = []
     for ticker, df in download(tickers, cfg.history_period, log=log):
         stats["loaded"] += 1
@@ -202,7 +226,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             stats["passed"] += res.passed
         if res.passed or include_all or in_watch:
             info = meta.get(ticker, {})
-            rows.append({"ticker": ticker, "name": info.get("name") or watchlist.get(ticker, ""),
+            region = info.get("region") or region_of(ticker)
+            try:
+                ctx = _ctx_fields(_context(df.dropna(subset=["Close"]), indices.get(INDEX_OF_REGION.get(region, "^GSPC"))), -1)
+            except Exception:
+                ctx = {}
+            rows.append({**ctx,"ticker": ticker, "name": info.get("name") or watchlist.get(ticker, ""),
                          "in_watchlist": in_watch,
                          "region": info.get("region") or region_of(ticker),
                          "market_cap_usd": info.get("market_cap_usd"),
@@ -214,9 +243,57 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         targets = analyst_targets(passed, log=log)
         for r in rows:
             r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
-                                               "isin": None}))
+                                               "isin": None, "earnings_date": None}))
+    for r in rows:
+        r["top_missing"] = top_missing(r, cfg) if r["passed"] else []
+        r["top"] = bool(r["passed"]) and not r["top_missing"]
+        # „Einstiegsbereit“ nur noch, wenn die Aktie in der Top-Auswahl ist (Backtest: frühere
+        # Definition – Kurs ganz am Tief – lief schlechter als der Durchschnitt)
+        if r.get("status") == "bereit" and not r["top"]:
+            r["status"] = "abwarten"
+        elif r["top"]:
+            r["status"] = "bereit"
+    stats["top"] = sum(r["top"] for r in rows)
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
+
+
+def top_missing(r: dict, cfg: Config = DEFAULT) -> list[str]:
+    """Welche Kriterien der Top-Auswahl fehlen (leer = alle erfüllt). Schwellen in `Config.top_*`."""
+    miss = []
+    if not r.get("passed"):
+        return ["vollständiges Setup"]
+    if cfg.top_core5 and len(r.get("core_met") or []) < 5:
+        miss.append("MACD heute rot & schrumpfend")
+    if cfg.top_min_upside > -999 and (r.get("upside_pct") is None or r["upside_pct"] < cfg.top_min_upside):
+        miss.append(f"Kursziel ≥ {cfg.top_min_upside:.0f} %")
+    if cfg.top_min_crv > 0 and (r.get("crv") or 0) < cfg.top_min_crv:
+        miss.append(f"Chance/Risiko ≥ {cfg.top_min_crv:g}")
+    if r.get("pullback_drawdown_pct", 0) < cfg.top_min_pullback:
+        miss.append(f"Rücksetzer ≥ {cfg.top_min_pullback:.0f} %")
+    if cfg.top_market and not r.get("market_ok"):
+        miss.append("Markt über EMA 200")
+    if cfg.top_trend and not r.get("ema200_rising"):
+        miss.append("Aufwärtstrend (EMA 200)")
+    if cfg.top_rel_strength and not (r.get("rel_strength") is not None and r["rel_strength"] > 0):
+        miss.append("stärker als der Markt")
+    rise = r.get("rise_from_low_pct", 0)
+    if rise < cfg.top_rise_min:
+        miss.append(f"Erholung ≥ {cfg.top_rise_min:.0f} % über dem Tief")
+    elif rise > cfg.top_rise_max:
+        miss.append(f"höchstens {cfg.top_rise_max:.0f} % über dem Tief")
+    if r.get("green_x_count", 0) < cfg.top_min_green_x:
+        miss.append(f"{cfg.top_min_green_x} grüne X")
+    if r.get("earnings_date"):
+        days = (pd.Timestamp(r["earnings_date"]) - pd.Timestamp.now().normalize()).days
+        if 0 <= days <= cfg.top_no_earnings_days:
+            miss.append(f"keine Quartalszahlen in {cfg.top_no_earnings_days} T.")
+    return miss
+
+
+def is_top(r: dict, cfg: Config = DEFAULT) -> bool:
+    """Top-Auswahl: wirklich alle Kriterien erfüllt."""
+    return bool(r.get("passed")) and not top_missing(r, cfg)
 
 
 def _print_table(rows: list[dict]) -> None:

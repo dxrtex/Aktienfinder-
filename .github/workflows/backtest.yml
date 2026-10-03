@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["claude/**"]
-    paths: ["aktienfinder/backtest.py", "aktienfinder/signals.py", "aktienfinder/config.py", ".github/workflows/backtest.yml"]
+    paths: ["aktienfinder/backtest.py", "aktienfinder/optimize.py", "aktienfinder/signals.py", "aktienfinder/config.py", ".github/workflows/backtest.yml"]
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -22,7 +22,10 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m aktienfinder.universe --out universe.csv
       - run: python -m aktienfinder.backtest --universe universe.csv --period 5y --out events.csv
+      - run: python -m aktienfinder.optimize --events events.csv --out empfehlung.json
       - uses: actions/upload-artifact@v4
         with:
           name: backtest-signale
-          path: events.csv
+          path: |
+            events.csv
+            empfehlung.json

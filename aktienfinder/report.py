@@ -34,6 +34,31 @@ def report(universe: pd.DataFrame, data: dict, refs: list[str]) -> str:
     out.append(f"Stats: {data['stats']}")
 
     res = [r for r in data["results"] if r["passed"]]
+    # Kontrolle: kommen die Zusatzdaten bei den Treffern an?
+    if res:
+        cov = lambda k: sum(r.get(k) is not None for r in res)
+        out.append(f"Datenabdeckung (von {len(res)} Treffern): Kursziel {cov('upside_pct')}, Quartalszahlen-Termin "
+                   f"{cov('earnings_date')}, Chance/Risiko {cov('crv')}, Marktumfeld {cov('market_ok')}, "
+                   f"rel. Stärke {cov('rel_strength')}, Divergenz in Bildung {cov('divergence_forming')}")
+        out.append("Chance/Risiko: " + _hist([r["crv"] for r in res if r.get("crv") is not None], [1, 2, 3, 5]))
+    top = sorted((r for r in data["results"] if r.get("top")), key=lambda r: -r["score"])
+    out.append(f"\n== Top-Auswahl: {len(top)} ==")
+    if res and any("top_missing" in r for r in res):
+        miss = collections.Counter(m for r in res for m in r.get("top_missing", []))
+        out.append("Scheitern an (Anzahl Setups, Mehrfachnennung): " + ", ".join(f"{k}: {v}" for k, v in miss.most_common()))
+        out.append("Anzahl fehlender Top-Kriterien: " + str(dict(sorted(collections.Counter(
+            len(r.get("top_missing", [])) for r in res).items()))))
+        near = sorted((r for r in res if len(r.get("top_missing", [])) == 1), key=lambda r: -r["score"])
+        out.append(f"Fast-Treffer (genau 1 Kriterium fehlt): {len(near)}")
+        for r in near[:15]:
+            out.append(f"  {r['ticker']:<10} Score {r['score']:>5}  fehlt: {r['top_missing'][0]}  "
+                       f"rel. Stärke {r.get('rel_strength')}  über Tief {r['rise_from_low_pct']} %  "
+                       f"grüne X {r.get('green_x_count')}  Kursziel {r.get('upside_pct')} %")
+    for r in top[:40]:
+        out.append(f"  {r['ticker']:<10} Score {r['score']:>5}  Kursziel {r.get('upside_pct')} %  "
+                   f"Chance/Risiko {r.get('crv')}  Stop {r.get('stop_price')}  Ziel {r.get('target_price_fib')}  "
+                   f"Kurs {r['close']}  über Tief {r['rise_from_low_pct']} %  Rücksetzer {r['pullback_drawdown_pct']} %  "
+                   f"Zahlen {r.get('earnings_date')}  {r.get('name', '')[:30]}")
     out.append("Setup-Status: " + str(dict(collections.Counter(r.get("status") for r in res))))
     liquid = data["stats"].get("liquid", 0) or 1
     out.append(f"\n== Treffer: {len(res)} ({100 * len(res) / liquid:.0f} % der liquiden) ==")

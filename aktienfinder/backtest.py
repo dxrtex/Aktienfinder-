@@ -103,7 +103,66 @@ def _forward(df: pd.DataFrame, entry: int) -> dict:
     return out
 
 
-def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[dict]:
+TRADE_TARGET = 0.20        # Swing-Trade: Verkauf bei +20 % …
+TRADE_DAYS = 60            # … spätestens nach 60 Handelstagen; Stop = Stop-Kurs des Setups
+
+
+def _trade(df: pd.DataFrame, entry: int, stop: float | None) -> dict:
+    """Simuliert einen echten Trade: Kauf zur Eröffnung am Tag `entry`, Stop-Loss beim Stop-Kurs
+    (bei Kurslücke darunter: Verkauf zur Eröffnung), Gewinnmitnahme bei +20 %, sonst Verkauf zum
+    Schlusskurs nach 60 Tagen. Trifft ein Tag Stop und Ziel, zählt (vorsichtig) der Stop."""
+    if stop is None or not np.isfinite(stop) or entry + TRADE_DAYS > len(df):
+        return {}
+    o = df["Open"].to_numpy(dtype=float)
+    hi = df["High"].to_numpy(dtype=float)
+    lo = df["Low"].to_numpy(dtype=float)
+    cl = df["Close"].to_numpy(dtype=float)
+    buy = o[entry]
+    if not np.isfinite(buy) or buy <= stop:
+        return {}                                   # Eröffnung schon unter dem Stop: kein Einstieg
+    target = buy * (1 + TRADE_TARGET)
+    for j in range(entry, entry + TRADE_DAYS):
+        if lo[j] <= stop:
+            exit_ = min(o[j], stop) if j > entry else stop
+            return {"trade_ret": exit_ / buy - 1, "trade_outcome": -1, "trade_days": j - entry + 1,
+                    "trade_risk": 1 - stop / buy}
+        if hi[j] >= target:
+            exit_ = max(o[j], target) if j > entry else target
+            return {"trade_ret": exit_ / buy - 1, "trade_outcome": 1, "trade_days": j - entry + 1,
+                    "trade_risk": 1 - stop / buy}
+    end = entry + TRADE_DAYS - 1
+    return {"trade_ret": cl[end] / buy - 1, "trade_outcome": 0, "trade_days": TRADE_DAYS,
+            "trade_risk": 1 - stop / buy}
+
+
+def _context(df: pd.DataFrame, index_close: pd.Series | None) -> pd.DataFrame:
+    """Zusatzmerkmale je Tag für die Stufe-B-Filter (nur Daten bis zum jeweiligen Tag)."""
+    close = df["Close"].astype(float)
+    e200 = ema(close, 200)
+    ctx = pd.DataFrame(index=df.index)
+    ctx["trend200"] = (close > e200) & (e200 > e200.shift(20))          # langfristiger Aufwärtstrend
+    ctx["ema200_rising"] = e200 > e200.shift(20)
+    vol = df["Volume"].astype(float) if "Volume" in df else pd.Series(np.nan, index=df.index)
+    ctx["vol_dry"] = vol.rolling(10).mean() / vol.rolling(50).mean()    # < 1: Volumen nimmt ab
+    ret63 = close / close.shift(63) - 1
+    if index_close is not None and len(index_close):
+        ic = index_close.reindex(df.index, method="ffill")
+        ctx["market_ok"] = ic > ema(ic.dropna(), 200).reindex(df.index, method="ffill")
+        ctx["rel_strength"] = ret63 - (ic / ic.shift(63) - 1)
+    else:
+        ctx["market_ok"] = np.nan
+        ctx["rel_strength"] = np.nan
+    return ctx
+
+
+def _ctx_fields(ctx: pd.DataFrame, day: int) -> dict:
+    row = ctx.iloc[day]
+    return {k: (None if pd.isna(v) else (bool(v) if k in ("trend200", "ema200_rising", "market_ok") else float(v)))
+            for k, v in row.items()}
+
+
+def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT,
+                 index_close: pd.Series | None = None) -> list[dict]:
     """Alle Tage, an denen der vollständige Trichter (Signale + Fibonacci + Rückgang) anschlägt."""
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
     if len(df) < MIN_HISTORY + 50:
@@ -119,6 +178,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
     mbi_idx = np.flatnonzero(mbi["green_x"].to_numpy())
     e20 = ema(close, cfg.ema_trigger_length).to_numpy()
     c = close.to_numpy(dtype=float)
+    hist = m["hist"].to_numpy()
+    ctx = _context(df, index_close)
 
     days = [d for d in cluster_completions(div_idx, macd_idx, mbi_idx, cfg) if d >= MIN_HISTORY and d + 1 < n]
     events = []
@@ -137,9 +198,13 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
             "volume_spike": res.volume_spike, "volume_breakout": res.volume_breakout,
             "reversal": res.reversal_candle_age is not None, "green_x_count": res.green_x_count,
             "rsi_signal_gap": res.rsi_signal_gap, "status": res.status,
-            "rise_from_low_pct": res.rise_from_low_pct,
+            "rise_from_low_pct": res.rise_from_low_pct, "crv": res.crv,
+            "pullback_drawdown_pct": res.pullback_drawdown_pct, "macd_closeness": res.macd_closeness,
+            "divergence_forming": res.divergence_forming,
+            "core_count": len(res.core_met), **_ctx_fields(ctx, day),
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
+        ev.update(_trade(df, day + 1, res.stop_price))
         # Variante: Einstieg erst beim Schlusskurs über der EMA 20 (innerhalb von 30 Tagen)
         # (liegt der Kurs am Signaltag schon darüber, ist das der Einstieg)
         brk = next((t for t in range(day, min(n - 1, day + cfg.max_signal_age))
@@ -147,11 +212,17 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
         if brk is not None:
             ev["brk_delay"] = brk - day
             ev.update({f"brk_{k}": v for k, v in _forward(df, brk + 1).items()})
+        # Variante „bestätigter Einstieg“: erst wenn das MACD-Histogramm grün wird (max. 20 Tage)
+        green = next((t for t in range(day, min(n - 1, day + 20)) if hist[t] > 0), None)
+        if green is not None:
+            ev["conf_delay"] = green - day
+            ev.update({f"conf_{k}": v for k, v in _forward(df, green + 1).items()})
         events.append(ev)
     return events
 
 
-def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> list[dict]:
+def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT,
+                     index_close: pd.Series | None = None) -> list[dict]:
     """Zufallseinstieg: jeder `step`-te Tag ab MIN_HISTORY.
 
     Zu jedem Tag wird vermerkt, ob die Fibonacci- und Rückgangs-Bedingungen erfüllt waren –
@@ -160,6 +231,7 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
     high52 = df["High"].rolling(cfg.drawdown_lookback, min_periods=1).max()
     recent_low = df["Low"].rolling(cfg.max_signal_age, min_periods=1).min()
+    ctx = _context(df, index_close)
     rows = []
     for day in range(MIN_HISTORY, len(df) - 1, step):
         fwd = _forward(df, day + 1)
@@ -175,6 +247,11 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
             fwd["core_count"] = len(res.core_met)
             fwd["core_met"] = "+".join(res.core_met)
             fwd["score"] = res.score
+            fwd["crv"] = res.crv
+            fwd["rise_from_low_pct"] = res.rise_from_low_pct
+            fwd["green_x_count"] = res.green_x_count
+            fwd.update(_ctx_fields(ctx, day))
+            fwd.update(_trade(df, day + 1, res.stop_price))
         rows.append(fwd)
     return rows
 
@@ -197,7 +274,39 @@ def _stats(frame: pd.DataFrame, prefix: str) -> str:
     r60 = f[f"{prefix}ret_60"].dropna()
     if len(r60):
         parts.append(f"Kurs nach 60 T. Median {100 * r60.median():+.1f} %")
+    tcol = "b_trade_ret" if prefix == "b_" else "trade_ret"
+    if prefix in ("", "sig_", "b_") and tcol in frame:
+        t = frame.dropna(subset=[tcol])
+        if len(t):
+            oc = t[tcol.replace("ret", "outcome")]
+            parts.append(f"TRADE (Stop/+20 %/60 T.): Ø {100 * t[tcol].mean():+.1f} % je Trade, "
+                         f"Ziel {100 * (oc == 1).mean():.0f} % / Stop {100 * (oc == -1).mean():.0f} %")
     return " | ".join(parts)
+
+
+def _filters(frame: pd.DataFrame, p: str) -> list[tuple[str, pd.Series]]:
+    """Kandidaten für zusätzliche Filter – jeweils als Maske über `frame` (Spalten mit Präfix p)."""
+    def col(name, default=np.nan):
+        return frame[p + name] if p + name in frame else pd.Series(default, index=frame.index)
+    market = col("market_ok").astype("boolean").fillna(False).astype(bool)
+    trend = col("trend200").astype("boolean").fillna(False).astype(bool)
+    rising = col("ema200_rising").astype("boolean").fillna(False).astype(bool)
+    rs = col("rel_strength").astype(float)
+    dry = col("vol_dry").astype(float)
+    crv = col("crv").astype(float)
+    return [
+        ("Markt über EMA 200", market),
+        ("Markt unter EMA 200", ~market),
+        ("Aktie im Aufwärtstrend (über steigender EMA 200)", trend),
+        ("EMA 200 der Aktie steigt", rising),
+        ("relative Stärke 3 Mon. > 0", rs > 0),
+        ("relative Stärke 3 Mon. < −20 %", rs < -0.20),
+        ("Volumen nimmt ab (10 T. < 80 % von 50 T.)", dry < 0.8),
+        ("Chance/Risiko ≥ 2", crv >= 2),
+        ("Chance/Risiko ≥ 3", crv >= 3),
+        ("Markt über EMA 200 + Chance/Risiko ≥ 2", market & (crv >= 2)),
+        ("Markt über EMA 200 + EMA 200 der Aktie steigt", market & rising),
+    ]
 
 
 def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
@@ -222,6 +331,13 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
         for lo, hi in ((0, 40), (40, 60), (60, 70), (70, 80), (80, 101)):
             out.append(f"  Score {lo}–{hi}:{'':<32}"
                        + _stats(cand[(cand["b_score"] >= lo) & (cand["b_score"] < hi)], "b_"))
+    if "b_core_count" in base_p:
+        cand = base_p.dropna(subset=["b_core_count"])
+        full = cand[cand["b_core_count"] >= 4]
+        out.append("\nStufe-B-Filter (Tage mit Fib + ≥20 % Rückgang und mind. 4 von 5 Kernkriterien):")
+        out.append(f"  {'ohne Zusatzfilter':<44}" + _stats(full, "b_"))
+        for label, mask in _filters(full, "b_"):
+            out.append(f"  {label:<44}" + _stats(full[mask], "b_"))
     if events.empty:
         out.append("keine Signale")
         return "\n".join(out)
@@ -263,6 +379,14 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
             & events["reversal"])
     variant("RSI ≤ 35 und Abstand ≥ 20 %", (events["div_rsi_min"] <= 35) & (events["drawdown_pct"] >= 20))
 
+    out.append("\nStufe-B-Filter auf die Scanner-Signale (Einstieg am Folgetag):")
+    for label, mask in _filters(events, ""):
+        variant(label, mask)
+    if "conf_entry_price" in events:
+        conf = events.dropna(subset=["conf_entry_price"])
+        out.append("Bestätigter Einstieg (erst wenn MACD grün wird, max. 20 T.): " + _stats(conf, "conf_"))
+        out.append("  dieselben Signale, aber sofort eingestiegen:              " + _stats(conf, "sig_"))
+
     # Robustheit: gleiche Auswertung für erste und zweite Hälfte des Zeitraums
     mid = events["date"].sort_values().iloc[len(events) // 2]
     out.append("\nZeitraum-Hälften (Einstieg am Folgetag):")
@@ -271,10 +395,14 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     return "\n".join(out)
 
 
+INDEX_OF_REGION = {"us": "^GSPC", "europe": "^STOXX50E", "global": "ACWI"}
+
+
 def _process(item):
-    ticker, df = item
+    ticker, df, index_close = item
     try:
-        return stock_events(ticker, df), baseline_returns(df)
+        return (stock_events(ticker, df, index_close=index_close),
+                baseline_returns(df, index_close=index_close))
     except Exception as exc:  # einzelne kaputte Datenreihen überspringen
         print(f"{ticker}: Fehler {exc!r}", file=sys.stderr)
         return [], []
@@ -296,8 +424,12 @@ def main(argv: list[str] | None = None) -> int:
     tickers = list(uni["ticker"])[: args.limit or None]
     started = time.time()
     events, base = [], []
+    indices = {t: d["Close"] for t, d in download(sorted(set(INDEX_OF_REGION.values())), args.period)}
+    print("Indizes geladen: " + ", ".join(sorted(indices)))
+    region = dict(zip(uni["ticker"], uni["region"])) if "region" in uni else {}
     with ProcessPoolExecutor() as pool:
-        futures = [pool.submit(_process, item) for item in download(tickers, args.period)]
+        futures = [pool.submit(_process, (t, d, indices.get(INDEX_OF_REGION.get(region.get(t, "us"), "^GSPC"))))
+                   for t, d in download(tickers, args.period)]
         for f in futures:
             e, b = f.result()
             events += e

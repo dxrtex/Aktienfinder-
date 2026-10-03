@@ -58,6 +58,12 @@ class Result:
     criteria: dict = field(default_factory=dict)   # Einzelkriterien erfüllt ja/nein
     status: str = "kein_setup"             # bereit | abwarten | gelaufen | kein_setup
     core_met: list = field(default_factory=list)   # erfüllte Kernkriterien des Gesamtpakets
+    divergence_forming: str | None = None  # Divergenz in Bildung (letztes Tief noch unbestätigt)
+    stop_price: float | None = None        # Stop knapp unter dem Rücksetzer-Tief
+    target_price_fib: float | None = None  # technisches Ziel: Fib 0,382 des Schwungs (bzw. Hoch)
+    chance_pct: float | None = None
+    risk_pct: float | None = None
+    crv: float | None = None               # Chance/Risiko-Verhältnis
     macd_closeness: float = 0.0            # rotes Histogramm: Anteil des tiefsten Balkens aufgeholt (1 = an 0)
     rsi_signal_gap: float = 0.0            # RSI minus gelbe Signallinie (≥ −2: „fast darauf“)
     dollar_volume: float = 0.0
@@ -137,6 +143,31 @@ def macd_condition(hist: pd.Series, cfg: Config = DEFAULT, line: pd.Series | Non
         scale = line.abs().rolling(60, min_periods=1).max()
         cond &= line >= line.shift(cfg.macd_line_lookback) - cfg.macd_line_tolerance * scale
     return cond
+
+
+def forming_divergence(df: pd.DataFrame, osc: pd.Series, cfg: Config = DEFAULT) -> str | None:
+    """Divergenz in Bildung (noch unbestätigt): Das Tief der letzten Kerzen ist noch nicht durch
+    `pivot_right` Folgekerzen bestätigt, bildet aber mit einem früheren bestätigten RSI-Tief bereits
+    eine Divergenz. Liefert "klassisch", "versteckt" oder None."""
+    n = len(df)
+    r, left = cfg.pivot_right, cfg.pivot_left
+    if n < left + r + 5:
+        return None
+    low = df["Low"].to_numpy(dtype=float)
+    o = osc.to_numpy(dtype=float)
+    c = n - r + int(np.argmin(low[n - r :]))          # tiefste der noch unbestätigten Kerzen
+    if low[c] > low[max(0, c - 10) : c].min() or not np.isfinite(o[c]):
+        return None                                   # kein neues Tief der letzten 2 Wochen
+    pivots = np.flatnonzero(pivot_low(osc, left, r).to_numpy()) - r
+    best = None
+    for p in pivots[::-1]:
+        if not cfg.divergence_min_bars <= c - p <= cfg.divergence_max_bars:
+            continue
+        if low[c] < low[p] and o[c] > o[p] + 2:      # mind. 2 RSI-Punkte höher
+            return "klassisch"
+        if best is None and low[c] > low[p] and o[c] < o[p] - 2:
+            best = "versteckt"
+    return best
 
 
 def find_cluster(div_ages: list[int], macd_ages: list[int], mbi_ages: list[int],
@@ -357,6 +388,24 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     scale = float(line.abs().iloc[-60:].max() or 1)
     macd_lines_ok = bool(line.iloc[-1] >= line.iloc[-1 - cfg.macd_line_lookback] - cfg.macd_line_tolerance * scale)
 
+    # Divergenz in Bildung (unbestätigt) – nur als Vorab-Hinweis, zählt nicht als Kernkriterium
+    forming = forming_divergence(df, r, cfg)
+
+    # Chance/Risiko: Stop knapp unter dem Rücksetzer-Tief, Ziel = Fib 0,382 des Schwungs (max. Hoch)
+    stop_price = target_fib = chance = risk = crv = None
+    swing = fib_swing(df, cfg)
+    last = float(close.iloc[-1])
+    if swing is not None:
+        s_high, s_low, s_pb = swing
+        stop_price = min(s_pb, recent_low) * (1 - cfg.stop_buffer)
+        target_fib = s_high - 0.382 * (s_high - s_low)
+        if target_fib <= last * 1.02:
+            target_fib = s_high
+        if stop_price < last < target_fib:
+            chance = target_fib / last - 1
+            risk = 1 - stop_price / last
+            crv = chance / risk if risk > 0 else None
+
     # Score (0–100): das Gesamtpaket zählt am meisten – erst wenn alle Kernkriterien erfüllt sind,
     # gibt es die hohen Punkte; MACD nahe 0 (noch rot) und Einstiegsnähe heben danach die Besten heraus
     kinds = {d.kind for d in divs}
@@ -374,9 +423,12 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         score += 12 * macd_closeness                 # je näher das rote Histogramm an 0, desto besser
     elif 0 < macd_green_days <= 3:
         score += 3                                   # schon grün – etwas spät
-    span = cfg.entry_zero - cfg.entry_full
-    score += 10 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    # Einstieg: Backtest (echte Trades) – Kurs 5–20 % über dem Tief (Erholung hat begonnen) lief am
+    # besten, Einstieg direkt am Tief (0–5 %) am schlechtesten
+    score += 10 if 5 <= 100 * rise_from_low <= 20 else 4 if rise_from_low < 0.05 else 0
     score += 3 * ("klassisch" in kinds)
+    if forming and not kinds:
+        score += 4                                   # Divergenz bildet sich gerade (unbestätigt)
     score += 4 * (green_x_count >= 2)
     score += 4 * sellers_fading                      # rote MBI-Balken rückläufig
     score += 6 * (reversal_age is not None)          # Umkehrkerze mit Volumen an Fib-Linie
@@ -426,4 +478,10 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         status=status,
         macd_closeness=round(macd_closeness, 2),
         core_met=core_met,
+        divergence_forming=forming,
+        stop_price=None if stop_price is None else round(stop_price, 4),
+        target_price_fib=None if target_fib is None else round(target_fib, 4),
+        chance_pct=None if chance is None else round(100 * chance, 1),
+        risk_pct=None if risk is None else round(100 * risk, 1),
+        crv=None if crv is None else round(crv, 2),
     )
