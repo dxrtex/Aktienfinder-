@@ -157,11 +157,27 @@ def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int
     return "\n".join(lines)
 
 
+def load_watchlist(path: str) -> dict[str, str]:
+    """Watchlist-Datei (Name → Liste von Yahoo-Tickern) als {Ticker: Name}."""
+    try:
+        with open(path, encoding="utf-8") as f:
+            raw = json.load(f)
+    except FileNotFoundError:
+        return {}
+    return {t: name for name, tickers in raw.items() if not name.startswith("_") for t in tickers}
+
+
 def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
          debug: bool = False, meta: dict | None = None, stats: Counter | None = None,
-         log=print) -> list[dict]:
-    """Prüft alle Ticker. `meta` liefert Name/Region je Ticker, `stats` sammelt Zählerstände."""
+         log=print, watchlist: dict[str, str] | None = None) -> list[dict]:
+    """Prüft alle Ticker. `meta` liefert Name/Region je Ticker, `stats` sammelt Zählerstände.
+
+    Aktien aus `watchlist` ({Ticker: Name}) werden immer bewertet und ausgegeben – auch ohne
+    vollständiges Setup und unabhängig vom Liquiditätsfilter.
+    """
     meta = meta or {}
+    watchlist = watchlist or {}
+    tickers = list(dict.fromkeys(list(tickers) + list(watchlist)))
     stats = stats if stats is not None else Counter()
     stats["universe"] += len(tickers)
     rows = []
@@ -176,21 +192,25 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             log(f"{ticker}: Fehler {exc!r}")
             continue
         fx = usd_factor(ticker)
+        in_watch = ticker in watchlist
         if res.close * fx < cfg.min_price or res.dollar_volume * fx < cfg.min_dollar_volume:
             stats["illiquid"] += 1
-            continue
-        stats["liquid"] += 1
-        stats["passed"] += res.passed
-        if res.passed or include_all:
+            if not in_watch:
+                continue
+        else:
+            stats["liquid"] += 1
+            stats["passed"] += res.passed
+        if res.passed or include_all or in_watch:
             info = meta.get(ticker, {})
-            rows.append({"ticker": ticker, "name": info.get("name", ""),
+            rows.append({"ticker": ticker, "name": info.get("name") or watchlist.get(ticker, ""),
+                         "in_watchlist": in_watch,
                          "region": info.get("region") or region_of(ticker),
                          "market_cap_usd": info.get("market_cap_usd"),
                          "date": str(df.index[-1].date()), **res.to_dict(),
                          **chart_data(df, cfg)})
-    passed = [r["ticker"] for r in rows if r["passed"]]
+    passed = [r["ticker"] for r in rows if r["passed"] or r["in_watchlist"]]
     if passed:
-        log(f"  Analysten-Kursziele für {len(passed)} Treffer abfragen …")
+        log(f"  Analysten-Kursziele für {len(passed)} Treffer und Watchlist-Aktien abfragen …")
         targets = analyst_targets(passed, log=log)
         for r in rows:
             r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
@@ -232,6 +252,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--all", action="store_true", help="auch Aktien ohne alle Pflichtsignale ausgeben")
     p.add_argument("--debug", action="store_true", help="alle Signaltermine je Aktie ausgeben")
     p.add_argument("--quiet", action="store_true", help="keine Tabelle ausgeben")
+    p.add_argument("--watchlist", help="Watchlist-JSON (Name → Ticker); diese Aktien immer bewerten")
     args = p.parse_args(argv)
 
     tickers = list(args.tickers)
@@ -258,7 +279,8 @@ def main(argv: list[str] | None = None) -> int:
 
     started = time.time()
     stats: Counter = Counter()
-    rows = scan(tickers, include_all=args.all, debug=args.debug, meta=meta, stats=stats)
+    watchlist = load_watchlist(args.watchlist) if args.watchlist else {}
+    rows = scan(tickers, include_all=args.all, debug=args.debug, meta=meta, stats=stats, watchlist=watchlist)
     if not args.quiet:
         _print_table(rows)
     summary = (f"Universum {stats['universe']}, geladen {stats['loaded']}, liquide {stats['liquid']}, "

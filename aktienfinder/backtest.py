@@ -27,8 +27,10 @@ from .indicators import ema, macd, rsi
 from .mbi import momentum_bias_index
 from .signals import evaluate, fib_retracement, find_divergences, macd_condition
 
-HORIZONS = (10, 20, 40)
+HORIZONS = (20, 40, 60)
 TARGET, STOP = 0.10, -0.07
+SWING_DAYS = 60            # Swing-Trading: Haltedauer wenige Wochen bis max. ~3 Monate
+SWING_TARGETS = (0.10, 0.20, 0.30)
 MIN_HISTORY = 260          # so viele Kerzen vor dem ersten möglichen Signal (für 52-Wochen-Hoch)
 DEDUPE_BARS = 10           # neues Bündel derselben Aktie erst nach so vielen Tagen erneut zählen
 
@@ -85,6 +87,19 @@ def _forward(df: pd.DataFrame, entry: int) -> dict:
                 outcome = 1.0
                 break
     out["target_first"] = outcome
+    # Swing-Trading: wird +10/+20/+30 % innerhalb von 60 Handelstagen erreicht (Tageshoch)?
+    # Und wie tief lag die Aktie zwischendurch, bevor +10 % kamen?
+    if entry + SWING_DAYS <= len(df):
+        hi = high[entry : entry + SWING_DAYS] / o - 1
+        lo = low[entry : entry + SWING_DAYS] / o - 1
+        out["max_gain"] = float(hi.max())
+        for t in SWING_TARGETS:
+            hit = np.flatnonzero(hi >= t)
+            out[f"hit_{int(t * 100)}"] = float(len(hit) > 0)
+            out[f"days_{int(t * 100)}"] = float(hit[0] + 1) if len(hit) else np.nan
+        first = np.flatnonzero(hi >= SWING_TARGETS[0])
+        upto = first[0] + 1 if len(first) else SWING_DAYS
+        out["dip_before"] = float(lo[:upto].min())
     return out
 
 
@@ -121,7 +136,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
             "fib_zone": res.fib_zone, "fib": res.fib_retracement, "ema_breakout_age": res.ema_breakout_age,
             "volume_spike": res.volume_spike, "volume_breakout": res.volume_breakout,
             "reversal": res.reversal_candle_age is not None, "green_x_count": res.green_x_count,
-            "rsi_signal_gap": res.rsi_signal_gap,
+            "rsi_signal_gap": res.rsi_signal_gap, "status": res.status,
+            "rise_from_low_pct": res.rise_from_low_pct,
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
         # Variante: Einstieg erst beim Schlusskurs über der EMA 20 (innerhalb von 30 Tagen)
@@ -154,22 +170,33 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
         fib = fib_retracement(df.iloc[: day + 1], cfg)
         lo_r, hi_r = cfg.fib_required
         fwd["fib_zone"] = fib is not None and lo_r - cfg.fib_tolerance <= fib <= hi_r + cfg.fib_tolerance
+        if fwd["fib_zone"] and fwd["pullback_drawdown"] >= cfg.min_drawdown:
+            res = evaluate(df.iloc[: day + 1], cfg)     # wie viele Kernkriterien waren an diesem Tag erfüllt?
+            fwd["core_count"] = len(res.core_met)
+            fwd["core_met"] = "+".join(res.core_met)
+            fwd["score"] = res.score
         rows.append(fwd)
     return rows
 
 
 def _stats(frame: pd.DataFrame, prefix: str) -> str:
-    if frame.empty:
+    """Kennzahlen für Swing-Trading (Ziel +10–30 %, Haltedauer bis 60 Handelstage)."""
+    if frame.empty or f"{prefix}hit_10" not in frame:
         return "n=0"
-    parts = [f"n={len(frame)}"]
-    for h in HORIZONS:
-        col = frame[f"{prefix}ret_{h}"].dropna()
-        if len(col):
-            parts.append(f"{h}T: Ø {100 * col.mean():+.1f} % / Median {100 * col.median():+.1f} % / "
-                         f"positiv {100 * (col > 0).mean():.0f} %")
-    tf = frame[f"{prefix}target_first"].dropna()
-    if len(tf):
-        parts.append(f"+10 % vor −7 %: {100 * (tf == 1).mean():.0f} % (−7 % zuerst {100 * (tf == -1).mean():.0f} %)")
+    f = frame.dropna(subset=[f"{prefix}hit_10"])
+    if f.empty:
+        return "n=0"
+    parts = [f"n={len(f)}"]
+    hits = " / ".join(f"+{t}: {100 * f[f'{prefix}hit_{t}'].mean():.0f} %" for t in (10, 20, 30))
+    parts.append(f"erreicht in 60 T. {hits}")
+    d20 = f[f"{prefix}days_20"].dropna()
+    if len(d20):
+        parts.append(f"Tage bis +20 % (Median) {d20.median():.0f}")
+    parts.append(f"Höchstgewinn Median {100 * f[f'{prefix}max_gain'].median():+.0f} %")
+    parts.append(f"Rücksetzer vor +10 % Median {100 * f[f'{prefix}dip_before'].median():.0f} %")
+    r60 = f[f"{prefix}ret_60"].dropna()
+    if len(r60):
+        parts.append(f"Kurs nach 60 T. Median {100 * r60.median():+.1f} %")
     return " | ".join(parts)
 
 
@@ -182,6 +209,19 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     setup = base_p[(base_p["b_pullback_drawdown"] >= DEFAULT.min_drawdown) & base_p["b_fib_zone"]]
     out.append("Zufallseinstieg mit Fib-Zone + ≥20 % Rückgang:  " + _stats(setup, "b_")
                + "   ← Vergleichsmaßstab: gleiches Setup ohne RSI/MACD/MBI")
+    if "b_core_count" in base_p:
+        out.append("\nGesamtpaket (alle Tage mit Fib + ≥20 % Rückgang, jeden 5. Tag):")
+        cand = base_p.dropna(subset=["b_core_count"])
+        for k in (2, 3, 4, 5):
+            out.append(f"  {k} von 5 Kernkriterien:{'':<22}" + _stats(cand[cand["b_core_count"] == k], "b_"))
+        names = ("divergenz", "macd_jetzt", "mbi_x")
+        four = cand[cand["b_core_count"] == 4]
+        for n in names:
+            miss = four[~four["b_core_met"].str.contains(n)]
+            out.append(f"  4 von 5, es fehlt nur {n:<20}" + _stats(miss, "b_"))
+        for lo, hi in ((0, 40), (40, 60), (60, 70), (70, 80), (80, 101)):
+            out.append(f"  Score {lo}–{hi}:{'':<32}"
+                       + _stats(cand[(cand["b_score"] >= lo) & (cand["b_score"] < hi)], "b_"))
     if events.empty:
         out.append("keine Signale")
         return "\n".join(out)
@@ -191,6 +231,12 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
 
     def variant(label, mask):
         out.append(f"  {label:<44}" + _stats(events[mask], "sig_"))
+
+    out.append("\nSetup-Status (Einstieg am Folgetag):")
+    for st, label in (("bereit", "Einstiegsbereit"), ("abwarten", "Abwarten"), ("gelaufen", "Schon gelaufen")):
+        variant(label, events["status"] == st)
+    for lo, hi in ((0, 5), (5, 10), (10, 20), (20, 999)):
+        variant(f"Kurs {lo}–{hi} % über dem Tief", events["rise_from_low_pct"].between(lo, hi, inclusive="left"))
 
     out.append("\nVarianten (Einstieg am Folgetag):")
     for lo, hi in ((0, 40), (40, 50), (50, 60), (60, 70), (70, 80), (80, 101)):

@@ -23,14 +23,16 @@ def test_cluster_completions_matches_brute_force():
 
 
 def test_forward_returns_and_target_stop():
-    idx = pd.bdate_range("2026-01-01", periods=60)
-    close = np.full(60, 100.0)
+    idx = pd.bdate_range("2026-01-01", periods=80)
+    close = np.full(80, 100.0)
     close[5:] = 112.0                     # +12 % ab Tag 5
     df = pd.DataFrame({"Open": 100.0, "High": close, "Low": close * 0.99, "Close": close}, index=idx)
     f = backtest._forward(df, 0)
-    assert abs(f["ret_10"] - 0.12) < 1e-9 and f["target_first"] == 1.0
-    df2 = df.assign(Low=np.where(np.arange(60) == 2, 90.0, 99.0))   # −10 % an Tag 2 → Stopp zuerst
+    assert abs(f["ret_20"] - 0.12) < 1e-9 and f["target_first"] == 1.0
+    assert f["hit_10"] == 1.0 and f["days_10"] == 6 and f["hit_20"] == 0.0
+    df2 = df.assign(Low=np.where(np.arange(80) == 2, 90.0, 99.0))   # −10 % an Tag 2 → Stopp zuerst
     assert backtest._forward(df2, 0)["target_first"] == -1.0
+    assert abs(backtest._forward(df2, 0)["dip_before"] + 0.10) < 1e-9
 
 
 def test_stock_events_and_summary_run():

@@ -70,6 +70,14 @@
   .card-title h2 { margin: 0; font-size: 21px; line-height: 1.25; letter-spacing: -.01em;
                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .card-title .meta { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .status { display: inline-flex; align-items: center; gap: 6px; margin: 8px 8px 0 0; font-size: 13px; font-weight: 700;
+            padding: 4px 12px; border-radius: 999px; }
+  .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .st-bereit { color: var(--accent); background: var(--accent-bg); }
+  .st-abwarten { color: var(--gold); background: var(--gold-bg); }
+  .st-gelaufen { color: var(--red); background: var(--red-bg); }
+  .st-kein_setup { color: var(--muted); background: var(--surface-2); }
+  .chip.miss { background: transparent; color: var(--faint); border: 1px dashed var(--line); }
   .wl { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--gold); background: var(--gold-bg);
         padding: 4px 12px; border-radius: 999px; }
   .score { flex: none; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
@@ -201,9 +209,20 @@
     <div class="opts" data-key="minUpside"><button class="opt" data-v="-999">alle</button><button class="opt" data-v="20">ab +20 %</button><button class="opt" data-v="40">ab +40 %</button><button class="opt" data-v="60">ab +60 %</button></div></div>
   <div class="group"><div class="group-label">Börsenwert</div>
     <div class="opts" data-key="minCap"><button class="opt" data-v="0">alle (ab 2 Mrd. $)</button><button class="opt" data-v="10000000000">ab 10 Mrd. $</button><button class="opt" data-v="50000000000">ab 50 Mrd. $</button><button class="opt" data-v="200000000000">ab 200 Mrd. $</button></div></div>
+  <div class="group"><div class="group-label">Setup-Status</div>
+    <div class="opts" data-key="status"><button class="opt" data-v="">alle</button><button class="opt" data-v="bereit">nur Einstiegsbereit</button><button class="opt" data-v="nicht_gelaufen">noch nicht gelaufen</button></div></div>
+  <div class="group"><div class="group-label">Fibonacci</div>
+    <div class="opts" data-key="fib"><button class="opt" data-v="">egal</button><button class="opt" data-v="zone">in der Golden Zone</button><button class="opt" data-v="unter">unter die Zone gefallen</button></div></div>
+  <div class="group"><div class="group-label">RSI-Divergenz</div>
+    <div class="opts" data-key="div"><button class="opt" data-v="">egal</button><button class="opt" data-v="klassisch">klassisch</button><button class="opt" data-v="versteckt">versteckt</button></div></div>
+  <div class="group"><div class="group-label">MACD</div>
+    <div class="opts" data-key="macd"><button class="opt" data-v="">egal</button><button class="opt" data-v="rot">Balken noch rot, schrumpfend</button><button class="opt" data-v="gruen">gerade grün geworden</button></div></div>
+  <div class="group"><div class="group-label">MBI grüne X</div>
+    <div class="opts" data-key="mbi"><button class="opt" data-v="">egal</button><button class="opt" data-v="2">mind. 2 grüne X</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="upside">Kursziel</button><button class="opt" data-v="fresh">frischestes Signal</button><button class="opt" data-v="drawdown">stärkster Rückgang</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="upside">Kursziel</button><button class="opt" data-v="entry">nächstes am Tief</button><button class="opt" data-v="fresh">frischestes Signal</button><button class="opt" data-v="drawdown">stärkster Rückgang</button></div></div>
   <button class="btn" id="done">Fertig</button>
+  <button class="opt" id="reset" style="width:100%;margin-top:10px">Filter zurücksetzen</button>
 </section>
 
 <script>
@@ -220,6 +239,9 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, 0) + " Mrd. $";
 const fmtUp = v => v == null ? "–" : (v > 0 ? "+" : "") + fmt(v, 0) + " %";
 
+function macdNear(r) {
+  return r.macd_status.startsWith("rot") && r.macd_closeness ? ` · ${Math.round(r.macd_closeness * 100)} % an 0` : "";
+}
 function tvUrl(ticker) {
   let sym = ticker, ex = "";
   const m = ticker.match(/^(.+)\.([A-Z]{1,3})$/);
@@ -235,10 +257,29 @@ function scalableUrl(r) {
 
 // ---------- Watchlist ----------
 let watch = new Set();
-const inWatch = r => watch.has(r.ticker);
+const inWatch = r => r.in_watchlist || watch.has(r.ticker);
+
+const STATUS = { bereit: "Einstiegsbereit", abwarten: "Abwarten", gelaufen: "Schon gelaufen", kein_setup: "Kein Setup" };
+const statusBadge = r => `<span class="status st-${r.status}">${STATUS[r.status] || r.status}</span>`;
 
 // ---------- Kriterien als Etiketten ----------
+function watchTraits(r) {
+  // Watchlist: jedes Pflichtkriterium mit erfüllt / fehlt
+  const c = r.criteria || {};
+  const fib = r.fib_retracement == null ? "Fibonacci –" : `Fibonacci ${fmt(r.fib_retracement, 2)}`;
+  return [
+    { ok: c.rueckgang, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
+    { ok: c.fibonacci, star: c.fibonacci && r.fib_zone, text: fib },
+    { ok: c.divergenz, text: c.divergenz ? "RSI-Divergenz" : "keine RSI-Divergenz" },
+    { ok: c.macd, text: `MACD ${r.macd_status}${macdNear(r)}` },
+    { ok: c.mbi, text: c.mbi ? `MBI ${r.green_x_count}× grünes X` : "kein grünes X" },
+    { ok: c.buendel, text: c.buendel ? "Signale zeitlich zusammen" : "Signale nicht zusammen" },
+    { ok: r.rise_from_low_pct <= 8, text: `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
+  ];
+}
+
 function traits(r) {
+  if (!r.passed) return watchTraits(r);
   const kinds = [...new Set(r.divergences.map(d => d.kind))].sort();
   const c = r.cluster || {};
   const rsiNear = r.rsi_signal_gap >= -2 && r.rsi_signal_gap <= 5;
@@ -249,13 +290,13 @@ function traits(r) {
     { ok: true, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
     { ok: true, star: r.fib_zone, text: fib },
     { ok: true, text: `Divergenz ${kinds.join(" + ")} · vor ${c.divergence_age} T.` },
-    { ok: true, star: r.macd_status.startsWith("rot"), text: `MACD ${r.macd_status}` },
+    { ok: true, star: r.macd_status.startsWith("rot"), text: `MACD ${r.macd_status}${macdNear(r)}` },
     { ok: true, star: r.green_x_count >= 2, text: `MBI ${r.green_x_count}× grünes X` },
     { ok: rsiNear, text: rsiNear ? "RSI an Signallinie" : `RSI ${fmt(r.rsi, 0)}` },
     { ok: r.reversal_candle_age != null, star: r.reversal_candle_age != null,
       text: r.reversal_candle_age != null ? `Umkehrkerze ${r.reversal_candle_age ? "vor " + r.reversal_candle_age + " T." : "heute"}` : "keine Umkehrkerze" },
-    { ok: r.ema_breakout_age != null && r.ema_breakout_age < 5,
-      text: r.ema_breakout_age == null ? "unter EMA 20" : `über EMA 20 seit ${r.ema_breakout_age} T.` },
+    { ok: r.rise_from_low_pct <= 8 && !r.still_falling, star: r.rise_from_low_pct <= 5 && !r.still_falling,
+      text: r.still_falling ? "fällt noch (neues Tief)" : `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
     { ok: r.volume_spike || r.volume_breakout, text: r.volume_spike ? "Volumen-Spike am Tief" : r.volume_breakout ? "hohes Volumen" : "Volumen normal" },
   ];
 }
@@ -289,7 +330,9 @@ function detailHtml(r) {
   const c = r.cluster;
   const divs = r.divergences.map(d =>
     `<li>${d.kind}: ${d.prev_pivot_date} (Tief ${fmt(d.prev_price_low)}, RSI ${fmt(d.prev_rsi_low, 1)}) → ${d.pivot_date} (Tief ${fmt(d.price_low)}, RSI ${fmt(d.rsi_low, 1)})</li>`).join("");
-  return `Signal-Bündel: Divergenz vor ${c.divergence_age}, MACD vor ${c.macd_age}, grünes X vor ${c.mbi_age} Handelstagen.
+  const bundle = c ? `Signal-Bündel: Divergenz vor ${c.divergence_age}, MACD vor ${c.macd_age}, grünes X vor ${c.mbi_age} Handelstagen.`
+                   : "Noch kein vollständiges Signal-Bündel.";
+  return `${bundle}
     ${r.target_price ? `Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten).` : ""}
     ${r.isin ? `ISIN ${esc(r.isin)}.` : ""}<ul>${divs}</ul>`;
 }
@@ -299,12 +342,12 @@ const CHEVRON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" str
 function card(r, hero = false) {
   const up = r.upside_pct;
   return `<article class="card${hero ? " hero" : ""}">
-    ${hero ? `<div class="hero-label">⭐ Top-Setup des Tages</div>` : ""}
+    ${hero ? `<div class="hero-label">⭐ ${r.status === "bereit" ? "Top-Setup des Tages · einstiegsbereit" : "Top-Setup des Tages"}</div>` : ""}
     <div class="card-top">
       <div class="card-title">
         <h2 title="${esc(r.name)}">${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${REGION[r.region] || r.region}</div>
-        ${inWatch(r) ? `<span class="wl">★ In deiner Watchlist</span>` : ""}
+        ${statusBadge(r)}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
       </div>
       <div class="score" style="--p:${r.score}" title="Score ${fmt(r.score, 0)} von 100"><span>${fmt(r.score, 0)}</span></div>
     </div>
@@ -315,7 +358,7 @@ function card(r, hero = false) {
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
     </div>
     ${candleChart(r)}
-    <div class="chips">${traits(r).map(t => `<span class="chip ${t.star ? "star" : t.ok ? "ok" : ""}">${t.ok ? "✓ " : ""}${esc(t.text)}</span>`).join("")}</div>
+    <div class="chips">${traits(r).map(t => `<span class="chip ${t.star ? "star" : t.ok ? "ok" : r.passed ? "" : "miss"}">${t.ok ? "✓ " : r.passed ? "" : "✗ "}${esc(t.text)}</span>`).join("")}</div>
     <div class="actions">
       <a class="btn" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
       <a class="btn" href="${scalableUrl(r)}" target="_blank" rel="noopener">Scalable</a>
@@ -328,10 +371,14 @@ function card(r, hero = false) {
 // ---------- Tabelle ----------
 const COLUMNS = [
   { key: "score", label: "Score", num: true, get: r => r.score, html: r => `<b>${fmt(r.score, 0)}</b>` },
+  { key: "status", label: "Status", get: r => ({ bereit: 0, abwarten: 1, gelaufen: 2, kein_setup: 3 })[r.status] ?? 9,
+    html: r => `<span class="status st-${r.status}" style="margin:0">${STATUS[r.status] || ""}</span>` },
   { key: "name", label: "Aktie", get: r => r.name || r.ticker,
     html: r => `<a href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">${esc((r.name || r.ticker).slice(0, 30))}</a>${inWatch(r) ? " ★" : ""} <span class="muted">${esc(r.ticker)}</span>` },
   { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999, html: r => `<span class="${r.upside_pct >= 40 ? "up" : "muted"}">${fmtUp(r.upside_pct)}</span>` },
   { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
+  { key: "entry", label: "über Tief", num: true, get: r => -r.rise_from_low_pct,
+    html: r => r.still_falling ? `<span class="down">fällt noch</span>` : `+${fmt(r.rise_from_low_pct, 0)} %` },
   { key: "dd", label: "vom Hoch", num: true, get: r => r.drawdown_pct, html: r => `<span class="down">−${fmt(r.drawdown_pct, 0)} %</span>` },
   { key: "cap", label: "Börsenwert", num: true, get: r => r.market_cap_usd ?? -1, html: r => fmtCap(r.market_cap_usd) },
   { key: "fib", label: "Fib", num: true, get: r => r.fib_retracement ?? -1, html: r => fmt(r.fib_retracement, 2) + (r.fib_zone ? " ★" : "") },
@@ -345,37 +392,48 @@ const COLUMNS = [
 // ---------- Zustand ----------
 let data = null;
 const open = new Set();
-const state = { tab: "cards", region: "", minUpside: "40", minCap: "0", sort: "score", tableSort: "score", tableAsc: false };
+const DEFAULTS = { region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
+const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
 const SORTS = {
   score: (a, b) => b.score - a.score,
   upside: (a, b) => (b.upside_pct ?? -999) - (a.upside_pct ?? -999),
   fresh: (a, b) => newestAge(a) - newestAge(b) || b.score - a.score,
   drawdown: (a, b) => b.pullback_drawdown_pct - a.pullback_drawdown_pct,
+  entry: (a, b) => a.rise_from_low_pct - b.rise_from_low_pct || b.score - a.score,
 };
+const STATUS_RANK = { bereit: 0, abwarten: 1, gelaufen: 2, kein_setup: 3 };
 
 function filtered({ ignoreWatch = false } = {}) {
   const q = $("search").value.trim().toLowerCase();
+  const search = r => !q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q);
+  // Watchlist-Tab: alle eigenen Aktien, mit oder ohne Setup – nur die Suche greift
+  if (state.tab === "watch" && !ignoreWatch) return data.results.filter(r => inWatch(r) && search(r));
   const minUp = +state.minUpside, minCap = +state.minCap;
-  return data.results.filter(r => r.passed
+  const kinds = r => new Set(r.divergences.map(d => d.kind));
+  return data.results.filter(r => r.passed && search(r)
     && (!state.region || r.region === state.region)
     && (minUp <= -999 || (r.upside_pct ?? -999) >= minUp)
     && (!minCap || (r.market_cap_usd ?? 0) >= minCap)
-    && (ignoreWatch || state.tab !== "watch" || inWatch(r))
-    && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q)));
+    && (!state.status || (state.status === "bereit" ? r.status === "bereit" : r.status !== "gelaufen"))
+    && (!state.fib || (state.fib === "zone" ? r.fib_zone : !r.fib_zone && r.fib_retracement > 0.79))
+    && (!state.div || kinds(r).has(state.div))
+    && (!state.macd || (state.macd === "rot" ? r.macd_status.startsWith("rot") : /grün seit [1-3] T/.test(r.macd_status)))
+    && (!state.mbi || r.green_x_count >= +state.mbi));
 }
 
 function render() {
   if (!data) return;
-  const rows = filtered().sort(SORTS[state.sort]);
-  const wlCount = filtered({ ignoreWatch: true }).filter(inWatch).length;
+  const rows = filtered().sort(state.tab === "watch"
+    ? (a, b) => (b.passed - a.passed) || b.score - a.score : SORTS[state.sort]);
+  const wlCount = data.results.filter(r => inWatch(r) && r.passed).length;
   $("wlBadge").hidden = !wlCount; $("wlBadge").textContent = wlCount;
-  const title = { cards: "Alle Setups", table: "Alle Setups", watch: "Aus deiner Watchlist" }[state.tab] || "Setups";
+  const title = { cards: "Alle Setups", table: "Alle Setups", watch: "Deine Watchlist · nach Score" }[state.tab] || "Setups";
   const head = n => `<div class="section-title"><span>${title}</span><span>${n} ${n === 1 ? "Aktie" : "Aktien"}</span></div>`;
 
   if (!rows.length) {
     $("main").innerHTML = head(0) + `<div class="empty">${state.tab === "watch"
-      ? "Heute erfüllt keine Aktie aus deiner Watchlist die Kriterien."
+      ? "Keine Watchlist-Aktie gefunden."
       : "Keine Setups mit diesen Filtern.<br>Tipp: Unter „Filter“ das Kursziel auf „alle“ stellen."}</div>`;
     return;
   }
@@ -388,7 +446,9 @@ function render() {
       <tbody>${rows.map(r => `<tr>${COLUMNS.map(c => `<td class="${c.num ? "num" : ""}">${c.html(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
   }
-  const [top, ...rest] = rows;
+  // Top-Setup: bevorzugt ein einstiegsbereites Setup
+  const topIdx = Math.max(0, rows.findIndex(r => r.status === "bereit"));
+  const top = rows[topIdx], rest = rows.filter((_, i) => i !== topIdx);
   $("main").innerHTML = (state.tab === "cards" ? card(top, true) + head(rest.length) : head(rows.length))
     + `<div class="grid">${(state.tab === "cards" ? rest : rows).map(r => card(r)).join("")}</div>`;
 }
@@ -398,7 +458,8 @@ function renderHead() {
   $("greet").textContent = (h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + " 👋";
   const when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   const n = data.results.filter(r => r.passed).length;
-  $("sub").innerHTML = `<b>${n.toLocaleString("de-DE")} Setups</b> heute · ${(data.stats.liquid || 0).toLocaleString("de-DE")} Aktien geprüft · Scan ${esc(when)} Uhr`;
+  const ready = data.results.filter(r => r.passed && r.status === "bereit").length;
+  $("sub").innerHTML = `<b>${n.toLocaleString("de-DE")} Setups</b> heute, davon <b>${ready} einstiegsbereit</b> · ${(data.stats.liquid || 0).toLocaleString("de-DE")} Aktien geprüft · Scan ${esc(when)} Uhr`;
   $("sources").textContent = (data.universe_log || []).join("\n") + "\n\nDauer: " + (data.duration_s || 0) + " s\n\n"
     + Object.entries(data.config || {}).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join("\n");
 }
@@ -412,7 +473,7 @@ function syncOpts() {
 const openFilters = v => document.body.classList.toggle("filters-open", v);
 
 // ---------- Einstellungen merken (nur auf diesem Gerät) ----------
-const PREF_KEY = "aktienfinder-v3";
+const PREF_KEY = "aktienfinder-v4";
 function savePrefs() {
   try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch (e) {}
 }
@@ -430,6 +491,7 @@ $("sheet").addEventListener("click", e => {
   state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); savePrefs(); render();
 });
 $("done").addEventListener("click", () => openFilters(false));
+$("reset").addEventListener("click", () => { Object.assign(state, DEFAULTS); syncOpts(); savePrefs(); render(); });
 $("backdrop").addEventListener("click", () => openFilters(false));
 $("search").addEventListener("input", render);
 $("main").addEventListener("click", e => {

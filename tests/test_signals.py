@@ -60,7 +60,10 @@ def test_evaluate_runs_on_random_walk():
                        "Close": close, "Volume": 2e6}, index=idx)
     res = evaluate(df)
     assert 0 <= res.rsi <= 100
-    assert res.score == 0 or res.passed
+    assert 0 <= res.score <= 100
+    assert res.status in {"bereit", "abwarten", "gelaufen", "kein_setup"}
+    assert set(res.criteria) == {"rueckgang", "fibonacci", "divergenz", "macd", "mbi", "buendel"}
+    assert res.passed or res.status in {"abwarten", "kein_setup"}
     assert isinstance(res.to_dict(), dict)
 
 
@@ -126,3 +129,38 @@ def test_macd_line_sideways_is_enough():
     # minimal fallend (−0,2 bei Ausschlägen bis 6) zählt noch als seitwärts
     slightly = pd.Series([0, -1, -2, -6, -3.0, -3.1, -3.2])
     assert macd_condition(hist, cfg, slightly).iloc[-1]
+
+
+def _status_case(rise_after_low):
+    """Abwärtstrend, Tief, danach Anstieg um `rise_after_low` – Score und Status vergleichen."""
+    rng = np.random.default_rng(4)
+    n = 400
+    down = 100 * np.exp(np.cumsum(rng.normal(-0.004, 0.012, n - 20)))
+    up = down[-1] * np.linspace(1, 1 + rise_after_low, 20)
+    c = np.concatenate([down, up])
+    idx = pd.bdate_range("2025-01-01", periods=n)
+    return evaluate(pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c,
+                                  "Volume": 1e6}, index=idx))
+
+
+def test_entry_proximity_prefers_not_yet_risen():
+    near, far = _status_case(0.03), _status_case(0.30)
+    assert near.rise_from_low_pct < far.rise_from_low_pct
+    # gleiche Vorgeschichte: der noch nicht gestiegene Kurs bekommt mehr Einstiegsnähe-Punkte
+    assert far.rise_from_low_pct > 20
+    if far.passed:
+        assert far.status == "gelaufen"
+
+
+def test_score_prefers_red_macd_close_to_zero():
+    import numpy as np
+    import pandas as pd
+    from aktienfinder.signals import evaluate
+    rng = np.random.default_rng(0)
+    idx = pd.bdate_range("2024-10-01", periods=500)
+    for _ in range(300):
+        c = 100 * np.exp(np.cumsum(rng.normal(0, 0.02, 500)))
+        r = evaluate(pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": 1e6}, index=idx))
+        assert 0 <= r.macd_closeness <= 1
+        if r.status == "bereit":
+            assert r.macd_status.startswith("rot")
