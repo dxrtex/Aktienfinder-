@@ -1,4 +1,8 @@
-"""Optimierer: sucht die Filterkombination, die im Backtest am häufigsten +20 % in 60 Tagen brachte.
+"""Optimierer: sucht die Filterkombination mit dem besten durchschnittlichen Ergebnis je Trade.
+
+Gemessen wird ein echter Swing-Trade (Kauf am Folgetag, Stop unter dem Tief, Verkauf bei +20 %,
+spätestens nach 60 Tagen) – nicht nur „wurde +20 % irgendwann berührt“. Sonst würden einfach die
+schwankungsstärksten Aktien gewinnen, die genauso oft vorher den Stop reißen.
 
 Schutz gegen Zufallstreffer (Overfitting): Die Kombination wird nur auf der ersten Hälfte des
 Zeitraums ausgewählt („Lernen“) und danach auf der zweiten Hälfte geprüft („Test“). Übernommen
@@ -33,13 +37,18 @@ def _dimensions(ev: pd.DataFrame) -> dict[str, list[tuple[str, pd.Series]]]:
     }
 
 
-def _rate(frame: pd.DataFrame, col: str = "sig_hit_20") -> float:
+def _rate(frame: pd.DataFrame, col: str = "trade_ret") -> float:
     v = frame[col].dropna()
     return float(v.mean()) if len(v) else np.nan
 
 
+def _win(frame: pd.DataFrame) -> float:
+    v = frame["trade_outcome"].dropna()
+    return float((v == 1).mean()) if len(v) else np.nan
+
+
 def optimize(ev: pd.DataFrame, min_train: int = 150, min_test: int = 100, top: int = 15) -> tuple[str, dict]:
-    ev = ev.dropna(subset=["sig_hit_20"]).reset_index(drop=True)
+    ev = ev.dropna(subset=["trade_ret"]).reset_index(drop=True)
     split = ev["date"].sort_values().iloc[len(ev) // 2]
     train, test = ev["date"] < split, ev["date"] >= split
     dims = _dimensions(ev)
@@ -54,42 +63,44 @@ def optimize(ev: pd.DataFrame, min_train: int = 150, min_test: int = 100, top: i
             continue
         rows.append({
             **{n: lab for n, (lab, _) in zip(names, combo)},
-            "n_lern": n_tr, "lern_20": _rate(ev[mask & train]),
-            "n_test": n_te, "test_20": _rate(ev[mask & test]),
-            "test_10": _rate(ev[mask & test], "sig_hit_10"), "test_30": _rate(ev[mask & test], "sig_hit_30"),
-            "test_median_60": float(ev.loc[mask & test, "sig_ret_60"].median()),
+            "n_lern": n_tr, "lern": _rate(ev[mask & train]),
+            "n_test": n_te, "test": _rate(ev[mask & test]),
+            "test_win": _win(ev[mask & test]), "test_hit20": _rate(ev[mask & test], "sig_hit_20"),
+            "test_median": float(ev.loc[mask & test, "trade_ret"].median()),
         })
     res = pd.DataFrame(rows)
     out = [f"== Optimierer: {len(res)} Kombinationen mit genug Signalen (Lernen bis {split}, Test ab {split}) ==",
-           f"Ohne Zusatzfilter: +20 % in 60 T. Lernen {100 * base_tr:.0f} % | Test {100 * base_te:.0f} %"]
+           f"Ohne Zusatzfilter: Ø je Trade Lernen {100 * base_tr:+.2f} % | Test {100 * base_te:+.2f} % "
+           f"(Ziel vor Stop im Test: {100 * _win(ev[test]):.0f} %)"]
     if res.empty:
         return "\n".join(out + ["keine Kombination mit genug Signalen"]), {}
-    best = res.sort_values("lern_20", ascending=False).head(top)
+    best = res.sort_values("lern", ascending=False).head(top)
     out.append(f"\nBeste {top} nach der Lern-Hälfte – und wie sie in der Test-Hälfte liefen:")
     for _, r in best.iterrows():
         filt = ", ".join(f"{n}={r[n]}" for n in names if r[n] != "egal")
-        out.append(f"  Lernen {100 * r.lern_20:.0f} % (n={r.n_lern}) → Test {100 * r.test_20:.0f} % (n={r.n_test}), "
-                   f"Test +10/+30 %: {100 * r.test_10:.0f}/{100 * r.test_30:.0f} %, Median 60 T. "
-                   f"{100 * r.test_median_60:+.1f} % | {filt or 'keine Filter'}")
+        out.append(f"  Lernen Ø {100 * r.lern:+.2f} % (n={r.n_lern}) → Test Ø {100 * r.test:+.2f} % (n={r.n_test}), "
+                   f"Test: Ziel vor Stop {100 * r.test_win:.0f} %, +20 % berührt {100 * r.test_hit20:.0f} %, "
+                   f"Median {100 * r.test_median:+.1f} % | {filt or 'keine Filter'}")
     # Robuste Wahl: unter den 15 besten der Lern-Hälfte die mit dem besten Testergebnis,
     # nur wenn sie in beiden Hälften die Basis schlägt
-    ok = best[(best.lern_20 > base_tr) & (best.test_20 > base_te)]
+    ok = best[(best.lern > base_tr) & (best.test > base_te)]
     choice = {}
     if len(ok):
-        r = ok.sort_values("test_20", ascending=False).iloc[0]
-        choice = {n: r[n] for n in names} | {"lern_20": round(r.lern_20, 3), "test_20": round(r.test_20, 3),
-                                             "n_test": int(r.n_test)}
+        r = ok.sort_values("test", ascending=False).iloc[0]
+        choice = {n: r[n] for n in names} | {"lern": round(r.lern, 4), "test": round(r.test, 4),
+                                             "test_win": round(r.test_win, 3), "n_test": int(r.n_test)}
         out.append("\nEMPFEHLUNG (in beiden Hälften besser als ohne Filter): " + json.dumps(choice, ensure_ascii=False))
     else:
         out.append("\nKeine Kombination ist in beiden Hälften besser – Filter würden nur Zufall nachbilden.")
     # Einzelwirkung jedes Filters (gegenüber „egal“), Test-Hälfte
-    out.append("\nEinzelwirkung je Filter (nur dieser Filter, Test-Hälfte, +20 % in 60 T.):")
+    out.append("\nEinzelwirkung je Filter (nur dieser Filter, Test-Hälfte, Ø Ergebnis je Trade):")
     for n in names:
         for lab, m in dims[n]:
             if lab == "egal":
                 continue
             sub = ev[m & test]
-            out.append(f"  {n:<12}{lab:<14} n={len(sub):<6} {100 * _rate(sub):.0f} % (Basis {100 * base_te:.0f} %)")
+            out.append(f"  {n:<12}{lab:<14} n={len(sub):<6} Ø {100 * _rate(sub):+.2f} %, Ziel vor Stop "
+                       f"{100 * _win(sub):.0f} % (Basis Ø {100 * base_te:+.2f} %)")
     return "\n".join(out), choice
 
 

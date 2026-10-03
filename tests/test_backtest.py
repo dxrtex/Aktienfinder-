@@ -48,3 +48,18 @@ def test_stock_events_and_summary_run():
     text = backtest.summarize(pd.DataFrame(ev), pd.DataFrame(backtest.baseline_returns(df)))
     assert "Fib-Zone" in text
     assert "Zufallseinstieg" in text and "Score" in text
+
+
+def test_trade_simulation_stop_target_and_timeout():
+    idx = pd.bdate_range("2026-01-01", periods=80)
+    flat = np.full(80, 100.0)
+    df = pd.DataFrame({"Open": flat, "High": flat * 1.01, "Low": flat * 0.99, "Close": flat}, index=idx)
+    t = backtest._trade(df, 0, 95.0)                       # nichts passiert → Verkauf nach 60 T.
+    assert t["trade_outcome"] == 0 and abs(t["trade_ret"]) < 1e-9 and t["trade_days"] == 60
+    up = df.copy(); up.loc[idx[10]:, ["Open", "High", "Low", "Close"]] = 125.0
+    t = backtest._trade(up, 0, 95.0)                       # Kurslücke über +20 % → Verkauf zur Eröffnung
+    assert t["trade_outcome"] == 1 and abs(t["trade_ret"] - 0.25) < 1e-9
+    down = df.copy(); down.loc[idx[5], "Low"] = 90.0
+    t = backtest._trade(down, 0, 95.0)                     # Stop gerissen
+    assert t["trade_outcome"] == -1 and abs(t["trade_ret"] + 0.05) < 1e-9
+    assert backtest._trade(df, 0, 101.0) == {}             # Eröffnung schon unter dem Stop

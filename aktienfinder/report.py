@@ -34,6 +34,20 @@ def report(universe: pd.DataFrame, data: dict, refs: list[str]) -> str:
     out.append(f"Stats: {data['stats']}")
 
     res = [r for r in data["results"] if r["passed"]]
+    # Kontrolle: kommen die Zusatzdaten bei den Treffern an?
+    if res:
+        cov = lambda k: sum(r.get(k) is not None for r in res)
+        out.append(f"Datenabdeckung (von {len(res)} Treffern): Kursziel {cov('upside_pct')}, Quartalszahlen-Termin "
+                   f"{cov('earnings_date')}, Chance/Risiko {cov('crv')}, Marktumfeld {cov('market_ok')}, "
+                   f"rel. Stärke {cov('rel_strength')}, Divergenz in Bildung {cov('divergence_forming')}")
+        out.append("Chance/Risiko: " + _hist([r["crv"] for r in res if r.get("crv") is not None], [1, 2, 3, 5]))
+    top = sorted((r for r in data["results"] if r.get("top")), key=lambda r: -r["score"])
+    out.append(f"\n== Top-Auswahl: {len(top)} ==")
+    for r in top[:40]:
+        out.append(f"  {r['ticker']:<10} Score {r['score']:>5}  Kursziel {r.get('upside_pct')} %  "
+                   f"Chance/Risiko {r.get('crv')}  Stop {r.get('stop_price')}  Ziel {r.get('target_price_fib')}  "
+                   f"Kurs {r['close']}  über Tief {r['rise_from_low_pct']} %  Rücksetzer {r['pullback_drawdown_pct']} %  "
+                   f"Zahlen {r.get('earnings_date')}  {r.get('name', '')[:30]}")
     out.append("Setup-Status: " + str(dict(collections.Counter(r.get("status") for r in res))))
     liquid = data["stats"].get("liquid", 0) or 1
     out.append(f"\n== Treffer: {len(res)} ({100 * len(res) / liquid:.0f} % der liquiden) ==")

@@ -103,6 +103,38 @@ def _forward(df: pd.DataFrame, entry: int) -> dict:
     return out
 
 
+TRADE_TARGET = 0.20        # Swing-Trade: Verkauf bei +20 % …
+TRADE_DAYS = 60            # … spätestens nach 60 Handelstagen; Stop = Stop-Kurs des Setups
+
+
+def _trade(df: pd.DataFrame, entry: int, stop: float | None) -> dict:
+    """Simuliert einen echten Trade: Kauf zur Eröffnung am Tag `entry`, Stop-Loss beim Stop-Kurs
+    (bei Kurslücke darunter: Verkauf zur Eröffnung), Gewinnmitnahme bei +20 %, sonst Verkauf zum
+    Schlusskurs nach 60 Tagen. Trifft ein Tag Stop und Ziel, zählt (vorsichtig) der Stop."""
+    if stop is None or not np.isfinite(stop) or entry + TRADE_DAYS > len(df):
+        return {}
+    o = df["Open"].to_numpy(dtype=float)
+    hi = df["High"].to_numpy(dtype=float)
+    lo = df["Low"].to_numpy(dtype=float)
+    cl = df["Close"].to_numpy(dtype=float)
+    buy = o[entry]
+    if not np.isfinite(buy) or buy <= stop:
+        return {}                                   # Eröffnung schon unter dem Stop: kein Einstieg
+    target = buy * (1 + TRADE_TARGET)
+    for j in range(entry, entry + TRADE_DAYS):
+        if lo[j] <= stop:
+            exit_ = min(o[j], stop) if j > entry else stop
+            return {"trade_ret": exit_ / buy - 1, "trade_outcome": -1, "trade_days": j - entry + 1,
+                    "trade_risk": 1 - stop / buy}
+        if hi[j] >= target:
+            exit_ = max(o[j], target) if j > entry else target
+            return {"trade_ret": exit_ / buy - 1, "trade_outcome": 1, "trade_days": j - entry + 1,
+                    "trade_risk": 1 - stop / buy}
+    end = entry + TRADE_DAYS - 1
+    return {"trade_ret": cl[end] / buy - 1, "trade_outcome": 0, "trade_days": TRADE_DAYS,
+            "trade_risk": 1 - stop / buy}
+
+
 def _context(df: pd.DataFrame, index_close: pd.Series | None) -> pd.DataFrame:
     """Zusatzmerkmale je Tag für die Stufe-B-Filter (nur Daten bis zum jeweiligen Tag)."""
     close = df["Close"].astype(float)
@@ -172,6 +204,7 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT,
             "core_count": len(res.core_met), **_ctx_fields(ctx, day),
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
+        ev.update(_trade(df, day + 1, res.stop_price))
         # Variante: Einstieg erst beim Schlusskurs über der EMA 20 (innerhalb von 30 Tagen)
         # (liegt der Kurs am Signaltag schon darüber, ist das der Einstieg)
         brk = next((t for t in range(day, min(n - 1, day + cfg.max_signal_age))
@@ -215,7 +248,10 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT,
             fwd["core_met"] = "+".join(res.core_met)
             fwd["score"] = res.score
             fwd["crv"] = res.crv
+            fwd["rise_from_low_pct"] = res.rise_from_low_pct
+            fwd["green_x_count"] = res.green_x_count
             fwd.update(_ctx_fields(ctx, day))
+            fwd.update(_trade(df, day + 1, res.stop_price))
         rows.append(fwd)
     return rows
 
@@ -238,6 +274,13 @@ def _stats(frame: pd.DataFrame, prefix: str) -> str:
     r60 = f[f"{prefix}ret_60"].dropna()
     if len(r60):
         parts.append(f"Kurs nach 60 T. Median {100 * r60.median():+.1f} %")
+    tcol = "b_trade_ret" if prefix == "b_" else "trade_ret"
+    if prefix in ("", "sig_", "b_") and tcol in frame:
+        t = frame.dropna(subset=[tcol])
+        if len(t):
+            oc = t[tcol.replace("ret", "outcome")]
+            parts.append(f"TRADE (Stop/+20 %/60 T.): Ø {100 * t[tcol].mean():+.1f} % je Trade, "
+                         f"Ziel {100 * (oc == 1).mean():.0f} % / Stop {100 * (oc == -1).mean():.0f} %")
     return " | ".join(parts)
 
 
