@@ -60,13 +60,37 @@ def download(tickers: list[str], period: str, batch_size: int = 200, retries: in
             log(f"  {done}/{total} Ticker geladen")
 
 
+def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
+    """Durchschnittliches Analysten-Kursziel und Upside je Ticker (Yahoo Finance).
+
+    Wird nur für die Treffer abgefragt (eine Anfrage je Aktie).
+    """
+    import yfinance as yf
+
+    out = {}
+    for t in tickers:
+        try:
+            info = yf.Ticker(t).info
+        except Exception as exc:  # fehlende Daten sind kein Abbruchgrund
+            log(f"  Kursziel {t}: {exc!r}")
+            continue
+        target = info.get("targetMeanPrice")
+        price = info.get("currentPrice") or info.get("regularMarketPrice")
+        if target and price:
+            out[t] = {"target_price": round(float(target), 2),
+                      "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
+                      "analysts": info.get("numberOfAnalystOpinions")}
+    return out
+
+
 def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int = 90) -> str:
     """Alle Signaltermine der letzten `bars` Handelstage – zum Abgleich mit TradingView."""
     df = df.dropna(subset=["Close", "Low", "High"])
     close = df["Close"]
     start = df.index[-bars]
     r = rsi(close, cfg.rsi_length)
-    hist = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)["hist"]
+    m = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)
+    hist = m["hist"]
     mbi = momentum_bias_index(close, df["High"], df["Low"], cfg.mbi_momentum_length,
                               cfg.mbi_bias_length, cfg.mbi_smooth_length,
                               cfg.mbi_impulse_length, cfg.mbi_std_mult)
@@ -79,7 +103,7 @@ def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int
                          f"RSI {d.prev_rsi_low:.1f}) -> {d.pivot_date} (Tief {d.price_low:.2f}, "
                          f"RSI {d.rsi_low:.1f}), bestätigt {d.confirmed_date}")
     recent = df.index >= start
-    lines.append(f"  MACD rot+schrumpfend : {fmt(df.index[macd_condition(hist, cfg).to_numpy() & recent])}")
+    lines.append(f"  MACD rot+schrumpfend : {fmt(df.index[macd_condition(hist, cfg, m['macd']).to_numpy() & recent])}")
     lines.append(f"  MBI grünes X         : {fmt(df.index[mbi['green_x'].to_numpy() & recent])}")
     lines.append(f"  MBI rotes X          : {fmt(df.index[mbi['red_x'].to_numpy() & recent])}")
     lines.append(f"  MBI jetzt            : grün {mbi['upper_bias'].iloc[-1]:.0f}, rot {mbi['lower_bias'].iloc[-1]:.0f}, "
@@ -117,6 +141,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
                          "region": info.get("region") or region_of(ticker),
                          "market_cap_usd": info.get("market_cap_usd"),
                          "date": str(df.index[-1].date()), **res.to_dict()})
+    passed = [r["ticker"] for r in rows if r["passed"]]
+    if passed:
+        log(f"  Analysten-Kursziele für {len(passed)} Treffer abfragen …")
+        targets = analyst_targets(passed, log=log)
+        for r in rows:
+            r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None}))
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
 
@@ -126,7 +156,7 @@ def _print_table(rows: list[dict]) -> None:
         print("Keine Treffer.")
         return
     print(f"{'Ticker':<10}{'Score':>6}{'Kurs':>10}{'vom Hoch':>10}{'RSI':>6}  "
-          f"{'Divergenz':<22}{'MACD':<18}{'MBI':<22}{'Fib':>6} {'EMA20':<7}{'Vol':<4}")
+          f"{'Divergenz':<22}{'MACD':<18}{'MBI':<22}{'Fib':>6} {'EMA20':<7}{'Vol':<4}{'Tief':>6}{'Ziel':>7} Trichter")
     for r in rows:
         div = ", ".join(sorted({d["kind"] for d in r["divergences"]})) or "-"
         c = r["cluster"]
@@ -136,9 +166,12 @@ def _print_table(rows: list[dict]) -> None:
         fib += "*" if r["fib_zone"] else " "
         ema = f"↑{r['ema_breakout_age']} T." if r["ema_breakout_age"] is not None else "darunter"
         vol = ("S" if r["volume_spike"] else "") + ("A" if r["volume_breakout"] else "")
+        upside = f"+{r['upside_pct']:.0f}%" if r.get("upside_pct") is not None else "-"
+        funnel = "JA" if r["passed"] else ("nur Signale" if r["signals_ok"] else "-")
         print(f"{r['ticker']:<10}{r['score']:>6}{r['close']:>10.2f}{-r['drawdown_pct']:>9.1f}%"
               f"{r['rsi']:>6.1f}  {div:<22}{r['macd_status']:<18}{r['mbi_status']:<22}"
-              f"{fib:>6} {ema:<7}{vol or '-':<4}")
+              f"{fib:>6} {ema:<7}{vol or '-':<4}{-r['pullback_drawdown_pct']:>5.0f}%"
+              f"{upside:>7} {funnel}")
     print("Fib* = Rücksetzer in der Fibonacci-Zone; Vol: S = Spike am Tief, A = Ausbruchsvolumen")
 
 

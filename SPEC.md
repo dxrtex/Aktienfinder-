@@ -22,19 +22,21 @@ Singapur, Brasilien, Mexiko, Südafrika, Israel, Neuseeland.
 Grundfilter im Scanner: Kurs ≥ 1 $ und durchschnittlicher Tagesumsatz ≥ 1 Mio. $ (umgerechnet).
 Auf der Website lässt sich die Börsenwert-Grenze weiter anheben (10 / 50 / 200 Mrd. $).
 
-## Kriterien
+## Kriterien – der Analyse-Trichter
 
-### Pflicht (alle drei müssen erfüllt sein)
-Die drei Signale müssen **dicht beieinander** auftreten: höchstens ~3 Wochen
-(15 Handelstage) zwischen dem ersten und dem letzten Signal. Das Bündel darf bis zu
-~6 Wochen (30 Handelstage) alt sein, weil der Einstieg oft erst Wochen später beim
-Ausbruch aus der Bodenzone erfolgt.
+Reihenfolge wie bei der manuellen Analyse; jede Stufe ist Pflicht:
 
-| Kriterium | Definition (Startwerte, anpassbar in `aktienfinder/config.py`) |
-|---|---|
-| RSI-Divergenz (RSI 14) | **Klassisch:** Kurs tieferes Tief, RSI höheres Tief. **Versteckt:** Kurs höheres Tief, RSI tieferes Tief. Pivot-Tiefs auf dem RSI (3 Balken links/rechts). Jedes Tief wird mit **allen** früheren Tiefs im Abstand von 4–60 Tagen verglichen. |
-| MACD-Histogramm (12/26/9) | Histogramm noch negativ, die Balken werden seit ≥ 3 Tagen kleiner und haben sich um ≥ 50 % vom Tiefpunkt erholt (kurz vor dem Wechsel ins Positive). |
-| Momentum Bias Index (AlgoAlpha, close 10 5 10 30 3) | Grünes X („Bullish TP Signal“, exakt wie im Original): roter Balken wird nach einer Spitze kleiner, liegt über der gepunkteten Linie (Impulse Boundary) und über dem grünen Balken. |
+| # | Stufe | Umsetzung |
+|---|---|---|
+| 1 | Analysten-Kursziel ≥ 40 % über Kurs | Ø Kursziel von Yahoo Finance (nur live, für Treffer abgefragt); Website-Filter, Standard „ab 40 %“ |
+| 2 | Starker Rückgang | Rücksetzer-Tief der letzten 30 Handelstage mind. 20 % unter dem 52-Wochen-Hoch |
+| 3 | Fibonacci-Golden-Zone | Der Rücksetzer seit dem letzten Hoch hat 0,618 erreicht und 0,886 nicht unterschritten (± 0,03); Schwung = höchstes Hoch der letzten 150 Tage und tiefstes Tief davor |
+| 4 | RSI-Divergenz (RSI 14) | klassisch oder versteckt; Pivot-Tiefs 3/3, Vergleich mit allen früheren Tiefs im Abstand von 4–60 Tagen |
+| 5 | MACD (12/26/9) | rote Balken werden seit ≥ 3 Tagen kleiner, ≥ 50 % vom Tiefpunkt erholt **und die MACD-Linie steigt** |
+| 6 | Momentum Bias Index (AlgoAlpha) | grünes X („Bullish TP Signal“) auf der Spitze der roten Balken über der Impulse Boundary |
+
+Die Signale 4–6 müssen innerhalb von ~3 Wochen (15 Handelstage) zueinander auftreten, das
+Bündel darf bis zu ~6 Wochen (30 Handelstage) alt sein.
 
 ### Weich (Score 0–100, kein Ausschluss)
 | Kriterium | Punkte |

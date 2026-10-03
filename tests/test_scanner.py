@@ -20,8 +20,13 @@ def _fake_download(tickers, period, log=print, **kw):
     yield from _fake_download_dict(tickers, period).items()
 
 
+def _no_targets(tickers, log=print):
+    return {t: {"target_price": 1.0, "upside_pct": 50.0, "analysts": 3} for t in tickers}
+
+
 def test_scan_filters_pennystocks_and_sorts(monkeypatch, capsys):
     monkeypatch.setattr(scanner, "download", _fake_download)
+    monkeypatch.setattr(scanner, "analyst_targets", _no_targets)
     rows = scanner.scan([f"T{i}" for i in range(30)], include_all=True)
     assert rows and all(r["ticker"] != "PENNY" for r in rows)
     keys = [(r["passed"], r["score"]) for r in rows]
@@ -39,6 +44,7 @@ def test_debug_report_lists_signal_dates():
 def test_main_writes_json(monkeypatch, tmp_path):
     import json
     monkeypatch.setattr(scanner, "download", _fake_download)
+    monkeypatch.setattr(scanner, "analyst_targets", _no_targets)
     uni = tmp_path / "u.csv"
     uni.write_text("ticker,name,region,source\nAAA,Alpha AG,europe,x\nBBB,Beta,us,x\n")
     (tmp_path / "u.csv.log").write_text("Quelle: 2 Aktien\n")
@@ -54,6 +60,7 @@ def test_main_writes_json(monkeypatch, tmp_path):
 def test_report_runs_on_scan_output(monkeypatch, tmp_path):
     from aktienfinder import report
     monkeypatch.setattr(scanner, "download", _fake_download)
+    monkeypatch.setattr(scanner, "analyst_targets", _no_targets)
     uni = tmp_path / "u.csv"
     rows = "\n".join(f"T{i},Firma {i},us,x,5e9" for i in range(40))
     uni.write_text("ticker,name,region,source,market_cap_usd\n" + rows + "\n")

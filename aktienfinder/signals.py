@@ -40,6 +40,8 @@ class Result:
     close: float
     rsi: float
     drawdown_pct: float
+    pullback_drawdown_pct: float = 0.0     # Rücksetzer-Tief unter dem 52-Wochen-Hoch
+    signals_ok: bool = False               # die drei Indikator-Signale allein erfüllt
     divergences: list = field(default_factory=list)
     cluster: Cluster | None = None
     macd_status: str = ""
@@ -109,14 +111,20 @@ def find_divergences(df: pd.DataFrame, osc: pd.Series, cfg: Config = DEFAULT) ->
     return out
 
 
-def macd_condition(hist: pd.Series, cfg: Config = DEFAULT) -> pd.Series:
-    """Rote Balken, die seit `macd_rising_bars` Tagen kleiner werden und nahe null sind."""
+def macd_condition(hist: pd.Series, cfg: Config = DEFAULT, line: pd.Series | None = None) -> pd.Series:
+    """Rote Balken, die seit `macd_rising_bars` Tagen kleiner werden und nahe null sind.
+
+    Mit `line` (MACD-Linie) und `cfg.macd_line_rising` muss zusätzlich die Linie steigen.
+    """
     rising = pd.Series(True, index=hist.index)
     for k in range(cfg.macd_rising_bars):
         rising &= hist.shift(k) > hist.shift(k + 1)
     trough = hist.rolling(cfg.macd_trough_lookback, min_periods=1).min()
     near_zero = hist >= trough * cfg.macd_near_zero
-    return (hist < 0) & rising & near_zero & (trough < 0)
+    cond = (hist < 0) & rising & near_zero & (trough < 0)
+    if line is not None and cfg.macd_line_rising:
+        cond &= line > line.shift(1)
+    return cond
 
 
 def find_cluster(div_ages: list[int], macd_ages: list[int], mbi_ages: list[int],
@@ -179,8 +187,9 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     divs = [d for d in find_divergences(df, r, cfg) if d.age <= cfg.max_signal_age]
 
     # Pflicht 2: MACD-Histogramm rot, aber kleiner werdend
-    hist = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)["hist"]
-    macd_ok = macd_condition(hist, cfg)
+    m = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)
+    hist = m["hist"]
+    macd_ok = macd_condition(hist, cfg, m["macd"])
     last_hist = float(hist.iloc[-1])
     if last_hist < 0:
         macd_status = "rot, schrumpfend" if hist.iloc[-1] > hist.iloc[-2] else "rot"
@@ -208,18 +217,23 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     mbi_status = "grün" if buyers_lead else "rot"
 
     cluster = find_cluster([d.age for d in divs], _ages(macd_ok), _ages(mbi["green_x"]), cfg)
-    passed = cluster is not None
     if cluster:
         mbi_status = f"X vor {cluster.mbi_age} T., jetzt {mbi_status}"
 
-    # Weich: Abstand zum Hoch
+    # Pflicht 4: starker Rückgang – Rücksetzer-Tief mind. `min_drawdown` unter dem 52-Wochen-Hoch
     high = df["High"].rolling(cfg.drawdown_lookback, min_periods=1).max()
     drawdown = float(1 - close.iloc[-1] / high.iloc[-1])
+    recent_low = float(df["Low"].iloc[-cfg.max_signal_age :].min())
+    pullback_drawdown = float(1 - recent_low / high.iloc[-1])
 
-    # Weich: Fibonacci-Zone
+    # Pflicht 5: Fibonacci – Rücksetzer hat die Golden Zone erreicht und nicht durchbrochen
     fib = fib_retracement(df, cfg)
     lo_z, hi_z = cfg.fib_zone
     fib_zone = fib is not None and lo_z - cfg.fib_tolerance <= fib <= hi_z + cfg.fib_tolerance
+
+    signals_ok = cluster is not None
+    passed = (signals_ok and pullback_drawdown >= cfg.min_drawdown
+              and (fib_zone or not cfg.require_fib_zone))
 
     # Weich: Ausbruch über die EMA 20 (Einstiegs-Trigger)
     e20 = ema(close, cfg.ema_trigger_length)
@@ -273,6 +287,8 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         close=round(float(close.iloc[-1]), 4),
         rsi=round(float(r.iloc[-1]), 2),
         drawdown_pct=round(drawdown * 100, 1),
+        pullback_drawdown_pct=round(pullback_drawdown * 100, 1),
+        signals_ok=signals_ok,
         divergences=divs,
         cluster=cluster,
         macd_status=macd_status,

@@ -16,6 +16,12 @@ class Config:
     cluster_span: int = 15
     max_signal_age: int = 30
 
+    # Pflicht-Filter aus dem eigenen Analyse-Ablauf (zusätzlich zu den drei Signalen)
+    require_fib_zone: bool = True     # Rücksetzer hat die Golden Zone erreicht, nicht durchbrochen
+    min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem 52-Wochen-Hoch
+    macd_line_rising: bool = True     # MACD-Linie steigt bereits (nicht nur das Histogramm)
+    min_analyst_upside: float = 0.40  # Analysten-Kursziel mind. 40 % über Kurs (Website-Filter)
+
     # RSI und Divergenz
     rsi_length: int = 14
     pivot_left: int = 3          # Balken links vom Tief

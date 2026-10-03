@@ -25,7 +25,7 @@ import pandas as pd
 from .config import DEFAULT, Config
 from .indicators import ema, macd, rsi
 from .mbi import momentum_bias_index
-from .signals import evaluate, find_divergences, macd_condition
+from .signals import evaluate, fib_retracement, find_divergences, macd_condition
 
 HORIZONS = (10, 20, 40)
 TARGET, STOP = 0.10, -0.07
@@ -89,6 +89,7 @@ def _forward(df: pd.DataFrame, entry: int) -> dict:
 
 
 def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[dict]:
+    """Alle Tage, an denen der vollständige Trichter (Signale + Fibonacci + Rückgang) anschlägt."""
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
     if len(df) < MIN_HISTORY + 50:
         return []
@@ -96,8 +97,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
     r = rsi(close, cfg.rsi_length)
     n = len(df)
     div_idx = [n - 1 - d.age for d in find_divergences(df, r, cfg)]
-    hist = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)["hist"]
-    macd_idx = np.flatnonzero(macd_condition(hist, cfg).to_numpy())
+    m = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)
+    macd_idx = np.flatnonzero(macd_condition(m["hist"], cfg, m["macd"]).to_numpy())
     mbi = momentum_bias_index(close, df["High"], df["Low"], cfg.mbi_momentum_length, cfg.mbi_bias_length,
                               cfg.mbi_smooth_length, cfg.mbi_impulse_length, cfg.mbi_std_mult)
     mbi_idx = np.flatnonzero(mbi["green_x"].to_numpy())
@@ -132,16 +133,26 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
     return events
 
 
-def baseline_returns(df: pd.DataFrame, step: int = 5) -> list[dict]:
-    """Zufallseinstieg: jeder `step`-te Tag ab MIN_HISTORY."""
+def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> list[dict]:
+    """Zufallseinstieg: jeder `step`-te Tag ab MIN_HISTORY.
+
+    Zu jedem Tag wird vermerkt, ob die Fibonacci- und Rückgangs-Bedingungen erfüllt waren –
+    so lässt sich prüfen, ob die drei Indikatoren *zusätzlich* etwas bringen.
+    """
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
-    high52 = df["High"].rolling(252, min_periods=1).max()
+    high52 = df["High"].rolling(cfg.drawdown_lookback, min_periods=1).max()
+    recent_low = df["Low"].rolling(cfg.max_signal_age, min_periods=1).min()
+    lo_z, hi_z = cfg.fib_zone
     rows = []
     for day in range(MIN_HISTORY, len(df) - 1, step):
         fwd = _forward(df, day + 1)
-        if fwd:
-            fwd["drawdown_pct"] = 100 * (1 - df["Close"].iloc[day] / high52.iloc[day])
-            rows.append(fwd)
+        if not fwd:
+            continue
+        fwd["drawdown_pct"] = 100 * (1 - df["Close"].iloc[day] / high52.iloc[day])
+        fwd["pullback_drawdown"] = 1 - recent_low.iloc[day] / high52.iloc[day]
+        fib = fib_retracement(df.iloc[: day + 1], cfg)
+        fwd["fib_zone"] = fib is not None and lo_z - cfg.fib_tolerance <= fib <= hi_z + cfg.fib_tolerance
+        rows.append(fwd)
     return rows
 
 
@@ -166,6 +177,9 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     out.append("Zufallseinstieg (alle Aktien, alle Tage):        " + _stats(base_p, "b_"))
     dips = base_p[base_p["b_drawdown_pct"] >= 20]
     out.append("Zufallseinstieg nach ≥20 % Rückgang vom Hoch:    " + _stats(dips, "b_"))
+    setup = base_p[(base_p["b_pullback_drawdown"] >= DEFAULT.min_drawdown) & base_p["b_fib_zone"]]
+    out.append("Zufallseinstieg mit Fib-Zone + ≥20 % Rückgang:  " + _stats(setup, "b_")
+               + "   ← Vergleichsmaßstab: gleiches Setup ohne RSI/MACD/MBI")
     if events.empty:
         out.append("keine Signale")
         return "\n".join(out)

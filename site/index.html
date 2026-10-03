@@ -64,7 +64,7 @@
 <body>
 <header>
   <h1>Aktienfinder</h1>
-  <div class="sub">Bullische Umkehrsignale: RSI-Divergenz + schrumpfendes MACD-Histogramm + grünes X im Momentum Bias Index – innerhalb von ~3 Wochen.</div>
+  <div class="sub">Trichter: Rückgang ≥ 20 % → Rücksetzer in der Fibonacci-Golden-Zone → RSI-Divergenz + schrumpfende rote MACD-Balken bei steigender MACD-Linie + grünes X im Momentum Bias Index (innerhalb von ~3 Wochen) → Analysten-Kursziel.</div>
   <div class="stats" id="stats"></div>
 </header>
 
@@ -82,6 +82,12 @@
       <option value="200000000000">ab 200 Mrd. $</option>
     </select>
   </label>
+  <label>Kursziel-Upside
+    <select id="minUpside">
+      <option value="-999">alle</option><option value="20">ab 20 %</option>
+      <option value="40" selected>ab 40 %</option><option value="60">ab 60 %</option>
+    </select>
+  </label>
   <label>Mindest-Score <input type="range" id="minScore" min="0" max="100" step="5" value="0">
     <b id="minScoreVal">0</b></label>
   <label><input type="checkbox" id="onlyRed"> MACD noch rot</label>
@@ -94,7 +100,7 @@
   <div class="table-wrap">
     <table>
       <thead><tr id="head"></tr></thead>
-      <tbody id="body"><tr><td class="empty" colspan="14">Lade Daten …</td></tr></tbody>
+      <tbody id="body"><tr><td class="empty" colspan="15">Lade Daten …</td></tr></tbody>
     </table>
   </div>
   <details>
@@ -135,9 +141,12 @@ const COLUMNS = [
   { key: "region", label: "Region", get: r => r.region, html: r => `<span class="pill">${REGION[r.region] || r.region}</span>` },
   { key: "cap", label: "Börsenwert", num: true, get: r => r.market_cap_usd ?? -1,
     html: r => r.market_cap_usd == null ? "–" : fmtCap(r.market_cap_usd) },
+  { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999,
+    html: r => r.upside_pct == null ? `<span class="m">–</span>`
+      : `<span class="${r.upside_pct >= 40 ? "g" : "m"}" title="Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten)">+${fmt(r.upside_pct, 0)} %</span>` },
   { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
   { key: "drawdown_pct", label: "vom Hoch", num: true, get: r => -r.drawdown_pct,
-    html: r => `<span class="${r.drawdown_pct >= 20 ? "r" : "m"}">−${fmt(r.drawdown_pct, 1)} %</span>` },
+    html: r => `<span class="${r.drawdown_pct >= 20 ? "r" : "m"}" title="Rücksetzer-Tief: −${fmt(r.pullback_drawdown_pct, 1)} %">−${fmt(r.drawdown_pct, 1)} %</span>` },
   { key: "rsi", label: "RSI", num: true, get: r => r.rsi, html: r => fmt(r.rsi, 1) },
   { key: "div", label: "Divergenz", get: r => r.cluster ? r.cluster.divergence_age : 999,
     html: r => {
@@ -164,7 +173,7 @@ let data = null, sortKey = "score", sortAsc = false, open = new Set();
 const $ = id => document.getElementById(id);
 
 function readControls() {
-  return { region: $("region").value, minCap: +$("minCap").value, minScore: +$("minScore").value, onlyRed: $("onlyRed").checked,
+  return { region: $("region").value, minUpside: +$("minUpside").value, minCap: +$("minCap").value, minScore: +$("minScore").value, onlyRed: $("onlyRed").checked,
            onlyBreakout: $("onlyBreakout").checked, onlyFib: $("onlyFib").checked,
            q: $("search").value.trim().toLowerCase() };
 }
@@ -183,7 +192,8 @@ function render() {
   const col = COLUMNS.find(c => c.key === sortKey);
   const rows = data.results.filter(r =>
       r.passed && (!f.region || r.region === f.region) &&
-      (!f.minCap || (r.market_cap_usd ?? 0) >= f.minCap) && r.score >= f.minScore &&
+      (!f.minCap || (r.market_cap_usd ?? 0) >= f.minCap) &&
+      (f.minUpside <= -999 || (r.upside_pct ?? -999) >= f.minUpside) && r.score >= f.minScore &&
       (!f.onlyRed || r.macd_status.startsWith("rot")) &&
       (!f.onlyBreakout || (r.ema_breakout_age != null && r.ema_breakout_age < 5)) &&
       (!f.onlyFib || r.fib_zone) &&
@@ -220,6 +230,7 @@ function loadPrefs() {
     const p = JSON.parse(localStorage.getItem("aktienfinder-filter") || "{}");
     if (p.region != null) $("region").value = p.region;
     if (p.minCap != null) $("minCap").value = String(p.minCap);
+    if (p.minUpside != null) $("minUpside").value = String(p.minUpside);
     if (p.minScore != null) $("minScore").value = p.minScore;
     ["onlyRed", "onlyBreakout", "onlyFib"].forEach(k => { if (p[k] != null) $(k).checked = p[k]; });
   } catch (e) { /* Speicher nicht verfügbar */ }
@@ -243,7 +254,7 @@ loadPrefs();
 fetch("data/results.json", { cache: "no-store" })
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => { data = d; renderStats(); render(); })
-  .catch(err => { $("body").innerHTML = `<tr><td class="empty" colspan="14">Noch keine Scan-Ergebnisse vorhanden (${esc(err.message)}).</td></tr>`; });
+  .catch(err => { $("body").innerHTML = `<tr><td class="empty" colspan="15">Noch keine Scan-Ergebnisse vorhanden (${esc(err.message)}).</td></tr>`; });
 </script>
 </body>
 </html>

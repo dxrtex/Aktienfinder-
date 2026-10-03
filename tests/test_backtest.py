@@ -39,8 +39,10 @@ def test_stock_events_and_summary_run():
     c = 100 * np.exp(np.cumsum(rng.normal(0, 0.02, n)))
     idx = pd.bdate_range("2023-01-02", periods=n)
     df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c, "Volume": 1e6}, index=idx)
-    ev = backtest.stock_events("X", df)
+    loose = Config(require_fib_zone=False, min_drawdown=0.0)   # Zufallskurs: Pflichtfilter lockern
+    ev = backtest.stock_events("X", df, loose)
     assert ev, "auf 900 Tagen Zufallskurs sollte es Signale geben"
     assert all(e["score"] > 0 for e in ev)
     text = backtest.summarize(pd.DataFrame(ev), pd.DataFrame(backtest.baseline_returns(df)))
+    assert "Fib-Zone" in text
     assert "Zufallseinstieg" in text and "Score" in text
