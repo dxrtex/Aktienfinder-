@@ -3,11 +3,14 @@
 Aufruf:
     python -m aktienfinder.scanner AAPL MSFT SAP.DE
     python -m aktienfinder.scanner --file tickers.txt --out results.json --all
+    python -m aktienfinder.scanner --universe universe.csv --out site/data/results.json
 """
 
 import argparse
 import json
 import sys
+import time
+from collections import Counter
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -20,30 +23,40 @@ from .signals import evaluate, find_divergences, macd_condition
 MIN_BARS = 120
 
 
-def download(tickers: list[str], period: str, batch_size: int = 100) -> dict[str, pd.DataFrame]:
+MAX_STALE_DAYS = 10   # letzte Kerze älter → vermutlich delistet
+
+
+def download(tickers: list[str], period: str, batch_size: int = 200, retries: int = 3,
+             log=print):
+    """Lädt Tageskerzen paketweise und liefert (ticker, DataFrame) nacheinander."""
     import yfinance as yf
 
-    out: dict[str, pd.DataFrame] = {}
-    for start in range(0, len(tickers), batch_size):
+    total = len(tickers)
+    for start in range(0, total, batch_size):
         batch = tickers[start : start + batch_size]
-        data = yf.download(
-            batch,
-            period=period,
-            interval="1d",
-            group_by="ticker",
-            auto_adjust=True,
-            progress=False,
-            threads=True,
-        )
+        data = None
+        for attempt in range(retries):
+            try:
+                data = yf.download(batch, period=period, interval="1d", group_by="ticker",
+                                   auto_adjust=True, progress=False, threads=True)
+                break
+            except Exception as exc:  # Netzwerk/Rate-Limit: kurz warten und erneut versuchen
+                log(f"  Paket {start}: Fehler {exc!r}, Versuch {attempt + 1}/{retries}")
+                time.sleep(10 * (attempt + 1))
+        if data is None or data.empty:
+            continue
+        cutoff = pd.Timestamp.now(tz=data.index.tz) - pd.Timedelta(days=MAX_STALE_DAYS)
         for t in batch:
             try:
                 df = data[t] if isinstance(data.columns, pd.MultiIndex) else data
             except KeyError:
                 continue
             df = df.dropna(subset=["Close"])
-            if len(df) >= MIN_BARS:
-                out[t] = df
-    return out
+            if len(df) >= MIN_BARS and df.index[-1] >= cutoff:
+                yield t, df
+        done = min(start + batch_size, total)
+        if done % 1000 < batch_size or done == total:
+            log(f"  {done}/{total} Ticker geladen")
 
 
 def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int = 90) -> str:
@@ -74,22 +87,42 @@ def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int
 
 
 def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
-         debug: bool = False) -> list[dict]:
+         debug: bool = False, meta: dict | None = None, stats: Counter | None = None,
+         log=print) -> list[dict]:
+    """Prüft alle Ticker. `meta` liefert Name/Region je Ticker, `stats` sammelt Zählerstände."""
+    meta = meta or {}
+    stats = stats if stats is not None else Counter()
+    stats["universe"] += len(tickers)
     rows = []
-    for ticker, df in download(tickers, cfg.history_period).items():
+    for ticker, df in download(tickers, cfg.history_period, log=log):
+        stats["loaded"] += 1
         if debug:
             print(debug_report(ticker, df, cfg))
         try:
             res = evaluate(df, cfg)
         except Exception as exc:  # einzelne kaputte Datenreihen sollen den Scan nicht stoppen
-            print(f"{ticker}: Fehler {exc}", file=sys.stderr)
+            stats["errors"] += 1
+            log(f"{ticker}: Fehler {exc!r}")
             continue
         if res.close < cfg.min_price or res.dollar_volume < cfg.min_dollar_volume:
+            stats["illiquid"] += 1
             continue
+        stats["liquid"] += 1
+        stats["passed"] += res.passed
         if res.passed or include_all:
-            rows.append({"ticker": ticker, "date": str(df.index[-1].date()), **res.to_dict()})
+            info = meta.get(ticker, {})
+            rows.append({"ticker": ticker, "name": info.get("name", ""),
+                         "region": info.get("region", _region_from_ticker(ticker)),
+                         "date": str(df.index[-1].date()), **res.to_dict()})
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
+
+
+def _region_from_ticker(ticker: str) -> str:
+    europe = {"DE", "L", "PA", "AS", "SW", "MC", "MI", "ST", "CO", "OL", "HE", "BR", "VI", "LS", "IR", "WA"}
+    if "." not in ticker:
+        return "us"
+    return "europe" if ticker.rsplit(".", 1)[1] in europe else "global"
 
 
 def _print_table(rows: list[dict]) -> None:
@@ -117,27 +150,57 @@ def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(description="Aktienfinder-Scan")
     p.add_argument("tickers", nargs="*", help="Ticker-Symbole (Yahoo-Format, z. B. SAP.DE)")
     p.add_argument("--file", help="Datei mit einem Ticker pro Zeile")
+    p.add_argument("--universe", help="CSV aus aktienfinder.universe (ticker,name,region,source)")
     p.add_argument("--out", help="Ergebnis als JSON speichern")
     p.add_argument("--all", action="store_true", help="auch Aktien ohne alle Pflichtsignale ausgeben")
     p.add_argument("--debug", action="store_true", help="alle Signaltermine je Aktie ausgeben")
+    p.add_argument("--quiet", action="store_true", help="keine Tabelle ausgeben")
     args = p.parse_args(argv)
 
     tickers = list(args.tickers)
+    meta: dict[str, dict] = {}
+    universe_log: list[str] = []
     if args.file:
         with open(args.file, encoding="utf-8") as f:
             tickers += [line.split("#")[0].strip() for line in f if line.split("#")[0].strip()]
+    if args.universe:
+        uni = pd.read_csv(args.universe, dtype=str).fillna("")
+        meta = {r.ticker: {"name": r.name, "region": r.region} for r in uni.itertuples()}
+        tickers += list(uni["ticker"])
+        log_path = args.universe + ".log"
+        try:
+            with open(log_path, encoding="utf-8") as f:
+                universe_log = [line.rstrip() for line in f if line.strip()]
+        except FileNotFoundError:
+            pass
+    tickers = list(dict.fromkeys(tickers))
     if not tickers:
         p.error("keine Ticker angegeben")
 
-    rows = scan(tickers, include_all=args.all, debug=args.debug)
-    _print_table(rows)
+    started = time.time()
+    stats: Counter = Counter()
+    rows = scan(tickers, include_all=args.all, debug=args.debug, meta=meta, stats=stats)
+    if not args.quiet:
+        _print_table(rows)
+    summary = (f"Universum {stats['universe']}, geladen {stats['loaded']}, liquide {stats['liquid']}, "
+               f"Treffer {stats['passed']}, Fehler {stats['errors']}, Dauer {time.time() - started:.0f} s")
+    print(summary)
     if args.out:
+        import os
+        os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(
-                {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "results": rows},
+                {
+                    "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    "stats": dict(stats),
+                    "duration_s": round(time.time() - started),
+                    "universe_log": universe_log,
+                    "config": {k: v for k, v in vars(DEFAULT).items()},
+                    "results": rows,
+                },
                 f,
                 ensure_ascii=False,
-                indent=1,
+                separators=(",", ":"),
             )
     return 0
 

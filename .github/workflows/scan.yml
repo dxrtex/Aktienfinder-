@@ -1,0 +1,76 @@
+name: Täglicher Scan
+
+on:
+  schedule:
+    # Werktags nach US-Börsenschluss (22:47 UTC = 23:47/00:47 deutscher Zeit)
+    - cron: "47 22 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      regions:
+        description: "Regionen (us,europe,global)"
+        default: "us,europe,global"
+  push:
+    branches: ["claude/**"]
+    paths: ["aktienfinder/**", "site/**", ".github/workflows/scan.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Ticker-Universum zusammenstellen
+        run: python -m aktienfinder.universe --out universe.csv --regions "${{ inputs.regions || 'us,europe,global' }}"
+      - name: Scan
+        run: python -m aktienfinder.scanner --universe universe.csv --out site/data/results.json --quiet
+      - name: Treffer-Übersicht
+        run: |
+          python - <<'PY'
+          import json, collections
+          d = json.load(open("site/data/results.json"))
+          print(d["stats"])
+          res = d["results"]
+          print("Treffer je Region:", dict(collections.Counter(r["region"] for r in res)))
+          for lo in (40, 50, 60, 70, 80):
+              print(f"Score >= {lo}: {sum(r['score'] >= lo for r in res)}")
+          ref = {"QBTS", "RKLB", "IFX.DE", "UBER", "TUI1.DE"}
+          print("Referenz-Trades:", {r["ticker"]: r["score"] for r in res if r["ticker"] in ref})
+          for r in res[:25]:
+              print(f"{r['score']:5.1f} {r['ticker']:<10} {r['name'][:30]:<30} {r['region']}")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scan-ergebnis
+          path: |
+            site/data/results.json
+            universe.csv
+            universe.csv.log
+      - if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: scan
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
