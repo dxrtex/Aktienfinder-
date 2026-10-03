@@ -3,7 +3,8 @@
 Quellen (alle fehlertolerant – fällt eine aus, läuft der Rest weiter):
 - USA komplett: Symbolverzeichnis von NASDAQ Trader (alle an US-Börsen gehandelten Aktien)
 - Europa/global: Indexlisten von Wikipedia (DAX, FTSE 100, CAC 40, Nikkei 225 …)
-- Europa/global breit: Yahoo-Finance-Screener nach Land und Mindest-Börsenwert
+- Europa/global breit: Yahoo-Finance-Screener – je Land die größten Unternehmen an der
+  Heimatbörse (Tabelle in `markets.py`)
 
 Aufruf:
     python -m aktienfinder.universe --out universe.csv [--regions us,europe,global]
@@ -17,6 +18,8 @@ from dataclasses import dataclass
 
 import pandas as pd
 import requests
+
+from .markets import KNOWN_SUFFIXES, MARKETS
 
 HEADERS = {"User-Agent": "Mozilla/5.0 (Aktienfinder; +https://github.com/dxrtex/Aktienfinder-)"}
 
@@ -43,8 +46,6 @@ class IndexSource:
 INDEX_SOURCES = [
     IndexSource("DAX", "https://en.wikipedia.org/wiki/DAX", "europe", ".DE"),
     IndexSource("MDAX", "https://en.wikipedia.org/wiki/MDAX", "europe", ".DE"),
-    IndexSource("SDAX", "https://en.wikipedia.org/wiki/SDAX", "europe", ".DE"),
-    IndexSource("TecDAX", "https://en.wikipedia.org/wiki/TecDAX", "europe", ".DE"),
     IndexSource("FTSE 100", "https://en.wikipedia.org/wiki/FTSE_100_Index", "europe", ".L", dot_to_dash=True),
     IndexSource("FTSE 250", "https://en.wikipedia.org/wiki/FTSE_250_Index", "europe", ".L", dot_to_dash=True),
     IndexSource("CAC 40", "https://en.wikipedia.org/wiki/CAC_40", "europe", ".PA"),
@@ -54,20 +55,11 @@ INDEX_SOURCES = [
     IndexSource("FTSE MIB", "https://en.wikipedia.org/wiki/FTSE_MIB", "europe", ".MI"),
     IndexSource("OMX Stockholm 30", "https://en.wikipedia.org/wiki/OMX_Stockholm_30", "europe", ".ST", dot_to_dash=True),
     IndexSource("EURO STOXX 50", "https://en.wikipedia.org/wiki/Euro_Stoxx_50", "europe", ""),
-    IndexSource("Nikkei 225", "https://en.wikipedia.org/wiki/Nikkei_225", "global", ".T"),
     IndexSource("Hang Seng", "https://en.wikipedia.org/wiki/Hang_Seng_Index", "global", ".HK", zero_pad=4),
     IndexSource("S&P/TSX 60", "https://en.wikipedia.org/wiki/S%26P/TSX_60", "global", ".TO", dot_to_dash=True),
     IndexSource("S&P/ASX 200", "https://en.wikipedia.org/wiki/S%26P/ASX_200", "global", ".AX"),
     IndexSource("NIFTY 50", "https://en.wikipedia.org/wiki/NIFTY_50", "global", ".NS"),
 ]
-
-# Yahoo-Screener: Länder je Region (Yahoo-Regionscodes)
-SCREENER_REGIONS = {
-    "europe": ["de", "gb", "fr", "nl", "ch", "es", "it", "se", "dk", "no", "fi", "be", "at", "ie", "pt", "pl"],
-    "global": ["jp", "hk", "ca", "au", "in", "kr", "tw", "sg", "br", "mx", "za", "il", "nz", "cn"],
-}
-SCREENER_MIN_MARKET_CAP = 300_000_000
-
 
 def _get(url: str) -> str:
     resp = requests.get(url, headers=HEADERS, timeout=30)
@@ -96,6 +88,8 @@ def _normalize(raw, src: IndexSource) -> str | None:
         return None
     if src.suffix and t.endswith(src.suffix):
         return t
+    if "." in t and "." + t.rsplit(".", 1)[1] in KNOWN_SUFFIXES:
+        return t                                          # andere Heimatbörse, z. B. Airbus "AIR.PA" im DAX
     if not src.suffix:
         # gemischte Liste (z. B. EURO STOXX 50): nur Einträge mit Yahoo-Suffix verwendbar
         return t if re.search(r"\.[A-Z]{1,2}$", t) else None
@@ -132,26 +126,30 @@ def index_members(src: IndexSource) -> pd.DataFrame:
     return pd.DataFrame(rows, columns=["ticker", "name", "region", "source"])
 
 
-def screener(region: str) -> pd.DataFrame:
-    """Yahoo-Screener: alle Aktien der Länder einer Region ab Mindest-Börsenwert."""
+def screener(region: str, page_size: int = 250) -> pd.DataFrame:
+    """Yahoo-Screener: je Land die `top_n` größten Unternehmen an der Heimatbörse.
+
+    Sortiert wird nach Börsenwert innerhalb eines Landes (dort ist die Währung einheitlich).
+    Zweitlistings an Nebenbörsen (z. B. Frankfurt/Stuttgart statt XETRA) werden verworfen.
+    """
     import yfinance as yf
     from yfinance import EquityQuery
 
     rows = []
-    for country in SCREENER_REGIONS[region]:
-        query = EquityQuery("and", [
-            EquityQuery("eq", ["region", country]),
-            EquityQuery("gte", ["intradaymarketcap", SCREENER_MIN_MARKET_CAP]),
-        ])
-        offset = 0
-        while True:
-            res = yf.screen(query, offset=offset, size=250, sortField="intradaymarketcap", sortAsc=False)
+    for m in (m for m in MARKETS if m.region == region):
+        query = EquityQuery("eq", ["region", m.country])
+        found, offset = 0, 0
+        while found < m.top_n:
+            res = yf.screen(query, offset=offset, size=page_size, sortField="intradaymarketcap", sortAsc=False)
             quotes = res.get("quotes", [])
             for q in quotes:
-                rows.append((q["symbol"], q.get("longName") or q.get("shortName", ""), region,
-                             f"Yahoo-Screener {country}"))
+                sym = q.get("symbol", "")
+                if q.get("quoteType", "EQUITY") == "EQUITY" and sym.endswith(m.suffixes) and found < m.top_n:
+                    rows.append((sym, q.get("longName") or q.get("shortName", ""), region,
+                                 f"Yahoo-Screener {m.country}"))
+                    found += 1
             offset += len(quotes)
-            if not quotes or offset >= res.get("total", 0) or offset >= 5000:
+            if not quotes or offset >= res.get("total", 0) or offset >= 10 * m.top_n:
                 break
     return pd.DataFrame(rows, columns=["ticker", "name", "region", "source"])
 

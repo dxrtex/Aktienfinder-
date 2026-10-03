@@ -11,12 +11,15 @@ on:
         default: "us,europe,global"
   push:
     branches: ["claude/**"]
-    paths: ["aktienfinder/**", "site/**", ".github/workflows/scan.yml"]
+    paths: ["aktienfinder/**", ".github/workflows/scan.yml"]
 
 permissions:
   contents: read
   pages: write
   id-token: write
+
+env:
+  PYTHONUNBUFFERED: "1"   # Fortschritt sofort im Log anzeigen
 
 concurrency:
   group: scan-${{ github.ref }}

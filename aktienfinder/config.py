@@ -51,9 +51,9 @@ class Config:
     ema_trigger_length: int = 20   # Ausbruch über die EMA 20 als Einstiegs-Trigger
     trigger_max_age: int = 5
 
-    # Grundfilter gegen Pennystocks / illiquide Werte
+    # Grundfilter gegen Pennystocks / illiquide Werte (in US-Dollar umgerechnet, siehe markets.py)
     min_price: float = 1.0
-    min_dollar_volume: float = 1_000_000.0
+    min_dollar_volume: float = 1_000_000.0   # durchschnittlicher Tagesumsatz
 
     # Benötigte Historie
     history_period: str = "2y"

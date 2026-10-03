@@ -17,6 +17,7 @@ import pandas as pd
 
 from .config import DEFAULT, Config
 from .indicators import macd, rsi
+from .markets import region_of, usd_factor
 from .mbi import momentum_bias_index
 from .signals import evaluate, find_divergences, macd_condition
 
@@ -104,7 +105,8 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
             stats["errors"] += 1
             log(f"{ticker}: Fehler {exc!r}")
             continue
-        if res.close < cfg.min_price or res.dollar_volume < cfg.min_dollar_volume:
+        fx = usd_factor(ticker)
+        if res.close * fx < cfg.min_price or res.dollar_volume * fx < cfg.min_dollar_volume:
             stats["illiquid"] += 1
             continue
         stats["liquid"] += 1
@@ -112,17 +114,10 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         if res.passed or include_all:
             info = meta.get(ticker, {})
             rows.append({"ticker": ticker, "name": info.get("name", ""),
-                         "region": info.get("region", _region_from_ticker(ticker)),
+                         "region": info.get("region") or region_of(ticker),
                          "date": str(df.index[-1].date()), **res.to_dict()})
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
-
-
-def _region_from_ticker(ticker: str) -> str:
-    europe = {"DE", "L", "PA", "AS", "SW", "MC", "MI", "ST", "CO", "OL", "HE", "BR", "VI", "LS", "IR", "WA"}
-    if "." not in ticker:
-        return "us"
-    return "europe" if ticker.rsplit(".", 1)[1] in europe else "global"
 
 
 def _print_table(rows: list[dict]) -> None:

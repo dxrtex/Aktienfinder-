@@ -14,8 +14,9 @@ from .indicators import ema
 
 def wma(src: pd.Series, length: int) -> pd.Series:
     """Gewichteter Durchschnitt wie Pine `ta.wma` (jüngster Wert hat Gewicht `length`)."""
-    weights = np.arange(1, length + 1, dtype=float)
-    return src.rolling(length).apply(lambda x: np.dot(x, weights) / weights.sum(), raw=True)
+    # Summe über verschobene Reihen statt rolling.apply – gleiches Ergebnis, viel schneller
+    total = sum((length - k) * src.shift(k) for k in range(length))
+    return total / (length * (length + 1) / 2)
 
 
 def hma(src: pd.Series, length: int) -> pd.Series:
