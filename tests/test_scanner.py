@@ -24,3 +24,9 @@ def test_scan_filters_pennystocks_and_sorts(monkeypatch, capsys):
     assert keys == sorted(keys, reverse=True)
     scanner._print_table(rows)
     assert "Ticker" in capsys.readouterr().out
+
+
+def test_debug_report_lists_signal_dates():
+    df = _fake_download(["X"], "2y")["X"]
+    text = scanner.debug_report("X", df)
+    assert "MBI grünes X" in text and "MACD rot+schrumpfend" in text

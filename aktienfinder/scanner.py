@@ -13,7 +13,9 @@ from datetime import datetime, timezone
 import pandas as pd
 
 from .config import DEFAULT, Config
-from .signals import evaluate
+from .indicators import macd, rsi
+from .mbi import momentum_bias_index
+from .signals import evaluate, find_divergences, macd_condition
 
 MIN_BARS = 120
 
@@ -44,9 +46,39 @@ def download(tickers: list[str], period: str, batch_size: int = 100) -> dict[str
     return out
 
 
-def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False) -> list[dict]:
+def debug_report(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT, bars: int = 90) -> str:
+    """Alle Signaltermine der letzten `bars` Handelstage – zum Abgleich mit TradingView."""
+    df = df.dropna(subset=["Close", "Low", "High"])
+    close = df["Close"]
+    start = df.index[-bars]
+    r = rsi(close, cfg.rsi_length)
+    hist = macd(close, cfg.macd_fast, cfg.macd_slow, cfg.macd_signal)["hist"]
+    mbi = momentum_bias_index(close, df["High"], df["Low"], cfg.mbi_momentum_length,
+                              cfg.mbi_bias_length, cfg.mbi_smooth_length,
+                              cfg.mbi_impulse_length, cfg.mbi_std_mult)
+    fmt = lambda idx: ", ".join(str(d.date()) for d in idx) or "-"
+    lines = [f"--- {ticker}: {len(df)} Kerzen bis {df.index[-1].date()}, Schluss {close.iloc[-1]:.2f}, "
+             f"RSI {r.iloc[-1]:.1f}, MACD-Hist {hist.iloc[-1]:.4f}"]
+    for d in find_divergences(df, r, cfg):
+        if pd.Timestamp(d.confirmed_date) >= start:
+            lines.append(f"  Divergenz {d.kind:<9}: {d.prev_pivot_date} (Tief {d.prev_price_low:.2f}, "
+                         f"RSI {d.prev_rsi_low:.1f}) -> {d.pivot_date} (Tief {d.price_low:.2f}, "
+                         f"RSI {d.rsi_low:.1f}), bestätigt {d.confirmed_date}")
+    recent = df.index >= start
+    lines.append(f"  MACD rot+schrumpfend : {fmt(df.index[macd_condition(hist, cfg).to_numpy() & recent])}")
+    lines.append(f"  MBI grünes X         : {fmt(df.index[mbi['green_x'].to_numpy() & recent])}")
+    lines.append(f"  MBI rotes X          : {fmt(df.index[mbi['red_x'].to_numpy() & recent])}")
+    lines.append(f"  MBI jetzt            : grün {mbi['upper_bias'].iloc[-1]:.0f}, rot {mbi['lower_bias'].iloc[-1]:.0f}, "
+                 f"Linie {mbi['impulse_boundary'].iloc[-1]:.0f}")
+    return "\n".join(lines)
+
+
+def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
+         debug: bool = False) -> list[dict]:
     rows = []
     for ticker, df in download(tickers, cfg.history_period).items():
+        if debug:
+            print(debug_report(ticker, df, cfg))
         try:
             res = evaluate(df, cfg)
         except Exception as exc:  # einzelne kaputte Datenreihen sollen den Scan nicht stoppen
@@ -87,6 +119,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--file", help="Datei mit einem Ticker pro Zeile")
     p.add_argument("--out", help="Ergebnis als JSON speichern")
     p.add_argument("--all", action="store_true", help="auch Aktien ohne alle Pflichtsignale ausgeben")
+    p.add_argument("--debug", action="store_true", help="alle Signaltermine je Aktie ausgeben")
     args = p.parse_args(argv)
 
     tickers = list(args.tickers)
@@ -96,7 +129,7 @@ def main(argv: list[str] | None = None) -> int:
     if not tickers:
         p.error("keine Ticker angegeben")
 
-    rows = scan(tickers, include_all=args.all)
+    rows = scan(tickers, include_all=args.all, debug=args.debug)
     _print_table(rows)
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
