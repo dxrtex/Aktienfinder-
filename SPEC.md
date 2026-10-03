@@ -116,3 +116,16 @@ Gemessen: Wird innerhalb von 60 Handelstagen (Tageshoch) +10 / +20 / +30 % errei
 Fazit: Der Vorteil kommt vor allem aus „deutlich gefallen + Fibonacci“ und einem tiefen Rücksetzer.
 RSI/MACD/MBI verbessern die Trefferquote im Schnitt kaum; Aktien, die schon vom Tief steigen,
 liefen statistisch eher besser. Der Scanner bleibt ein Vorfilter für die eigene Chartprüfung.
+
+## Erweiterungen (Okt. 2026)
+- **Divergenz in Bildung:** Die letzte Kerze(n) bilden ein neues 2-Wochen-Tief, das noch nicht durch 3 Folgekerzen
+  bestätigt ist, aber mit einem früheren bestätigten RSI-Tief bereits eine Divergenz zeigt (RSI mind. 2 Punkte
+  Abstand). Nur Hinweis (+4 Punkte, wenn noch keine bestätigte Divergenz vorliegt), kein Kernkriterium.
+- **Chance/Risiko:** Stop 3 % unter dem Rücksetzer-Tief, technisches Ziel = Fib 0,382 des Schwungs (liegt das
+  schon unter dem Kurs: das Schwunghoch). Chance/Risiko = (Ziel − Kurs) / (Kurs − Stop).
+- **Quartalszahlen:** nächster Termin von Yahoo; Warnung auf der Karte, wenn er in den nächsten 10 Tagen liegt.
+- **Top-Auswahl:** alle 5 Kernkriterien, Chance/Risiko ≥ 2 : 1, keine Quartalszahlen in den nächsten 10 Tagen
+  (zusätzlich gilt der Kursziel-Filter). Wird beim Top-Setup des Tages bevorzugt.
+- **Backtest Stufe B:** prüft Marktumfeld (Index über EMA 200), langfristigen Trend der Aktie, relative Stärke,
+  nachlassendes Volumen, Chance/Risiko und einen bestätigten Einstieg (erst wenn das MACD-Histogramm grün wird).
+  Übernommen wird nur, was die Trefferquote messbar verbessert.

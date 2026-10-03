@@ -54,6 +54,7 @@ class Config:
     volume_avg_length: int = 20
     volume_spike: float = 1.5      # Volumen ≥ 1,5 × Durchschnitt
     fib_lookback: int = 150        # Suchbereich für den letzten Aufwärtsschwung
+    stop_buffer: float = 0.03      # Stop so weit unter dem Rücksetzer-Tief
     fib_low_lookback: int = 300    # großer Schwung: Schwungtief bis so viele Tage vor dem Hoch
     # Golden Zone 0,618–0,79 (Anzeige „★“ auf der Website, mit Toleranz)
     fib_zone: tuple = (0.618, 0.79)

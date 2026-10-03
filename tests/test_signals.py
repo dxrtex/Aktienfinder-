@@ -176,3 +176,19 @@ def test_fib_uses_big_swing_like_tradingview():
                       index=pd.bdate_range("2025-01-01", periods=len(c)))
     fib = fib_retracement(df)
     assert fib is not None and 0.70 < fib < 0.78
+
+
+def test_forming_divergence_on_unconfirmed_new_low():
+    # Tief A (steiler Abverkauf, RSI tief), Erholung, langsames tieferes Tief B ganz am Ende (unbestätigt)
+    import numpy as np
+    import pandas as pd
+    from aktienfinder.indicators import rsi
+    from aktienfinder.signals import find_divergences, forming_divergence
+    c = np.concatenate([np.linspace(130, 131, 40), np.linspace(131, 107, 12), np.linspace(107, 122, 15),
+                        np.linspace(122, 112, 15), np.linspace(112, 114, 4), np.linspace(114, 105.5, 14)])
+    df = pd.DataFrame({"Open": c, "High": c + 0.3, "Low": c - 0.3, "Close": c},
+                      index=pd.bdate_range("2026-01-01", periods=len(c)))
+    r = rsi(df["Close"])
+    assert forming_divergence(df, r) == "klassisch"
+    # bestätigt ist sie noch nicht (letztes Tief = letzte Kerze)
+    assert all(d.pivot_date != str(df.index[-1].date()) for d in find_divergences(df, r))

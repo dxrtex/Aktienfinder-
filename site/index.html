@@ -78,6 +78,10 @@
   .st-gelaufen { color: var(--red); background: var(--red-bg); }
   .st-kein_setup { color: var(--muted); background: var(--surface-2); }
   .chip.miss { background: transparent; color: var(--faint); border: 1px dashed var(--line); }
+  .top, .warn { display: inline-block; margin: 8px 8px 0 0; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
+  .top { color: var(--accent-ink); background: var(--accent); }
+  .warn { color: var(--red); background: var(--red-bg); }
+  .hint { margin: 8px 2px 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
   .wl { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--gold); background: var(--gold-bg);
         padding: 4px 12px; border-radius: 999px; }
   .score { flex: none; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
@@ -203,6 +207,9 @@
 <section class="sheet" id="sheet" aria-label="Filter">
   <div class="grabber"></div>
   <h3>Filter</h3>
+  <div class="group"><div class="group-label">Auswahl</div>
+    <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
+    <p class="hint">Top-Auswahl = alle 5 Kernkriterien erfüllt, Chance/Risiko mind. 2 : 1, keine Quartalszahlen in den nächsten 10 Tagen.</p></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
   <div class="group"><div class="group-label">Analysten-Kursziel</div>
@@ -219,8 +226,10 @@
     <div class="opts" data-key="macd"><button class="opt" data-v="">egal</button><button class="opt" data-v="rot">Balken noch rot, schrumpfend</button><button class="opt" data-v="gruen">gerade grün geworden</button></div></div>
   <div class="group"><div class="group-label">MBI grüne X</div>
     <div class="opts" data-key="mbi"><button class="opt" data-v="">egal</button><button class="opt" data-v="2">mind. 2 grüne X</button></div></div>
+  <div class="group"><div class="group-label">Quartalszahlen</div>
+    <div class="opts" data-key="earn"><button class="opt" data-v="">egal</button><button class="opt" data-v="nein">keine Zahlen in den nächsten 10 Tagen</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="upside">Kursziel</button><button class="opt" data-v="entry">nächstes am Tief</button><button class="opt" data-v="fresh">frischestes Signal</button><button class="opt" data-v="drawdown">stärkster Rückgang</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="upside">Kursziel</button><button class="opt" data-v="entry">nächstes am Tief</button><button class="opt" data-v="fresh">frischestes Signal</button><button class="opt" data-v="drawdown">stärkster Rückgang</button><button class="opt" data-v="crv">Chance/Risiko</button></div></div>
   <button class="btn" id="done">Fertig</button>
   <button class="opt" id="reset" style="width:100%;margin-top:10px">Filter zurücksetzen</button>
 </section>
@@ -239,6 +248,16 @@ const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, 0) + " Mrd. $";
 const fmtUp = v => v == null ? "–" : (v > 0 ? "+" : "") + fmt(v, 0) + " %";
 
+// Tage bis zu den nächsten Quartalszahlen (null = unbekannt)
+function earningsDays(r) {
+  if (!r.earnings_date) return null;
+  const d = new Date(r.earnings_date + "T12:00:00"), now = new Date();
+  return Math.round((d - now) / 864e5);
+}
+const earningsSoon = r => { const d = earningsDays(r); return d != null && d >= 0 && d <= 10; };
+const fmtCrv = v => v == null ? "–" : `${fmt(v, 1)} : 1`;
+// Top-Auswahl: alle 5 Kernkriterien, Chance/Risiko ≥ 2, keine Quartalszahlen in den nächsten 10 Tagen
+const isTop = r => r.passed && (r.core_met || []).length === 5 && (r.crv ?? 0) >= 2 && !earningsSoon(r);
 function macdNear(r) {
   return r.macd_status.startsWith("rot") && r.macd_closeness ? ` · ${Math.round(r.macd_closeness * 100)} % an 0` : "";
 }
@@ -270,11 +289,13 @@ function watchTraits(r) {
   return [
     { ok: c.rueckgang, text: `Rückgang −${fmt(r.pullback_drawdown_pct, 0)} %` },
     { ok: c.fibonacci, star: c.fibonacci && r.fib_zone, text: fib },
-    { ok: c.divergenz, text: c.divergenz ? "RSI-Divergenz" : "keine RSI-Divergenz" },
+    { ok: c.divergenz, star: !c.divergenz && !!r.divergence_forming,
+      text: c.divergenz ? "RSI-Divergenz" : r.divergence_forming ? `Divergenz ${r.divergence_forming} in Bildung (unbestätigt)` : "keine RSI-Divergenz" },
     { ok: c.macd, text: `MACD ${r.macd_status}${macdNear(r)}` },
     { ok: c.mbi, text: c.mbi ? `MBI ${r.green_x_count}× grünes X` : "kein grünes X" },
     { ok: c.buendel, text: c.buendel ? "Signale zeitlich zusammen" : "Signale nicht zusammen" },
     { ok: r.rise_from_low_pct <= 8, text: `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
+    { ok: (r.crv ?? 0) >= 2, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
   ];
 }
 
@@ -298,6 +319,8 @@ function traits(r) {
     { ok: r.rise_from_low_pct <= 8 && !r.still_falling, star: r.rise_from_low_pct <= 5 && !r.still_falling,
       text: r.still_falling ? "fällt noch (neues Tief)" : `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
     { ok: r.volume_spike || r.volume_breakout, text: r.volume_spike ? "Volumen-Spike am Tief" : r.volume_breakout ? "hohes Volumen" : "Volumen normal" },
+    { ok: (r.crv ?? 0) >= 2, star: (r.crv ?? 0) >= 3, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
+    ...(r.divergence_forming ? [{ ok: true, text: `neue Divergenz ${r.divergence_forming} in Bildung` }] : []),
   ];
 }
 
@@ -333,6 +356,8 @@ function detailHtml(r) {
   const bundle = c ? `Signal-Bündel: Divergenz vor ${c.divergence_age}, MACD vor ${c.macd_age}, grünes X vor ${c.mbi_age} Handelstagen.`
                    : "Noch kein vollständiges Signal-Bündel.";
   return `${bundle}
+    ${r.stop_price != null && r.target_price_fib != null ? `<br>Technisch: Stop ${fmt(r.stop_price)} (−${fmt(r.risk_pct ?? 0, 0)} %, knapp unter dem Rücksetzer-Tief), Ziel ${fmt(r.target_price_fib)} (+${fmt(r.chance_pct ?? 0, 0)} %, Fib 0,382 bzw. letztes Hoch) → Chance/Risiko ${fmtCrv(r.crv)}.<br>` : ""}
+    ${r.earnings_date ? `Nächste Quartalszahlen: ${new Date(r.earnings_date + "T12:00:00").toLocaleDateString("de-DE")}.` : ""}
     ${r.target_price ? `Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten).` : ""}
     ${r.isin ? `ISIN ${esc(r.isin)}.` : ""}<ul>${divs}</ul>`;
 }
@@ -342,12 +367,13 @@ const CHEVRON = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" str
 function card(r, hero = false) {
   const up = r.upside_pct;
   return `<article class="card${hero ? " hero" : ""}">
-    ${hero ? `<div class="hero-label">⭐ ${r.status === "bereit" ? "Top-Setup des Tages · einstiegsbereit" : "Top-Setup des Tages"}</div>` : ""}
+    ${hero ? `<div class="hero-label">⭐ Top-Setup des Tages${isTop(r) ? " · Top-Auswahl" : ""}${r.status === "bereit" ? " · einstiegsbereit" : ""}</div>` : ""}
     <div class="card-top">
       <div class="card-title">
         <h2 title="${esc(r.name)}">${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${REGION[r.region] || r.region}</div>
-        ${statusBadge(r)}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
+        ${statusBadge(r)}${isTop(r) ? `<span class="top">Top-Auswahl</span>` : ""}${inWatch(r) ? `<span class="wl">★ Watchlist</span>` : ""}
+        ${earningsSoon(r) ? `<span class="warn">⚠ Zahlen ${earningsDays(r) === 0 ? "heute" : `in ${earningsDays(r)} T.`}</span>` : ""}
       </div>
       <div class="score" style="--p:${r.score}" title="Score ${fmt(r.score, 0)} von 100"><span>${fmt(r.score, 0)}</span></div>
     </div>
@@ -386,13 +412,16 @@ const COLUMNS = [
     html: r => [...new Set(r.divergences.map(d => d.kind))].join(" + ") + ` <span class="muted">${r.cluster.divergence_age} T.</span>` },
   { key: "macd", label: "MACD", get: r => r.macd_status, html: r => esc(r.macd_status) },
   { key: "mbi", label: "MBI", get: r => r.green_x_count, html: r => `${r.green_x_count}× X` },
+  { key: "crv", label: "Chance/Risiko", num: true, get: r => r.crv ?? -1, html: r => `<span class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmtCrv(r.crv)}</span>` },
+  { key: "earn", label: "Zahlen", num: true, get: r => earningsDays(r) ?? 999,
+    html: r => earningsDays(r) == null || earningsDays(r) < 0 ? "–" : `<span class="${earningsSoon(r) ? "down" : ""}">in ${earningsDays(r)} T.</span>` },
   { key: "rev", label: "Umkehrkerze", get: r => r.reversal_candle_age ?? 99, html: r => r.reversal_candle_age == null ? "–" : `vor ${r.reversal_candle_age} T.` },
 ];
 
 // ---------- Zustand ----------
 let data = null;
 const open = new Set();
-const DEFAULTS = { region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
+const DEFAULTS = { pick: "", region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "", earn: "" };
 const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
 const SORTS = {
@@ -401,6 +430,7 @@ const SORTS = {
   fresh: (a, b) => newestAge(a) - newestAge(b) || b.score - a.score,
   drawdown: (a, b) => b.pullback_drawdown_pct - a.pullback_drawdown_pct,
   entry: (a, b) => a.rise_from_low_pct - b.rise_from_low_pct || b.score - a.score,
+  crv: (a, b) => (b.crv ?? -1) - (a.crv ?? -1),
 };
 const STATUS_RANK = { bereit: 0, abwarten: 1, gelaufen: 2, kein_setup: 3 };
 
@@ -412,6 +442,8 @@ function filtered({ ignoreWatch = false } = {}) {
   const minUp = +state.minUpside, minCap = +state.minCap;
   const kinds = r => new Set(r.divergences.map(d => d.kind));
   return data.results.filter(r => r.passed && search(r)
+    && (!state.pick || isTop(r))
+    && (!state.earn || !earningsSoon(r))
     && (!state.region || r.region === state.region)
     && (minUp <= -999 || (r.upside_pct ?? -999) >= minUp)
     && (!minCap || (r.market_cap_usd ?? 0) >= minCap)
@@ -447,7 +479,8 @@ function render() {
     return;
   }
   // Top-Setup: bevorzugt ein einstiegsbereites Setup
-  const topIdx = Math.max(0, rows.findIndex(r => r.status === "bereit"));
+  const pref = [r => isTop(r) && r.status === "bereit", isTop, r => r.status === "bereit"];
+  const topIdx = pref.map(f => rows.findIndex(f)).find(i => i >= 0) ?? 0;
   const top = rows[topIdx], rest = rows.filter((_, i) => i !== topIdx);
   $("main").innerHTML = (state.tab === "cards" ? card(top, true) + head(rest.length) : head(rows.length))
     + `<div class="grid">${(state.tab === "cards" ? rest : rows).map(r => card(r)).join("")}</div>`;
@@ -459,7 +492,8 @@ function renderHead() {
   const when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   const n = data.results.filter(r => r.passed).length;
   const ready = data.results.filter(r => r.passed && r.status === "bereit").length;
-  $("sub").innerHTML = `<b>${n.toLocaleString("de-DE")} Setups</b> heute, davon <b>${ready} einstiegsbereit</b> · ${(data.stats.liquid || 0).toLocaleString("de-DE")} Aktien geprüft · Scan ${esc(when)} Uhr`;
+  const top = data.results.filter(isTop).length;
+  $("sub").innerHTML = `<b>${n.toLocaleString("de-DE")} Setups</b> heute, davon <b>${top} in der Top-Auswahl</b> und <b>${ready} einstiegsbereit</b> · ${(data.stats.liquid || 0).toLocaleString("de-DE")} Aktien geprüft · Scan ${esc(when)} Uhr`;
   $("sources").textContent = (data.universe_log || []).join("\n") + "\n\nDauer: " + (data.duration_s || 0) + " s\n\n"
     + Object.entries(data.config || {}).map(([k, v]) => `${k} = ${JSON.stringify(v)}`).join("\n");
 }

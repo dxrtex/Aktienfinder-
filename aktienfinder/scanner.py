@@ -93,18 +93,35 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
         except Exception:
             return None
 
+    def next_earnings(tk, info: dict) -> str | None:
+        """Nächster Termin für Quartalszahlen (ISO-Datum) oder None."""
+        today = pd.Timestamp.now(tz="UTC").normalize()
+        stamps = [info.get(k) for k in ("earningsTimestampStart", "earningsTimestamp")]
+        dates = [pd.Timestamp(v, unit="s", tz="UTC") for v in stamps if isinstance(v, (int, float))]
+        if not dates:
+            try:
+                cal = tk.calendar or {}
+                dates = [pd.Timestamp(d).tz_localize("UTC") for d in cal.get("Earnings Date", [])]
+            except Exception:
+                dates = []
+        future = sorted(d for d in dates if d >= today)
+        return str(future[0].date()) if future else None
+
     def fetch(t: str) -> tuple[float | None, float | None, int | None]:
         tk = yf.Ticker(t)
         isins[t] = isin_of(tk)
         for attempt in range(3):
             try:
                 info = tk.info
+                earnings[t] = next_earnings(tk, info)
                 target = info.get("targetMeanPrice")
                 price = info.get("currentPrice") or info.get("regularMarketPrice")
                 if target and price:
                     return target, price, info.get("numberOfAnalystOpinions")
             except Exception:  # Yahoo blockt gelegentlich (401/429): kurz warten, erneut versuchen
                 pass
+            if t not in earnings:
+                earnings[t] = next_earnings(tk, {})
             try:
                 apt = tk.analyst_price_targets or {}
                 if apt.get("mean") and apt.get("current"):
@@ -114,16 +131,17 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
             time.sleep(2 * (attempt + 1))
         return None, None, None
 
-    out, missing, isins = {}, 0, {}
+    out, missing, isins, earnings = {}, 0, {}, {}
     for t in tickers:
         target, price, analysts = fetch(t)
+        extra = {"isin": isins.get(t), "earnings_date": earnings.get(t)}
         if not (target and price):
             missing += 1
-            out[t] = {"target_price": None, "upside_pct": None, "analysts": None, "isin": isins.get(t)}
+            out[t] = {"target_price": None, "upside_pct": None, "analysts": None, **extra}
             continue
         out[t] = {"target_price": round(float(target), 2),
                   "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
-                  "analysts": analysts, "isin": isins.get(t)}
+                  "analysts": analysts, **extra}
     if missing:
         log(f"  Kursziel nicht verfügbar für {missing} von {len(tickers)} Aktien")
     return out
@@ -214,7 +232,7 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         targets = analyst_targets(passed, log=log)
         for r in rows:
             r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
-                                               "isin": None}))
+                                               "isin": None, "earnings_date": None}))
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
 
