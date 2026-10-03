@@ -129,3 +129,23 @@ liefen statistisch eher besser. Der Scanner bleibt ein Vorfilter für die eigene
 - **Backtest Stufe B:** prüft Marktumfeld (Index über EMA 200), langfristigen Trend der Aktie, relative Stärke,
   nachlassendes Volumen, Chance/Risiko und einen bestätigten Einstieg (erst wenn das MACD-Histogramm grün wird).
   Übernommen wird nur, was die Trefferquote messbar verbessert.
+
+## Optimierung mit echten Trades (Okt. 2026)
+Backtest-Trade: Kauf zur Eröffnung am Folgetag, Stop 3 % unter dem Rücksetzer-Tief, Verkauf bei +20 %,
+sonst nach 60 Handelstagen. Optimiert auf das Ø-Ergebnis je Trade; Auswahl auf 2021–Nov. 2024, Prüfung auf
+Nov. 2024–2026. Basis (alle Signale): Ø +2,7 % je Trade, Ziel vor Stop 31 %.
+
+| Filter (Test-Hälfte) | Ø je Trade | Ziel vor Stop |
+|---|---|---|
+| Relative Stärke 3 Mon. > 0 | +5,3 % | 42 % |
+| Rücksetzer ≥ 40 % | +3,5 % | 43 % |
+| Kurs 5–20 % über dem Tief | +3,2 % | 35 % |
+| Kurs 0–8 % über dem Tief (Einstieg am Tief) | +1,2 % | 22 % |
+| Chance/Risiko ≥ 2 | +1,4 % | 26 % (enger Stop wird oft gerissen) |
+| Markt über EMA 200 | +1,6 % | 28 % |
+| **Top-Auswahl: rel. Stärke > 0, 5–20 % über Tief, ≥ 2 grüne X** | **+6,4 %** (Lernen +4,5 %) | 41 %, Median +10,4 % |
+
+Daraus folgt: Top-Auswahl und Status „Einstiegsbereit“ = vollständiges Setup + Kursziel ≥ 40 % + relative
+Stärke > 0 + Kurs 5–20 % über dem Tief + ≥ 2 grüne MBI-X + keine Quartalszahlen in 10 Tagen.
+„Schon gelaufen“ erst ab +20 % über dem Tief. Chance/Risiko wird nur angezeigt, nicht gefiltert.
+Hinweis: Vergangene Ergebnisse sind keine Garantie; der Zeitraum enthält keinen langen Bärenmarkt.

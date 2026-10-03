@@ -423,8 +423,9 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         score += 12 * macd_closeness                 # je näher das rote Histogramm an 0, desto besser
     elif 0 < macd_green_days <= 3:
         score += 3                                   # schon grün – etwas spät
-    span = cfg.entry_zero - cfg.entry_full
-    score += 10 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    # Einstieg: Backtest (echte Trades) – Kurs 5–20 % über dem Tief (Erholung hat begonnen) lief am
+    # besten, Einstieg direkt am Tief (0–5 %) am schlechtesten
+    score += 10 if 5 <= 100 * rise_from_low <= 20 else 4 if rise_from_low < 0.05 else 0
     score += 3 * ("klassisch" in kinds)
     if forming and not kinds:
         score += 4                                   # Divergenz bildet sich gerade (unbestätigt)

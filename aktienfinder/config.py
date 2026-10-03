@@ -54,17 +54,19 @@ class Config:
     volume_avg_length: int = 20
     volume_spike: float = 1.5      # Volumen ≥ 1,5 × Durchschnitt
     fib_lookback: int = 150        # Suchbereich für den letzten Aufwärtsschwung
-    # Top-Auswahl („alle Kriterien erfüllt“) – Schwellen werden per Optimierer (Backtest) festgelegt
-    top_core5: bool = True                 # alle 5 Kernkriterien
+    # Top-Auswahl („alle Kriterien erfüllt“) – Schwellen aus dem Optimierer (Backtest mit echten Trades:
+    # Stop unter dem Tief, +20 % Ziel, max. 60 Tage; ausgewählt auf 2021–2024, bestätigt auf 2024–2026).
+    # Voraussetzung ist immer das vollständige Setup (Rückgang, Fibonacci, Divergenz, MACD, MBI-X).
+    top_core5: bool = False                # zusätzlich MACD *heute* rot & schrumpfend (Backtest: kein Vorteil)
     top_min_upside: float = 40.0           # Analysten-Kursziel mind. so viel % über dem Kurs
-    top_min_crv: float = 2.0               # Chance/Risiko mindestens
+    top_min_crv: float = 0.0               # Chance/Risiko mindestens (Backtest: Filter verschlechtert das Ergebnis)
     top_min_pullback: float = 20.0         # Rücksetzer vom 52-Wochen-Hoch in %
     top_market: bool = False               # Gesamtmarkt über EMA 200
     top_trend: bool = False                # EMA 200 der Aktie steigt
-    top_rel_strength: bool = False         # relative Stärke 3 Monate > 0
-    top_rise_min: float = 0.0              # Kurs mind. so viel % über dem Tief
-    top_rise_max: float = 100.0            # … und höchstens so viel
-    top_min_green_x: int = 1
+    top_rel_strength: bool = True          # relative Stärke 3 Monate > 0 (stärkster Einzelfilter)
+    top_rise_min: float = 5.0              # Kurs mind. so viel % über dem Tief
+    top_rise_max: float = 20.0             # … und höchstens so viel (Erholung hat begonnen)
+    top_min_green_x: int = 2
     top_no_earnings_days: int = 10         # keine Quartalszahlen in so vielen Tagen
     stop_buffer: float = 0.03      # Stop so weit unter dem Rücksetzer-Tief
     fib_low_lookback: int = 300    # großer Schwung: Schwungtief bis so viele Tage vor dem Hoch
@@ -83,7 +85,7 @@ class Config:
     entry_full: float = 0.05       # bis +5 % über dem Tief volle Punkte
     entry_zero: float = 0.20       # ab +20 % keine Punkte mehr
     status_ready_max_rise: float = 0.08   # „Einstiegsbereit“: höchstens +8 % über dem Tief
-    status_ran_rise: float = 0.15         # „Schon gelaufen“: ab +15 % über dem Tief …
+    status_ran_rise: float = 0.20         # „Schon gelaufen“: ab +20 % über dem Tief …
     status_ran_green_days: int = 10       # … oder MACD seit mehr als 10 Tagen grün
     ema_trigger_length: int = 20   # Ausbruch über die EMA 20 (nur noch Info, kein Score)
     trigger_max_age: int = 5

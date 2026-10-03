@@ -246,6 +246,12 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
                                                "isin": None, "earnings_date": None}))
     for r in rows:
         r["top"] = is_top(r, cfg)
+        # „Einstiegsbereit“ nur noch, wenn die Aktie in der Top-Auswahl ist (Backtest: frühere
+        # Definition – Kurs ganz am Tief – lief schlechter als der Durchschnitt)
+        if r.get("status") == "bereit" and not r["top"]:
+            r["status"] = "abwarten"
+        elif r["top"]:
+            r["status"] = "bereit"
     stats["top"] = sum(r["top"] for r in rows)
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows

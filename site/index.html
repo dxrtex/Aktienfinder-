@@ -209,7 +209,7 @@
   <h3>Filter</h3>
   <div class="group"><div class="group-label">Auswahl</div>
     <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
-    <p class="hint">Top-Auswahl = alle 5 Kernkriterien erfüllt, Kursziel mind. +40 %, Chance/Risiko mind. 2 : 1, keine Quartalszahlen in den nächsten 10 Tagen – plus die Filter, die sich im Backtest bewährt haben.</p></div>
+    <p class="hint">Top-Auswahl = vollständiges Setup (Rückgang, Fibonacci, Divergenz, MACD, MBI) + Kursziel mind. +40 % + die Filter, die sich im Backtest mit echten Trades bewährt haben: Aktie stärker als der Markt (3 Monate), Erholung hat begonnen (5–20 % über dem Tief), mind. 2 grüne X, keine Quartalszahlen in den nächsten 10 Tagen.</p></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
   <div class="group"><div class="group-label">Analysten-Kursziel</div>
@@ -317,10 +317,13 @@ function traits(r) {
     { ok: rsiNear, text: rsiNear ? "RSI an Signallinie" : `RSI ${fmt(r.rsi, 0)}` },
     { ok: r.reversal_candle_age != null, star: r.reversal_candle_age != null,
       text: r.reversal_candle_age != null ? `Umkehrkerze ${r.reversal_candle_age ? "vor " + r.reversal_candle_age + " T." : "heute"}` : "keine Umkehrkerze" },
-    { ok: r.rise_from_low_pct <= 8 && !r.still_falling, star: r.rise_from_low_pct <= 5 && !r.still_falling,
-      text: r.still_falling ? "fällt noch (neues Tief)" : `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief` },
+    { ok: r.rise_from_low_pct >= 5 && r.rise_from_low_pct <= 20, star: r.rise_from_low_pct >= 5 && r.rise_from_low_pct <= 20,
+      text: r.still_falling ? "fällt noch (neues Tief)" : r.rise_from_low_pct < 5 ? `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief · Erholung noch nicht bestätigt`
+        : `+${fmt(r.rise_from_low_pct, 0)} % über dem Tief · Erholung läuft` },
     { ok: r.volume_spike || r.volume_breakout, text: r.volume_spike ? "Volumen-Spike am Tief" : r.volume_breakout ? "hohes Volumen" : "Volumen normal" },
-    { ok: (r.crv ?? 0) >= 2, star: (r.crv ?? 0) >= 3, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
+    ...(r.rel_strength != null ? [{ ok: r.rel_strength > 0, star: r.rel_strength > 0,
+      text: r.rel_strength > 0 ? "stärker als der Markt" : "schwächer als der Markt" }] : []),
+    { ok: true, text: `Chance/Risiko ${fmtCrv(r.crv)}` },
     ...(r.divergence_forming ? [{ ok: true, text: `neue Divergenz ${r.divergence_forming} in Bildung` }] : []),
   ];
 }
@@ -358,7 +361,8 @@ function detailHtml(r) {
                    : "Noch kein vollständiges Signal-Bündel.";
   return `${bundle}
     ${r.stop_price != null && r.target_price_fib != null ? `<br>Technisch: Stop ${fmt(r.stop_price)} (−${fmt(r.risk_pct ?? 0, 0)} %, knapp unter dem Rücksetzer-Tief), Ziel ${fmt(r.target_price_fib)} (+${fmt(r.chance_pct ?? 0, 0)} %, Fib 0,382 bzw. letztes Hoch) → Chance/Risiko ${fmtCrv(r.crv)}.<br>` : ""}
-    ${r.earnings_date ? `Nächste Quartalszahlen: ${new Date(r.earnings_date + "T12:00:00").toLocaleDateString("de-DE")}.` : ""}
+    ${r.earnings_date ? `Nächste Quartalszahlen: ${new Date(r.earnings_date + "T12:00:00").toLocaleDateString("de-DE")}.` : "Termin der nächsten Quartalszahlen unbekannt – bitte selbst prüfen."}
+    ${r.rel_strength != null ? `Relative Stärke (3 Monate gegenüber dem Index): ${r.rel_strength >= 0 ? "+" : ""}${fmt(100 * r.rel_strength, 0)} %-Punkte.` : ""}
     ${r.target_price ? `Ø Kursziel ${fmt(r.target_price)} (${r.analysts ?? "?"} Analysten).` : ""}
     ${r.isin ? `ISIN ${esc(r.isin)}.` : ""}<ul>${divs}</ul>`;
 }
