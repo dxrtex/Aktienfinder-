@@ -23,11 +23,14 @@ Grundfilter: Mindestkurs und Mindest-Tagesumsatz (keine Pennystocks/illiquiden W
 ## Kriterien
 
 ### Pflicht (alle drei müssen erfüllt sein)
+Zeitfenster: Alle drei Signale müssen in den letzten ca. 2 Wochen (10 Handelstagen)
+aufgetreten sein, aber nicht zwingend am selben Tag.
+
 | Kriterium | Definition (Startwerte, anpassbar) |
 |---|---|
-| RSI-Divergenz (RSI 14) | **Klassisch:** Kurs tieferes Tief, RSI höheres Tief. **Versteckt:** Kurs höheres Tief, RSI tieferes Tief. Abstand der Tiefs 5–60 Tage, zweites Tief max. ~10 Tage alt. |
+| RSI-Divergenz (RSI 14) | **Klassisch:** Kurs tieferes Tief, RSI höheres Tief. **Versteckt:** Kurs höheres Tief, RSI tieferes Tief. Pivot-Tiefs auf dem RSI (5 Balken links/rechts, wie im TradingView-RSI), Abstand der Tiefs 5–60 Tage. |
 | MACD-Histogramm (12/26/9) | Histogramm noch negativ, die Balken werden seit ≥ 3 Tagen kleiner und liegen nahe der Nulllinie (kurz vor dem Wechsel ins Positive). |
-| Momentum Bias Index (AlgoAlpha) | Grünes X (bullisches Erschöpfungs-/Take-Profit-Kreuz) in den letzten Tagen. Exakter Nachbau des Open-Source-Pine-Skripts. |
+| Momentum Bias Index (AlgoAlpha) | Grünes X (bullisches Erschöpfungs-/Take-Profit-Kreuz). Exakter Nachbau des Open-Source-Pine-Skripts. |
 
 ### Weich (fließen in den Score ein, kein Ausschluss)
 | Kriterium | Definition |
