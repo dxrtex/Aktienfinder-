@@ -34,6 +34,7 @@ def report(universe: pd.DataFrame, data: dict, refs: list[str]) -> str:
     out.append(f"Stats: {data['stats']}")
 
     res = [r for r in data["results"] if r["passed"]]
+    out.append("Setup-Status: " + str(dict(collections.Counter(r.get("status") for r in res))))
     liquid = data["stats"].get("liquid", 0) or 1
     out.append(f"\n== Treffer: {len(res)} ({100 * len(res) / liquid:.0f} % der liquiden) ==")
     out.append("Je Region: " + str(dict(collections.Counter(r["region"] for r in res))))
@@ -62,12 +63,18 @@ def report(universe: pd.DataFrame, data: dict, refs: list[str]) -> str:
     uni = universe.set_index("ticker")
     for t in refs:
         if t not in uni.index:
-            out.append(f"{t}: NICHT im Universum")
+            r = by_ticker.get(t)
+            extra = f" (über die Watchlist bewertet: Score {r['score']}, Status {r.get('status')})" if r else ""
+            out.append(f"{t}: NICHT im Universum{extra}")
             continue
         cap = uni.loc[t, "market_cap_usd"] if "market_cap_usd" in uni.columns else None
         r = by_ticker.get(t)
-        if r is None:
-            out.append(f"{t}: im Universum (Börsenwert {cap}), aber kein Treffer")
+        if r is None or not r["passed"]:
+            why = ""
+            if r is not None:
+                missing = [k for k, ok in r.get("criteria", {}).items() if not ok]
+                why = f" – fehlt: {', '.join(missing) or '–'}; Score {r['score']}, Status {r.get('status')}"
+            out.append(f"{t}: im Universum (Börsenwert {cap}), aber kein vollständiges Setup{why}")
         else:
             out.append(f"{t}: Score {r['score']}, Bündel {r['cluster']}, RSI-Tief {_min_rsi(r)}, "
                        f"Abstand {r['drawdown_pct']} %, Fib {r['fib_retracement']}, "

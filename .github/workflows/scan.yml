@@ -39,9 +39,9 @@ jobs:
       - name: Ticker-Universum zusammenstellen
         run: python -m aktienfinder.universe --out universe.csv --regions "${{ inputs.regions || 'us,europe,global' }}"
       - name: Scan
-        run: python -m aktienfinder.scanner --universe universe.csv --out site/data/results.json --quiet
+        run: python -m aktienfinder.scanner --universe universe.csv --watchlist site/watchlist.json --out site/data/results.json --quiet
       - name: Diagnose-Bericht
-        run: python -m aktienfinder.report --universe universe.csv --results site/data/results.json --refs QBTS,RKLB,IFX.DE,UBER,TUI1.DE
+        run: python -m aktienfinder.report --universe universe.csv --results site/data/results.json --refs QBTS,RKLB,IFX.DE,UBER,TUI1.DE,BABA,LHA.DE,FSLR,ASTS
       - name: Referenz-Aktien im Detail
         run: python -m aktienfinder.scanner --all --debug --file tickers/beispiele.txt
       - uses: actions/upload-artifact@v4

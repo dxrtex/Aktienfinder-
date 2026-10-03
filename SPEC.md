@@ -38,20 +38,35 @@ Reihenfolge wie bei der manuellen Analyse; jede Stufe ist Pflicht:
 Die Signale 4–6 müssen innerhalb von ~3 Wochen (15 Handelstage) zueinander auftreten, das
 Bündel darf bis zu ~6 Wochen (30 Handelstage) alt sein.
 
-### Score (0–100, sortiert die Treffer) – ausgerichtet am Musterbeispiel Uber
+### Score (0–100) – bevorzugt vollständige Setups, die noch NICHT gestiegen sind
+Wird für jede Aktie berechnet (auch Watchlist-Aktien ohne vollständiges Setup).
+
 | Merkmal | Punkte |
 |---|---|
-| Divergenz klassisch / versteckt | 10 / 8 |
-| Frische des jüngsten Signals | bis 10 |
-| MACD jetzt: rot und schrumpfend / seit ≤ 10 T. grün / sonst | 15 / 10 / 5 |
-| Grüne MBI-X im Fenster: ≥ 2 / 1 | 10 / 5 |
-| Rote MBI-Balken rückläufig | 5 |
-| RSI an der gelben Signallinie (SMA 14 des RSI; −2 … +5 Punkte) / darüber | 10 / 5 |
-| Bullische Umkehrkerze an einer Fib-Linie (0,618 / 0,706 / 0,79 / 0,886 / 1,0): grün, Schluss im oberen Drittel, Volumen ≥ 1,5 × Ø, in den letzten 3 Tagen | 15 |
-| Genau in der Golden Zone (0,618–0,79) | 5 |
-| Rücksetzer ≥ 30 % | 5 |
-| Ausbruch über die EMA 20 in den letzten 5 Tagen | 10 |
-| Volumen-Spike am Divergenz-Tief | 5 |
+| **Einstiegsnähe:** Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 20 |
+| MACD jetzt: rot und schrumpfend / seit ≤ 3 T. grün / Signal im Fenster | 15 / 10 / 3 |
+| Divergenz klassisch / versteckt | 12 / 9 |
+| Grüne MBI-X im Fenster: ≥ 2 / 1 | 12 / 8 |
+| Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 10 |
+| RSI an der gelben Signallinie (−2 … +5 Punkte) | 8 |
+| Fibonacci: in der Golden Zone / darunter (bis Schwungtief) | 8 / 6 |
+| Frische des jüngsten Signals | bis 6 |
+| Rücksetzer ≥ 30 % / ≥ 20 % | 5 / 3 |
+| Rote MBI-Balken rückläufig | 4 |
+
+Der Ausbruch über die EMA 20 zählt nicht mehr (er belohnte bereits gestiegene Aktien).
+
+### Setup-Status (regelbasiert, keine Kursprognose)
+| Status | Regel |
+|---|---|
+| 🟢 Einstiegsbereit | vollständiges Setup, Kurs ≤ +8 % über dem Tief, kein neues Tief in den letzten 2 Tagen, MACD rot und schrumpfend oder seit ≤ 3 Tagen grün, Verkaufsdruck im MBI rückläufig (oder Käufer vorne) |
+| 🟡 Abwarten | vollständiges Setup, aber noch nicht alle Einstiegsbedingungen – oder (Watchlist) mind. 3 von 6 Kriterien erfüllt |
+| 🔴 Schon gelaufen | Kurs ≥ +15 % über dem Tief oder MACD seit > 10 Tagen grün |
+| ⚪ Kein Setup | (nur Watchlist) weniger als 3 Kriterien erfüllt |
+
+### Watchlist
+Alle Aktien aus `site/watchlist.json` werden täglich bewertet – auch ohne vollständiges Setup und
+unabhängig von Börsenwert/Liquidität. Die Website zeigt je Kriterium erfüllt ✓ / fehlt ✗.
 
 ### Musterbeispiel: Uber, 2. Oktober 2026 („nahezu perfekter Einstieg“)
 - Analysten-Kursziel +48 %

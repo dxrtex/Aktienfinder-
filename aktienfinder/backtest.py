@@ -121,7 +121,8 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
             "fib_zone": res.fib_zone, "fib": res.fib_retracement, "ema_breakout_age": res.ema_breakout_age,
             "volume_spike": res.volume_spike, "volume_breakout": res.volume_breakout,
             "reversal": res.reversal_candle_age is not None, "green_x_count": res.green_x_count,
-            "rsi_signal_gap": res.rsi_signal_gap,
+            "rsi_signal_gap": res.rsi_signal_gap, "status": res.status,
+            "rise_from_low_pct": res.rise_from_low_pct,
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
         # Variante: Einstieg erst beim Schlusskurs über der EMA 20 (innerhalb von 30 Tagen)
@@ -191,6 +192,12 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
 
     def variant(label, mask):
         out.append(f"  {label:<44}" + _stats(events[mask], "sig_"))
+
+    out.append("\nSetup-Status (Einstieg am Folgetag):")
+    for st, label in (("bereit", "Einstiegsbereit"), ("abwarten", "Abwarten"), ("gelaufen", "Schon gelaufen")):
+        variant(label, events["status"] == st)
+    for lo, hi in ((0, 5), (5, 10), (10, 20), (20, 999)):
+        variant(f"Kurs {lo}–{hi} % über dem Tief", events["rise_from_low_pct"].between(lo, hi, inclusive="left"))
 
     out.append("\nVarianten (Einstieg am Folgetag):")
     for lo, hi in ((0, 40), (40, 50), (50, 60), (60, 70), (70, 80), (80, 101)):

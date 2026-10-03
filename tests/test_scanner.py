@@ -74,3 +74,19 @@ def test_chart_data_for_website():
     data = scanner.chart_data(df)
     assert len(data["spark"]) == scanner.CHART_BARS
     assert data["fib_high"] is None or data["fib_high"] > data["fib_low"]
+
+
+def test_watchlist_always_included(monkeypatch, tmp_path):
+    import json
+    monkeypatch.setattr(scanner, "download", _fake_download)
+    monkeypatch.setattr(scanner, "analyst_targets", _no_targets)
+    wl = tmp_path / "wl.json"
+    wl.write_text(json.dumps({"_hinweis": "x", "Pennystock AG": ["PENNY"], "Firma 1": ["T1"]}))
+    watch = scanner.load_watchlist(str(wl))
+    assert watch == {"PENNY": "Pennystock AG", "T1": "Firma 1"}
+    rows = scanner.scan(["T1", "T2", "T3"], watchlist=watch)
+    by = {r["ticker"]: r for r in rows}
+    # Watchlist-Aktien sind immer dabei – auch ohne Setup und trotz Liquiditätsfilter
+    assert by["T1"]["in_watchlist"] and by["PENNY"]["in_watchlist"]
+    assert by["PENNY"]["name"] == "Pennystock AG"
+    assert all(r["passed"] or r["in_watchlist"] for r in rows)

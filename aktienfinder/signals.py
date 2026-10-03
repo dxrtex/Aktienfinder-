@@ -53,6 +53,10 @@ class Result:
     volume_breakout: bool = False
     reversal_candle_age: int | None = None # bullische Umkehrkerze mit Volumen an Fib-Linie
     green_x_count: int = 0                 # grüne MBI-X in den letzten 30 Tagen
+    rise_from_low_pct: float = 0.0         # Kurs über dem jüngsten Tief (30 T.) in %
+    still_falling: bool = False            # neues Tief in den letzten 2 Tagen
+    criteria: dict = field(default_factory=dict)   # Einzelkriterien erfüllt ja/nein
+    status: str = "kein_setup"             # bereit | abwarten | gelaufen | kein_setup
     rsi_signal_gap: float = 0.0            # RSI minus gelbe Signallinie (≥ −2: „fast darauf“)
     dollar_volume: float = 0.0
 
@@ -307,33 +311,57 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
 
     dollar_volume = float((close * vol).iloc[-cfg.volume_avg_length :].mean())
 
-    # Score (0–100), ausgerichtet am Musterbeispiel Uber vom 2.10.2026
+    # Einstiegsnähe: Abstand zum jüngsten Tief, fällt der Kurs noch?
+    rise_from_low = float(close.iloc[-1] / recent_low - 1)
+    still_falling = bool(df["Low"].iloc[-2:].min() <= recent_low)   # Tief der letzten 30 T. in den letzten 2 T.
+
     green_x_count = int(mbi["green_x"].iloc[-cfg.max_signal_age :].sum())
     sellers_fading = bool(mbi["lower_bias"].iloc[-1] < mbi["lower_bias"].iloc[-2])
+    macd_red_shrinking = last_hist < 0 and hist.iloc[-1] > hist.iloc[-2]
+
+    # Einzelkriterien (für die Watchlist-Ampel; auch ohne vollständiges Setup)
+    criteria = {
+        "rueckgang": pullback_drawdown >= cfg.min_drawdown,
+        "fibonacci": bool(fib_ok),
+        "divergenz": bool(divs),
+        "macd": bool(macd_ok.iloc[-cfg.max_signal_age :].any()),
+        "mbi": green_x_count > 0,
+        "buendel": signals_ok,
+    }
+
+    # Score (0–100): bevorzugt vollständige Setups, die noch NICHT gestiegen sind
+    kinds = {d.kind for d in divs}
     score = 0.0
-    if passed:
-        kinds = {d.kind for d in divs}
-        score += 10 if "klassisch" in kinds else 8
+    score += 12 if "klassisch" in kinds else 9 if kinds else 0
+    if macd_red_shrinking:
+        score += 15                                  # rote Balken schrumpfen, kurz vor Grün
+    elif 0 < macd_green_days <= 3:
+        score += 10                                  # gerade erst grün geworden
+    elif criteria["macd"]:
+        score += 3
+    score += 12 if green_x_count >= 2 else 8 if green_x_count == 1 else 0
+    score += 4 * sellers_fading                      # rote MBI-Balken rückläufig
+    score += 8 * (-cfg.rsi_signal_gap <= rsi_gap <= 5)   # RSI (fast) auf der Signallinie
+    score += 10 * (reversal_age is not None)         # Umkehrkerze mit Volumen an Fib-Linie
+    score += 8 if fib_zone else 6 if fib_ok else 0
+    score += 5 if pullback_drawdown >= 0.30 else 3 if pullback_drawdown >= cfg.min_drawdown else 0
+    span = cfg.entry_zero - cfg.entry_full
+    score += 20 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    if cluster:
         newest = min(cluster.divergence_age, cluster.macd_age, cluster.mbi_age)
-        score += 10 * (1 - newest / cfg.max_signal_age)
-        if last_hist < 0 and hist.iloc[-1] > hist.iloc[-2]:
-            score += 15          # rote Balken schrumpfen, kurz vor Grün
-        elif 0 < macd_green_days <= 10:
-            score += 10
-        else:
-            score += 5
-        score += 10 if green_x_count >= 2 else 5     # zwei grüne X hintereinander
-        score += 5 * sellers_fading                  # rote MBI-Balken rückläufig
-        if -cfg.rsi_signal_gap <= rsi_gap <= 5:
-            score += 10          # RSI liegt (fast) auf der Signallinie
-        elif rsi_gap > 5:
-            score += 5
-        score += 15 * (reversal_age is not None)     # Umkehrkerze mit Volumen an Fib-Linie
-        score += 5 * fib_zone                        # genau in der Golden Zone
-        score += 5 * (pullback_drawdown >= 0.30)
-        if breakout_age is not None and breakout_age < cfg.trigger_max_age:
-            score += 10
-        score += 5 * volume_spike
+        score += 6 * (1 - newest / cfg.max_signal_age)
+
+    # Setup-Status (regelbasiert, keine Kursprognose)
+    if not passed:
+        status = "abwarten" if sum(criteria.values()) >= 3 else "kein_setup"
+    elif rise_from_low >= cfg.status_ran_rise or macd_green_days > cfg.status_ran_green_days:
+        status = "gelaufen"
+    elif (rise_from_low <= cfg.status_ready_max_rise and not still_falling
+          and (macd_red_shrinking or 0 < macd_green_days <= 3)
+          and (sellers_fading or buyers_lead)):
+        status = "bereit"
+    else:
+        status = "abwarten"
 
     return Result(
         passed=passed,
@@ -356,4 +384,8 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         green_x_count=green_x_count,
         rsi_signal_gap=round(rsi_gap, 2),
         dollar_volume=round(dollar_volume, 0),
+        rise_from_low_pct=round(rise_from_low * 100, 1),
+        still_falling=still_falling,
+        criteria=criteria,
+        status=status,
     )

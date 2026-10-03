@@ -65,7 +65,13 @@ class Config:
     reversal_lookback: int = 3          # Umkehrkerze in den letzten N Tagen
     rsi_signal_length: int = 14         # gelbe Signallinie des RSI (TradingView: SMA 14)
     rsi_signal_gap: float = 2.0         # RSI höchstens so viele Punkte unter der Signallinie
-    ema_trigger_length: int = 20   # Ausbruch über die EMA 20 als Einstiegs-Trigger
+    # Einstiegsnähe: wie weit ist der Kurs schon vom jüngsten Tief gestiegen?
+    entry_full: float = 0.05       # bis +5 % über dem Tief volle Punkte
+    entry_zero: float = 0.20       # ab +20 % keine Punkte mehr
+    status_ready_max_rise: float = 0.08   # „Einstiegsbereit“: höchstens +8 % über dem Tief
+    status_ran_rise: float = 0.15         # „Schon gelaufen“: ab +15 % über dem Tief …
+    status_ran_green_days: int = 10       # … oder MACD seit mehr als 10 Tagen grün
+    ema_trigger_length: int = 20   # Ausbruch über die EMA 20 (nur noch Info, kein Score)
     trigger_max_age: int = 5
 
     # Grundfilter gegen Pennystocks / illiquide Werte (in US-Dollar umgerechnet, siehe markets.py)
