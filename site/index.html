@@ -200,6 +200,8 @@
   .cfg h4 { margin: 18px 0 6px; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
   .cfg table { min-width: 0; font-size: 14px; }
   .cfg td { padding: 7px 10px; }
+  .seg { margin: 4px 0 6px; }
+  td .ampel { flex-wrap: nowrap; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   .links .btn { flex: 1 1 220px; }
 </style>
@@ -297,7 +299,7 @@ const tvUrl = t => {
 
 let data = null;
 const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
-const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
+const state = { tab: "cards", tableKind: "hit", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
@@ -311,9 +313,9 @@ const SORTS = {
 
 function rows(kind) {
   const q = $("search").value.trim().toLowerCase();
-  return data.results.filter(r => (kind === "fast" ? r.fast_hit : r.passed)
+  return data.results.filter(r => (kind === "all" ? (r.passed || r.fast_hit) : kind === "fast" ? r.fast_hit : r.passed)
     && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
-    && (r.score >= +state.minScore || kind === "fast")
+    && (r.score >= +state.minScore || !r.passed)
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9)
     && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9)
     && (!state.region || r.region === state.region)
@@ -411,6 +413,8 @@ const COLS = [
   { k: "score", l: "Score", n: 1, g: r => r.score, h: r => `<b>${r.score}</b>` },
   { k: "earn", l: "Earnings", g: r => r.earnings_date || "9", h: r => `<span class="${r.earnings_risk ? "down" : ""}">${dateDE(r.earnings_date)}</span>` },
   { k: "amp", l: "Kriterien", g: r => -r.missing.length, h: r => ampel(r) },
+  { k: "miss", l: "Fehlt", fast: 1, g: r => r.missing[0] || "", h: r => { if (r.passed) return `<span class="up">– (Treffer)</span>`;
+    const c = r.criteria.find(x => !x.ok); return `<span class="down" title="${esc(r.missing[0])}">${esc(SHORT[c && c.key] || r.missing[0])}</span>`; } },
 ];
 
 // ---------- Einstellungen ----------
@@ -440,10 +444,14 @@ function render() {
   const hits = data.results.filter(r => r.passed).length, fast = data.results.filter(r => r.fast_hit).length;
   $("wlBadge").hidden = !fast; $("wlBadge").textContent = fast;
   if (state.tab === "settings") { $("main").innerHTML = settingsHtml(); return; }
-  const kind = state.tab === "watch" ? "fast" : "hit";
+  const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   const list = rows(kind);
-  const title = kind === "fast" ? "Fast-Treffer · genau 1 Pflichtkriterium fehlt" : "Treffer · alle Pflichtkriterien erfüllt";
-  const head = `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  const title = { fast: "Fast-Treffer · genau 1 Pflichtkriterium fehlt", hit: "Treffer · alle Pflichtkriterien erfüllt",
+                  all: "Treffer und Fast-Treffer" }[kind];
+  const seg = state.tab === "table" ? `<div class="opts seg">${[["hit", "Treffer"], ["fast", "Fast-Treffer"], ["all", "beide"]].map(([v, l]) =>
+    `<button class="opt${state.tableKind === v ? " on" : ""}" data-tk="${v}">${l}</button>`).join("")}</div>` : "";
+  const toTable = state.tab === "watch" ? `<div class="opts seg"><button class="opt on">Karten</button><button class="opt" data-totable="fast">Tabelle</button></div>` : "";
+  const head = seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
   if (!list.length) {
     $("main").innerHTML = head + `<div class="empty">${kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
       : `Heute erfüllt keine Aktie alle Pflichtkriterien${hits ? " mit diesen Filtern" : ""}.<br>Die Fast-Treffer (unten in der Leiste) zeigen, wem nur ein Kriterium fehlt.`}</div>`;
@@ -452,8 +460,12 @@ function render() {
   if (state.tab === "table") {
     const col = COLS.find(c => c.k === state.tableSort) || COLS[12];
     list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
-    $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${COLS.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
-      <tbody>${list.map(r => `<tr>${COLS.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    // Bei Fast-Treffern steht „Fehlt“ direkt hinter dem Namen
+    const miss = COLS.find(c => c.k === "miss");
+    const cols = kind === "hit" ? COLS.filter(c => !c.fast)
+      : [...COLS.slice(0, 2), miss, ...COLS.slice(2).filter(c => !c.fast)];
+    $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
+      <tbody>${list.map(r => `<tr>${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
   }
   $("main").innerHTML = head + `<div class="grid">${list.map(card).join("")}</div>`;
@@ -577,7 +589,7 @@ function drawCharts(c, r) {
 
 // ---------- Export ----------
 function exportRows() {
-  const kind = state.tab === "watch" ? "fast" : "hit";
+  const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   return rows(kind).map(r => ({ Ticker: r.ticker, Name: r.name, "Börse": r.exchange, Region: REGION[r.region] || "", Sektor: r.sector,
     "Market Cap (Mrd. USD)": r.market_cap_usd ? +(r.market_cap_usd / 1e9).toFixed(2) : "", Kurs: r.close,
     "Rückgang %": r.drawdown != null ? +(100 * r.drawdown).toFixed(1) : "", Zone: r.zone_type, RSI: r.rsi != null ? +r.rsi.toFixed(1) : "",
@@ -610,6 +622,8 @@ $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", render);
 document.addEventListener("click", e => {
+  const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
+  const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
   const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openDetail(o.dataset.open); return; }
   const th = e.target.closest("th[data-k]"); if (th) { if (th.dataset.k === state.tableSort) state.tableAsc = !state.tableAsc; else { state.tableSort = th.dataset.k; state.tableAsc = false; } render(); }
 });
