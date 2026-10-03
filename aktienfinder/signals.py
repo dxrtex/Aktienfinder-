@@ -169,22 +169,41 @@ def _ages(mask: pd.Series) -> list[int]:
     return [int(len(arr) - 1 - i) for i in np.flatnonzero(arr)]
 
 
-def fib_swing(df: pd.DataFrame, cfg: Config = DEFAULT) -> tuple[float, float, float] | None:
-    """Letzter Aufwärtsschwung: (Schwunghoch, Schwungtief, tiefster Kurs seit dem Hoch).
-
-    Schwunghoch = höchstes Hoch der letzten `fib_lookback` Tage, Schwungtief = tiefstes Tief davor.
-    """
-    window = df.iloc[-cfg.fib_lookback :]
-    highs = window["High"].to_numpy(dtype=float)
-    lows = window["Low"].to_numpy(dtype=float)
-    hi_pos = int(np.argmax(highs))
-    if hi_pos < 5 or hi_pos >= len(window) - 3:
-        return None
-    swing_low = float(lows[:hi_pos].min())
+def _swing_candidates(df: pd.DataFrame, cfg: Config) -> list[tuple[float, float, float]]:
+    """Aufwärtsschwünge zum Hoch der letzten `fib_lookback` Tage: kurzer Schwung (Tief im selben
+    Fenster) und großer Schwung (Tief bis `fib_low_lookback` Tage vor dem Hoch – so wie man die
+    Fibonacci in TradingView vom Tief der ganzen Aufwärtsbewegung zieht)."""
+    n = len(df)
+    start = max(0, n - cfg.fib_lookback)
+    highs = df["High"].to_numpy(dtype=float)
+    lows = df["Low"].to_numpy(dtype=float)
+    hi_pos = start + int(np.argmax(highs[start:]))
+    if hi_pos - start < 5 or hi_pos >= n - 3:
+        return []
     swing_high = float(highs[hi_pos])
-    if swing_high <= swing_low:
+    pullback_low = float(lows[hi_pos + 1 :].min())
+    out = []
+    for lo_start in (start, max(0, hi_pos - cfg.fib_low_lookback)):
+        swing_low = float(lows[lo_start:hi_pos].min())
+        if swing_high > swing_low and (swing_high, swing_low, pullback_low) not in out:
+            out.append((swing_high, swing_low, pullback_low))
+    return out
+
+
+def fib_swing(df: pd.DataFrame, cfg: Config = DEFAULT) -> tuple[float, float, float] | None:
+    """Maßgeblicher Aufwärtsschwung: (Schwunghoch, Schwungtief, tiefster Kurs seit dem Hoch).
+
+    Bevorzugt den Schwung, in dessen Fibonacci-Bereich (0,618 … Schwungtief) der Rücksetzer liegt;
+    passt keiner, den kurzen Schwung.
+    """
+    cands = _swing_candidates(df, cfg)
+    if not cands:
         return None
-    return swing_high, swing_low, float(lows[hi_pos + 1 :].min())
+    lo_r, hi_r = cfg.fib_required
+    for high, low, pb in cands:
+        if lo_r - cfg.fib_tolerance <= (high - pb) / (high - low) <= hi_r + cfg.fib_tolerance:
+            return high, low, pb
+    return cands[0]
 
 
 def fib_retracement(df: pd.DataFrame, cfg: Config = DEFAULT) -> float | None:
