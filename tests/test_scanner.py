@@ -94,12 +94,14 @@ def test_watchlist_always_included(monkeypatch, tmp_path):
 
 def test_is_top_requires_all_criteria():
     from aktienfinder.scanner import is_top
-    r = {"passed": True, "core_met": ["a", "b", "c", "d", "e"], "upside_pct": 50, "crv": 2.5,
+    r = {"passed": True, "core_met": ["rueckgang", "fibonacci", "divergenz", "macd_jetzt", "mbi_x"], "upside_pct": 50, "crv": 2.5,
          "pullback_drawdown_pct": 30, "rise_from_low_pct": 8, "green_x_count": 2, "earnings_date": None,
          "rel_strength": 0.05}
     assert is_top(r)
-    assert not is_top({**r, "upside_pct": 30})
-    assert not is_top({**r, "rel_strength": -0.1})       # schwächer als der Markt
+    assert is_top({**r, "upside_pct": 31})               # Kursziel ab +30 %
+    assert not is_top({**r, "upside_pct": 25})
+    assert not is_top({**r, "core_met": ["rueckgang", "fibonacci", "divergenz", "mbi_x"]})  # MACD heute nicht rot/schrumpfend
+    assert is_top({**r, "rel_strength": -0.1})           # Marktvergleich kein Kriterium
     assert is_top({**r, "rise_from_low_pct": 1})          # Abstand zum Tief egal
     assert is_top({**r, "green_x_count": 1})              # 1 grünes X genügt
     assert not is_top({**r, "green_x_count": 0})

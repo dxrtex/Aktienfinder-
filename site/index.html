@@ -209,11 +209,11 @@
   <h3>Filter</h3>
   <div class="group"><div class="group-label">Auswahl</div>
     <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
-    <p class="hint">Top-Auswahl = vollständiges Setup (Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz, MACD, mind. 1 grünes X) + Analysten-Kursziel mind. +40 % + Aktie stärker als der Markt (3 Monate). Sortiert nach Score: oben die Aktien, auf die deine Kriterien am besten zutreffen.</p></div>
+    <p class="hint">Top-Auswahl = Rückgang ≥ 20 % + Fibonacci + bullische RSI-Divergenz (klassisch oder versteckt) + MACD-Histogramm noch rot und gerade schrumpfend Richtung 0, Linien fallen nicht mehr stark + mind. 1 grünes X + Analysten-Kursziel mind. +30 %. Sortiert nach Score.</p></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
   <div class="group"><div class="group-label">Analysten-Kursziel</div>
-    <div class="opts" data-key="minUpside"><button class="opt" data-v="-999">alle</button><button class="opt" data-v="20">ab +20 %</button><button class="opt" data-v="40">ab +40 %</button><button class="opt" data-v="60">ab +60 %</button></div></div>
+    <div class="opts" data-key="minUpside"><button class="opt" data-v="-999">alle</button><button class="opt" data-v="20">ab +20 %</button><button class="opt" data-v="30">ab +30 %</button><button class="opt" data-v="40">ab +40 %</button><button class="opt" data-v="60">ab +60 %</button></div></div>
   <div class="group"><div class="group-label">Börsenwert</div>
     <div class="opts" data-key="minCap"><button class="opt" data-v="0">alle (ab 2 Mrd. $)</button><button class="opt" data-v="10000000000">ab 10 Mrd. $</button><button class="opt" data-v="50000000000">ab 50 Mrd. $</button><button class="opt" data-v="200000000000">ab 200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Setup-Status</div>
@@ -378,7 +378,7 @@ function card(r, hero = false) {
       <div class="score" style="--p:${r.score}" title="Score ${fmt(r.score, 0)} von 100"><span>${fmt(r.score, 0)}</span></div>
     </div>
     <div class="figures">
-      <div class="fig"><span>Kursziel</span><b class="${up >= 40 ? "up" : "muted"}">${fmtUp(up)}</b></div>
+      <div class="fig"><span>Kursziel</span><b class="${up >= 30 ? "up" : "muted"}">${fmtUp(up)}</b></div>
       <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
       <div class="fig"><span>vom Hoch</span><b class="down">−${fmt(r.drawdown_pct, 0)} %</b></div>
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
@@ -401,7 +401,7 @@ const COLUMNS = [
     html: r => `<span class="status st-${r.status}" style="margin:0">${STATUS[r.status] || ""}</span>` },
   { key: "name", label: "Aktie", get: r => r.name || r.ticker,
     html: r => `<a href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">${esc((r.name || r.ticker).slice(0, 30))}</a>${inWatch(r) ? " ★" : ""} <span class="muted">${esc(r.ticker)}</span>` },
-  { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999, html: r => `<span class="${r.upside_pct >= 40 ? "up" : "muted"}">${fmtUp(r.upside_pct)}</span>` },
+  { key: "upside", label: "Kursziel", num: true, get: r => r.upside_pct ?? -999, html: r => `<span class="${r.upside_pct >= 30 ? "up" : "muted"}">${fmtUp(r.upside_pct)}</span>` },
   { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
   { key: "entry", label: "über Tief", num: true, get: r => -r.rise_from_low_pct,
     html: r => r.still_falling ? `<span class="down">fällt noch</span>` : `+${fmt(r.rise_from_low_pct, 0)} %` },
@@ -419,7 +419,7 @@ const COLUMNS = [
 // ---------- Zustand ----------
 let data = null;
 const open = new Set();
-const DEFAULTS = { pick: "top", region: "", minUpside: "40", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
+const DEFAULTS = { pick: "top", region: "", minUpside: "30", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
 const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
 const SORTS = {
@@ -517,7 +517,7 @@ function syncOpts() {
 const openFilters = v => document.body.classList.toggle("filters-open", v);
 
 // ---------- Einstellungen merken (nur auf diesem Gerät) ----------
-const PREF_KEY = "aktienfinder-v4";
+const PREF_KEY = "aktienfinder-v5";
 function savePrefs() {
   try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch (e) {}
 }

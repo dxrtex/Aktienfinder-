@@ -263,8 +263,11 @@ def top_missing(r: dict, cfg: Config = DEFAULT) -> list[str]:
     miss = []
     if not r.get("passed"):
         return ["vollständiges Setup"]
-    if cfg.top_core5 and len(r.get("core_met") or []) < 5:
-        miss.append("MACD heute rot & schrumpfend")
+    core = set(r.get("core_met") or [])
+    if cfg.top_core5 and "macd_jetzt" not in core:
+        miss.append("MACD: Histogramm rot & schrumpfend, Linien flach")
+    if cfg.top_core5 and "mbi_x" not in core:
+        miss.append("grünes X")
     if cfg.top_min_upside > -999 and (r.get("upside_pct") is None or r["upside_pct"] < cfg.top_min_upside):
         miss.append(f"Kursziel ≥ {cfg.top_min_upside:.0f} %")
     if cfg.top_min_crv > 0 and (r.get("crv") or 0) < cfg.top_min_crv:

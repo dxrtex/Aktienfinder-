@@ -57,13 +57,13 @@ class Config:
     # Top-Auswahl („alle Kriterien erfüllt“) – Schwellen aus dem Optimierer (Backtest mit echten Trades:
     # Stop unter dem Tief, +20 % Ziel, max. 60 Tage; ausgewählt auf 2021–2024, bestätigt auf 2024–2026).
     # Voraussetzung ist immer das vollständige Setup (Rückgang, Fibonacci, Divergenz, MACD, MBI-X).
-    top_core5: bool = False                # zusätzlich MACD *heute* rot & schrumpfend (Backtest: kein Vorteil)
-    top_min_upside: float = 40.0           # Analysten-Kursziel mind. so viel % über dem Kurs
+    top_core5: bool = True                 # MACD heute: Histogramm rot & schrumpfend, Linien fallen nicht mehr stark
+    top_min_upside: float = 30.0           # Analysten-Kursziel mind. so viel % über dem Kurs
     top_min_crv: float = 0.0               # Chance/Risiko mindestens (Backtest: Filter verschlechtert das Ergebnis)
     top_min_pullback: float = 20.0         # Rücksetzer vom 52-Wochen-Hoch in %
     top_market: bool = False               # Gesamtmarkt über EMA 200
     top_trend: bool = False                # EMA 200 der Aktie steigt
-    top_rel_strength: bool = True          # relative Stärke 3 Monate > 0 (stärkster Einzelfilter)
+    top_rel_strength: bool = False         # relative Stärke 3 Monate > 0 (auf Wunsch aus)
     top_rise_min: float = 0.0              # Kurs mind. so viel % über dem Tief
     top_rise_max: float = 1000.0             # … und höchstens so viel (1000 = aus)
     top_min_green_x: int = 1
