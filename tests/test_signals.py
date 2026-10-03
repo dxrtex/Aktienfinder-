@@ -164,3 +164,15 @@ def test_score_prefers_red_macd_close_to_zero():
         assert 0 <= r.macd_closeness <= 1
         if r.status == "bereit":
             assert r.macd_status.startswith("rot")
+
+
+def test_fib_uses_big_swing_like_tradingview():
+    # Tief 30 vor gut einem Jahr, Hoch 115, jetzt Rücksetzer auf 52 → im großen Schwung 0,74 (Golden Zone)
+    import numpy as np
+    import pandas as pd
+    from aktienfinder.signals import fib_retracement
+    c = np.concatenate([np.linspace(60, 30, 100), np.linspace(30, 115, 250), np.linspace(115, 52, 140)])
+    df = pd.DataFrame({"Open": c, "High": c * 1.01, "Low": c * 0.99, "Close": c},
+                      index=pd.bdate_range("2025-01-01", periods=len(c)))
+    fib = fib_retracement(df)
+    assert fib is not None and 0.70 < fib < 0.78
