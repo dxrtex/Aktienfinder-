@@ -61,14 +61,19 @@ def download(tickers: list[str], period: str, batch_size: int = 200, retries: in
 
 
 CHART_BARS = 120   # ca. 6 Monate für den Mini-Chart auf der Website
+CANDLE_BARS = 60   # ca. 3 Monate Kerzen für den Kerzen-Mini-Chart
 
 
 def chart_data(df: pd.DataFrame, cfg: Config = DEFAULT) -> dict:
     """Schlusskurse der letzten Monate und der Fibonacci-Schwung für den Mini-Chart."""
     closes = df["Close"].dropna().iloc[-CHART_BARS:]
     swing = fib_swing(df.dropna(subset=["Close", "Low", "High"]), cfg)
+    ohlc = df.dropna(subset=["Open", "High", "Low", "Close"]).iloc[-CANDLE_BARS:] if "Open" in df else df.iloc[0:0]
+    num = lambda v: float(f"{v:.5g}")
     return {
         "spark": [float(f"{v:.4g}") for v in closes],
+        "candles": [[num(o), num(h), num(l), num(c)]
+                    for o, h, l, c in ohlc[["Open", "High", "Low", "Close"]].itertuples(index=False)],
         "fib_high": round(swing[0], 4) if swing else None,
         "fib_low": round(swing[1], 4) if swing else None,
     }
@@ -81,8 +86,16 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
     """
     import yfinance as yf
 
+    def isin_of(tk) -> str | None:
+        try:
+            isin = tk.isin
+            return isin if isin and isin != "-" else None
+        except Exception:
+            return None
+
     def fetch(t: str) -> tuple[float | None, float | None, int | None]:
         tk = yf.Ticker(t)
+        isins[t] = isin_of(tk)
         for attempt in range(3):
             try:
                 info = tk.info
@@ -101,15 +114,16 @@ def analyst_targets(tickers: list[str], log=print) -> dict[str, dict]:
             time.sleep(2 * (attempt + 1))
         return None, None, None
 
-    out, missing = {}, 0
+    out, missing, isins = {}, 0, {}
     for t in tickers:
         target, price, analysts = fetch(t)
         if not (target and price):
             missing += 1
+            out[t] = {"target_price": None, "upside_pct": None, "analysts": None, "isin": isins.get(t)}
             continue
         out[t] = {"target_price": round(float(target), 2),
                   "upside_pct": round(100 * (float(target) / float(price) - 1), 1),
-                  "analysts": analysts}
+                  "analysts": analysts, "isin": isins.get(t)}
     if missing:
         log(f"  Kursziel nicht verfügbar für {missing} von {len(tickers)} Aktien")
     return out
@@ -179,7 +193,8 @@ def scan(tickers: list[str], cfg: Config = DEFAULT, include_all: bool = False,
         log(f"  Analysten-Kursziele für {len(passed)} Treffer abfragen …")
         targets = analyst_targets(passed, log=log)
         for r in rows:
-            r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None}))
+            r.update(targets.get(r["ticker"], {"target_price": None, "upside_pct": None, "analysts": None,
+                                               "isin": None}))
     rows.sort(key=lambda r: (r["passed"], r["score"]), reverse=True)
     return rows
 
