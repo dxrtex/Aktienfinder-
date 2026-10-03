@@ -154,3 +154,6 @@ Hinweis: Vergangene Ergebnisse sind keine Garantie; der Zeitraum enthält keinen
 Vollständiges Setup (Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz, MACD, mind. 1 grünes MBI-X) + Analysten-Kursziel
 ≥ 40 % + relative Stärke 3 Monate > 0. Kein Filter auf Abstand zum Tief, keine Quartalszahlen-Regel.
 Sortiert nach Score. Backtests laufen nur noch manuell.
+
+Update: Top-Auswahl = alle 5 Kernkriterien *heute* (Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz, MACD-Histogramm rot
+& schrumpfend mit nicht mehr stark fallenden Linien, mind. 1 grünes X) + Kursziel ≥ 30 %. Kein Marktvergleich.
