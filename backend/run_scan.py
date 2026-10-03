@@ -67,6 +67,16 @@ def chart_payload(df: pd.DataFrame, cfg=CONFIG) -> dict:
     return out
 
 
+def load_watchlist() -> dict[str, str]:
+    """Watchlist aus data/watchlist.json → {Ticker: Name}; je Aktie zählt der erste (Heimat-)Ticker."""
+    path = ROOT / "data" / "watchlist.json"
+    if not path.exists():
+        return {}
+    with open(path, encoding="utf-8") as f:
+        raw = json.load(f)
+    return {tickers[0]: name for name, tickers in raw.items() if not name.startswith("_") and tickers}
+
+
 def result_row(res, meta: dict) -> dict:
     div = res.flags.get("divergence") or {}
     fib, sup = res.zone.get("fib"), res.zone.get("support")
@@ -76,7 +86,9 @@ def result_row(res, meta: dict) -> dict:
         "region": meta.get("region", ""), "country": meta.get("country", ""), "sector": meta.get("sector", ""),
         "currency": res.flags.get("currency"), "market_cap_usd": res.flags.get("market_cap_usd"),
         "date": res.date, "close": res.close, "score": res.score, "passed": res.passed, "fast_hit": res.fast_hit,
-        "missing": [c.label for c in res.missing],
+        "missing": [c.label for c in res.missing], "in_watchlist": bool(meta.get("in_watchlist")),
+        "met": sum(c.ok for c in res.criteria if c.key not in ("cap", "liquidity", "price", "history")),
+        "total": sum(1 for c in res.criteria if c.key not in ("cap", "liquidity", "price", "history")),
         "drawdown": None if not res.zone.get("H") else (res.zone["H"] - res.close) / res.zone["H"],
         "zone_type": zone_type, "rsi": res.flags.get("rsi"), "divergence": div.get("kind"),
         "macd_status": ("Kreuz vor %d T." % res.flags["macd_cross_age"]) if res.flags.get("macd_cross_done")
@@ -104,6 +116,11 @@ def main(argv=None) -> int:
         uni = pd.concat([uni[uni["ticker"].isin(wanted)],
                          pd.DataFrame({"ticker": [t for t in wanted if t not in set(uni["ticker"])]})], ignore_index=True)
     meta = {r["ticker"]: {k: (None if pd.isna(v) else v) for k, v in r.items()} for r in uni.to_dict("records")}
+    watch = load_watchlist()
+    for t, name in watch.items():                    # Watchlist-Aktien immer prüfen
+        meta.setdefault(t, {"ticker": t, "name": name})
+        meta[t]["in_watchlist"] = True
+        meta[t]["name"] = meta[t].get("name") or name
     tickers = list(meta)
     print(f"Universum: {len(tickers)} Aktien")
     yf = YFinanceProvider()
@@ -121,7 +138,7 @@ def main(argv=None) -> int:
             stats["errors"] += 1
             print(f"{t}: Fehler {exc!r}")
             continue
-        if res.passed or res.fast_hit:
+        if res.passed or res.fast_hit or m.get("in_watchlist"):
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
     infos = yf.infos([t for t, _, _ in results])
@@ -135,12 +152,14 @@ def main(argv=None) -> int:
         info = {"currency": m.get("currency") or i.get("currency"), "market_cap_usd": m.get("market_cap_usd"),
                 "market_cap": i.get("market_cap"), "earnings_date": i.get("earnings_date")}
         res = evaluate(df, info, ticker=t)            # mit Earnings-Termin neu bewerten
-        m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or ""}
+        m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
+             "region": m.get("region") or ("us" if "." not in t else "europe"), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
+                 watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))
     out = {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "stats": stats,
            "config": as_dict(CONFIG), "results": rows}

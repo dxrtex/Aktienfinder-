@@ -35,7 +35,7 @@ Die Website zeigt die aktiven Werte unter **Einstellungen**.
 | Pflichtkriterien, Trade-Plan | `backend/scanner.py` |
 | Score | `backend/scoring.py` |
 | Universum (USA + Europa ab 2 Mrd. USD) | `backend/universe.py` → `data/universe_us.csv`, `data/universe_eu.csv` |
-| Täglicher Scan → `site/data/` | `backend/run_scan.py` |
+| Täglicher Scan → `site/data/` (inkl. Watchlist aus `data/watchlist.json`) | `backend/run_scan.py` |
 | Regressionstest mit den 5 Beispielen | `backend/regression.py` |
 | Website (Treffer, Tabelle, Fast-Treffer, Detailseite, Einstellungen, CSV/Excel) | `site/index.html` |
 
