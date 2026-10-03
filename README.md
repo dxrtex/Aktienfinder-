@@ -1,49 +1,57 @@
-# Aktienfinder
+# Reversal-Setup-Finder
 
-Scannt den Aktienmarkt täglich nach bullischen Umkehrsignalen und zeigt die Treffer als
-sortierbare Tabelle auf einer Website. Die Kriterien stehen in [SPEC.md](SPEC.md).
+Scannt täglich **alle Aktien ab 2 Mrd. USD Börsenwert in den USA und Europa** auf ein festes
+Long-Reversal-Setup im Tageschart, bewertet jeden Treffer mit einem **Score von 0–100** und zeigt
+Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
-Pflichtsignale (innerhalb von ~3 Wochen zueinander, Bündel höchstens ~6 Wochen alt):
-- bullische RSI-Divergenz (klassisch oder versteckt)
-- MACD-Histogramm rot, aber kleiner werdend und kurz vor Grün
-- grünes X im Momentum Bias Index (AlgoAlpha)
+**Website:** https://dxrtex.github.io/Aktienfinder-/  (auf dem iPad über „Teilen → Zum Home-Bildschirm“ als App)
 
-Kursrückgang, Fibonacci-Zone, Ausbruch über die EMA 20 und Volumen fließen nur in den Score ein.
+> Keine Anlageberatung. Signale sind rein technisch und ersetzen keine eigene Prüfung.
 
-## So funktioniert es
-1. **Täglicher Scan** (`.github/workflows/scan.yml`): werktags 22:47 UTC, nach US-Börsenschluss
-   - `aktienfinder/universe.py` stellt die Aktienliste zusammen (USA komplett, Europa, global)
-   - `aktienfinder/scanner.py` lädt die Tageskerzen von Yahoo Finance und prüft jede Aktie
-   - das Ergebnis (`site/data/results.json`) wird mit der Website auf GitHub Pages veröffentlicht
-2. **Website** (`site/index.html`): Setup-Karten mit Mini-Chart (Golden Zone markiert) und
-   Checkliste der Kriterien, alternativ Tabelle; Filter für Region, Kursziel-Upside und Börsenwert;
-   „Chart öffnen“ führt zu TradingView.
-3. **Als App nutzen (iPad/iPhone):** Link in Safari öffnen → Teilen-Symbol → „Zum Home-Bildschirm“.
-   Die Seite öffnet sich dann im Vollbild wie eine eigene App.
-4. **Manuell starten:** GitHub → Actions → „Täglicher Scan“ → „Run workflow“.
+## Das Setup (alle Pflicht)
+1. **Korrektur:** Rückgang ≥ 12 % vom Swing-High (höchstes Pivot-High der letzten 20–180 Tage), kein Crash
+   (kein Tagesverlust > 25 % in 10 Tagen), Kurs unter EMA 20 und EMA 50, EMA 20 fällt, Abflachung der letzten 10 Kerzen.
+2. **Unterstützungszone:** Fibonacci 0,618–0,79 (Variante A) **oder** horizontaler Mehrfachboden mit ≥ 2 Touches ± 3 % (Variante B).
+3. **RSI(14):** bullische Divergenz (klassisch oder versteckt), RSI aktuell 28–48.
+4. **MACD(12/26/9):** Linie und Signal unter 0 und bullisches Kreuz ≤ 7 Kerzen **oder** Histogramm seit ≥ 4 Kerzen steigend
+   und ≤ 25 % seines 30-Tage-Tiefs.
+5. **Momentum Bias Index [AlgoAlpha]:** grünes X auf einer roten Spitze (über der Referenzlinie) in den letzten 15 Kerzen,
+   seitdem rote Balken ≤ 70 % der Spitze oder Histogramm grün.
+6. **Risiko:** Chance-Risiko (Ziel 2 / Stop) ≥ 2,0. Earnings in den nächsten 5 Handelstagen: Score −15.
 
-## Lokal ausführen
+Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
+## Parameter
+Alle Schwellen stehen in **`config.yaml`** (Abschnitte wie im Prompt: `correction`, `fib`, `support`, `rsi`, `macd`, `mbi`,
+`risk`, `score`). Ändern: Datei auf GitHub bearbeiten → *Actions → Täglicher Scan → Run workflow*.
+Die Website zeigt die aktiven Werte unter **Einstellungen**.
+
+## Ablauf & Technik
+| Teil | Datei |
+|---|---|
+| Datenquelle (austauschbar, `DataProvider`), SQLite-Cache | `backend/data_provider.py` |
+| Indikatoren (EMA, RSI nach Wilder, MACD, ATR, Pivots) – selbst implementiert | `backend/indicators.py` |
+| Momentum Bias Index – 1:1-Port des Original-Pine-Scripts | `backend/mbi.py` |
+| Pflichtkriterien, Trade-Plan | `backend/scanner.py` |
+| Score | `backend/scoring.py` |
+| Universum (USA + Europa ab 2 Mrd. USD) | `backend/universe.py` → `data/universe_us.csv`, `data/universe_eu.csv` |
+| Täglicher Scan → `site/data/` | `backend/run_scan.py` |
+| Regressionstest mit den 5 Beispielen | `backend/regression.py` |
+| Website (Treffer, Tabelle, Fast-Treffer, Detailseite, Einstellungen, CSV/Excel) | `site/index.html` |
+
+Der Scan läuft **werktags um 22:30 Uhr (Berlin)** über GitHub Actions (`.github/workflows/scan.yml`) und veröffentlicht
+die Website über GitHub Pages. „Scan jetzt starten“: *Actions → Täglicher Scan → Run workflow*.
+
+**Abweichung vom Prompt:** Statt eines lokalen FastAPI-Servers mit APScheduler (localhost:8000) laufen Scan und Website
+über GitHub Actions und GitHub Pages – so funktioniert alles auf dem iPad ohne eigenen Rechner. Die Parameter sind deshalb
+in der Website sichtbar, geändert werden sie in `config.yaml`.
+
+## Lokal ausführen (optional)
 ```bash
 pip install -r requirements-dev.txt
-python -m pytest                                           # Tests
-python -m aktienfinder.scanner AAPL MSFT SAP.DE            # einzelne Ticker
-python -m aktienfinder.scanner --all --debug --file tickers/beispiele.txt   # Referenz-Trades mit allen Signalterminen
-python -m aktienfinder.universe --out universe.csv --regions us   # Aktienliste
-python -m aktienfinder.scanner --universe universe.csv --out site/data/results.json
-python -m http.server -d site                              # Website unter http://localhost:8000
+python -m pytest -q backend/tests      # Unit-Tests
+python -m backend.regression           # Regressionstest (Daten bis 02.10.2026)
+python -m backend.universe             # Universum aktualisieren
+python -m backend.run_scan             # Scan → site/data/
+python -m http.server -d site 8000     # Website unter http://localhost:8000
 ```
-
-Parameter (Zeitfenster, RSI-Länge, MACD-Einstellungen …) stehen in `aktienfinder/config.py`.
-
-## Stand
-- [x] Indikatoren: RSI, MACD, Momentum Bias Index (1:1 nach dem Original-Pine-Code)
-- [x] Signal-Erkennung und Score (abgestimmt auf 5 Referenz-Trades, alle 5 werden gefunden)
-- [x] Ticker-Universum USA/Europa/global
-- [x] Website + täglicher Auto-Scan (GitHub Actions/Pages)
-- [ ] Trefferquote auf dem Gesamtmarkt kalibrieren
-
-## Lizenz-Hinweis
-`aktienfinder/mbi.py` ist eine Portierung des TradingView-Indikators
-„Momentum Bias Index [AlgoAlpha]“ (© AlgoAlpha) und steht wie das Original unter der
-[Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/).
