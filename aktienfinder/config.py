@@ -21,6 +21,8 @@ class Config:
     min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem 52-Wochen-Hoch
     macd_line_rising: bool = True     # MACD-Linie fällt nicht mehr (seitwärts oder steigend)
     macd_line_lookback: int = 3       # … verglichen mit dem Wert vor so vielen Tagen
+    macd_line_tolerance: float = 0.10 # minimaler Rückgang zählt als „seitwärts“: Anteil der
+                                      # größten MACD-Ausschläge der letzten 60 Tage
     min_analyst_upside: float = 0.40  # Analysten-Kursziel mind. 40 % über Kurs (Website-Filter)
 
     # RSI und Divergenz

@@ -123,3 +123,6 @@ def test_macd_line_sideways_is_enough():
     cfg = Config(macd_rising_bars=3, macd_near_zero=0.5, macd_line_lookback=3)
     assert not macd_condition(hist, cfg, falling).iloc[-1]
     assert macd_condition(hist, cfg, flat).iloc[-1]
+    # minimal fallend (−0,2 bei Ausschlägen bis 6) zählt noch als seitwärts
+    slightly = pd.Series([0, -1, -2, -6, -3.0, -3.1, -3.2])
+    assert macd_condition(hist, cfg, slightly).iloc[-1]

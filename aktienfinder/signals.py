@@ -127,8 +127,9 @@ def macd_condition(hist: pd.Series, cfg: Config = DEFAULT, line: pd.Series | Non
     near_zero = hist >= trough * cfg.macd_near_zero
     cond = (hist < 0) & rising & near_zero & (trough < 0)
     if line is not None and cfg.macd_line_rising:
-        # Linie fällt nicht mehr: heute mind. so hoch wie vor `macd_line_lookback` Tagen
-        cond &= line >= line.shift(cfg.macd_line_lookback)
+        # Linie fällt nicht mehr: heute (fast) so hoch wie vor `macd_line_lookback` Tagen
+        scale = line.abs().rolling(60, min_periods=1).max()
+        cond &= line >= line.shift(cfg.macd_line_lookback) - cfg.macd_line_tolerance * scale
     return cond
 
 
