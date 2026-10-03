@@ -1,0 +1,28 @@
+name: Backtest
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["claude/**"]
+    paths: ["aktienfinder/backtest.py", "aktienfinder/signals.py", "aktienfinder/config.py", ".github/workflows/backtest.yml"]
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  backtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m aktienfinder.universe --out universe.csv
+      - run: python -m aktienfinder.backtest --universe universe.csv --period 5y --out events.csv
+      - uses: actions/upload-artifact@v4
+        with:
+          name: backtest-signale
+          path: events.csv
