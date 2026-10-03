@@ -337,26 +337,30 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     scale = float(line.abs().iloc[-60:].max() or 1)
     macd_lines_ok = bool(line.iloc[-1] >= line.iloc[-1 - cfg.macd_line_lookback] - cfg.macd_line_tolerance * scale)
 
-    # Score (0–100): am höchsten, wenn das MACD-Histogramm noch rot, aber fast bei 0 ist und
-    # alle anderen Kriterien erfüllt sind – und der Kurs noch nicht gestiegen ist
+    # Score (0–100): das Gesamtpaket zählt am meisten – erst wenn alle Kernkriterien erfüllt sind,
+    # gibt es die hohen Punkte; MACD nahe 0 (noch rot) und Einstiegsnähe heben danach die Besten heraus
     kinds = {d.kind for d in divs}
-    score = 0.0
+    core = [
+        pullback_drawdown >= cfg.min_drawdown,       # Rückgang ≥ 20 %
+        fib_ok,                                      # Fibonacci (Golden Zone bis Schwungtief)
+        bool(kinds),                                 # bullische RSI-Divergenz (klassisch/versteckt)
+        macd_red_shrinking and macd_lines_ok,        # Histogramm rot & schrumpfend, Linien fallen nicht mehr
+        green_x_count >= 1,                          # grünes MBI-X
+    ]
+    score = 5.0 * sum(core) + 16 * all(core)         # Gesamtpaket: bis 41
     if macd_red_shrinking:
-        score += 9 + 10 * macd_closeness             # rot, schrumpfend – je näher an 0, desto besser
-        score += 3 * macd_lines_ok                   # MACD-Linien fallen nicht mehr
+        score += 12 * macd_closeness                 # je näher das rote Histogramm an 0, desto besser
     elif 0 < macd_green_days <= 3:
-        score += 6                                   # schon grün – Einstieg eigentlich etwas spät
-    elif criteria["macd"]:
-        score += 2
+        score += 3                                   # schon grün – etwas spät
     span = cfg.entry_zero - cfg.entry_full
-    score += 16 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
-    score += 12 if "klassisch" in kinds else 9 if kinds else 0
-    score += 12 if green_x_count >= 2 else 8 if green_x_count == 1 else 0
+    score += 14 * float(np.clip((cfg.entry_zero - rise_from_low) / span, 0, 1))   # Einstiegsnähe
+    score += 3 * ("klassisch" in kinds)
+    score += 4 * (green_x_count >= 2)
     score += 4 * sellers_fading                      # rote MBI-Balken rückläufig
-    score += 8 * (reversal_age is not None)          # Umkehrkerze mit Volumen an Fib-Linie
-    score += 8 * (-cfg.rsi_signal_gap <= rsi_gap <= 5)   # RSI (fast) auf der Signallinie
-    score += 8 if fib_zone else 6 if fib_ok else 0
-    score += 5 if pullback_drawdown >= 0.30 else 3 if pullback_drawdown >= cfg.min_drawdown else 0
+    score += 6 * (reversal_age is not None)          # Umkehrkerze mit Volumen an Fib-Linie
+    score += 6 * (-cfg.rsi_signal_gap <= rsi_gap <= 5)   # RSI (fast) auf der Signallinie
+    score += 3 * fib_zone                            # in der Golden Zone (statt darunter)
+    score += 2 * (pullback_drawdown >= 0.30)
     if cluster:
         newest = min(cluster.divergence_age, cluster.macd_age, cluster.mbi_age)
         score += 5 * (1 - newest / cfg.max_signal_age)

@@ -43,17 +43,17 @@ Wird für jede Aktie berechnet (auch Watchlist-Aktien ohne vollständiges Setup)
 
 | Merkmal | Punkte |
 |---|---|
-| **MACD-Histogramm noch rot und schrumpfend:** 9 + bis 10 je nach Nähe zur 0-Linie (Anteil des tiefsten roten Balkens der letzten 20 T., der schon aufgeholt ist) + 3, wenn die MACD-Linien nicht mehr fallen | bis 22 |
-| MACD schon grün (seit ≤ 3 T.) / nur Signal im Fenster | 6 / 2 |
-| **Einstiegsnähe:** Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 16 |
-| Divergenz klassisch / versteckt | 12 / 9 |
-| Grüne MBI-X im Fenster: ≥ 2 / 1 | 12 / 8 |
-| Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 8 |
-| RSI an der gelben Signallinie (−2 … +5 Punkte) | 8 |
-| Fibonacci: in der Golden Zone / darunter (bis Schwungtief) | 8 / 6 |
+| **Gesamtpaket:** je Kernkriterium 5 Punkte – Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz (klassisch/versteckt), MACD-Histogramm rot & schrumpfend mit nicht mehr fallenden Linien, grünes MBI-X | 25 |
+| **Bonus, wenn alle 5 Kernkriterien erfüllt sind** | 16 |
+| MACD-Histogramm noch rot: je näher an 0 (Anteil des tiefsten roten Balkens der letzten 20 T., der aufgeholt ist) / schon seit ≤ 3 T. grün | bis 12 / 3 |
+| Einstiegsnähe: Kurs höchstens +5 % über dem Tief der letzten 30 Tage → voll, ab +20 % → 0 | bis 14 |
+| Umkehrkerze mit Volumen an einer Fib-Linie (letzte 3 Tage) | 6 |
+| RSI an der gelben Signallinie (−2 … +5 Punkte) | 6 |
 | Frische des jüngsten Signals | bis 5 |
-| Rücksetzer ≥ 30 % / ≥ 20 % | 5 / 3 |
-| Rote MBI-Balken rückläufig | 4 |
+| Zwei oder mehr grüne MBI-X / rote MBI-Balken rückläufig | 4 / 4 |
+| Klassische Divergenz / in der Golden Zone / Rücksetzer ≥ 30 % | 3 / 3 / 2 |
+
+Damit landet eine Aktie, der ein Kernkriterium fehlt, immer deutlich hinter vollständigen Setups.
 
 Der Ausbruch über die EMA 20 zählt nicht mehr (er belohnte bereits gestiegene Aktien).
 
