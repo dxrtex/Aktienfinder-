@@ -40,7 +40,7 @@ class Result:
     close: float
     rsi: float
     drawdown_pct: float
-    pullback_drawdown_pct: float = 0.0     # Rücksetzer-Tief unter dem 52-Wochen-Hoch
+    pullback_drawdown_pct: float = 0.0     # Rücksetzer-Tief unter dem Hoch der letzten 3 Monate
     signals_ok: bool = False               # die drei Indikator-Signale allein erfüllt
     divergences: list = field(default_factory=list)
     cluster: Cluster | None = None
@@ -322,7 +322,7 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     if cluster:
         mbi_status = f"X vor {cluster.mbi_age} T., jetzt {mbi_status}"
 
-    # Pflicht 4: starker Rückgang – Rücksetzer-Tief mind. `min_drawdown` unter dem 52-Wochen-Hoch
+    # Pflicht 4: starker Rückgang – Rücksetzer-Tief mind. `min_drawdown` unter dem Hoch der letzten 3 Monate
     high = df["High"].rolling(cfg.drawdown_lookback, min_periods=1).max()
     drawdown = float(1 - close.iloc[-1] / high.iloc[-1])
     recent_low = float(df["Low"].iloc[-cfg.max_signal_age :].min())

@@ -99,7 +99,7 @@ def test_is_top_requires_all_criteria():
          "rel_strength": 0.05}
     assert is_top(r)
     assert is_top({**r, "upside_pct": 31})               # Kursziel ab +30 %
-    assert not is_top({**r, "upside_pct": 25})
+    assert is_top({**r, "upside_pct": 5})                # Kursziel ist kein Kriterium
     assert not is_top({**r, "core_met": ["rueckgang", "fibonacci", "divergenz", "mbi_x"]})  # MACD heute nicht rot/schrumpfend
     assert is_top({**r, "rel_strength": -0.1})           # Marktvergleich kein Kriterium
     assert is_top({**r, "rise_from_low_pct": 1})          # Abstand zum Tief egal

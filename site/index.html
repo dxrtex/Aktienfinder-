@@ -209,7 +209,7 @@
   <h3>Filter</h3>
   <div class="group"><div class="group-label">Auswahl</div>
     <div class="opts" data-key="pick"><button class="opt" data-v="">alle Setups</button><button class="opt" data-v="top">nur Top-Auswahl</button></div>
-    <p class="hint">Top-Auswahl = Rückgang ≥ 20 % + Fibonacci + bullische RSI-Divergenz (klassisch oder versteckt) + MACD-Histogramm noch rot und gerade schrumpfend Richtung 0, Linien fallen nicht mehr stark + mind. 1 grünes X + Analysten-Kursziel mind. +30 %. Sortiert nach Score.</p></div>
+    <p class="hint">Top-Auswahl = alle 5 Kriterien erfüllt: Rückgang ≥ 20 % vom Hoch der letzten 3 Monate · Fibonacci (Golden Zone oder bis zum Schwungtief) · MACD-Histogramm rot und schrumpfend Richtung 0, Linien fallen nicht mehr stark · bullische RSI-Divergenz (klassisch oder versteckt) · mind. 1 grünes X im MBI. Sortiert nach Score (wie gut die Kriterien zutreffen).</p></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">Alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="global">Welt</button></div></div>
   <div class="group"><div class="group-label">Analysten-Kursziel</div>
@@ -380,7 +380,7 @@ function card(r, hero = false) {
     <div class="figures">
       <div class="fig"><span>Kursziel</span><b class="${up >= 30 ? "up" : "muted"}">${fmtUp(up)}</b></div>
       <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
-      <div class="fig"><span>vom Hoch</span><b class="down">−${fmt(r.drawdown_pct, 0)} %</b></div>
+      <div class="fig"><span>vom 3-Mon.-Hoch</span><b class="down">−${fmt(r.drawdown_pct, 0)} %</b></div>
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
     </div>
     ${candleChart(r)}
@@ -405,7 +405,7 @@ const COLUMNS = [
   { key: "close", label: "Kurs", num: true, get: r => r.close, html: r => fmt(r.close) },
   { key: "entry", label: "über Tief", num: true, get: r => -r.rise_from_low_pct,
     html: r => r.still_falling ? `<span class="down">fällt noch</span>` : `+${fmt(r.rise_from_low_pct, 0)} %` },
-  { key: "dd", label: "vom Hoch", num: true, get: r => r.drawdown_pct, html: r => `<span class="down">−${fmt(r.drawdown_pct, 0)} %</span>` },
+  { key: "dd", label: "vom 3-M.-Hoch", num: true, get: r => r.drawdown_pct, html: r => `<span class="down">−${fmt(r.drawdown_pct, 0)} %</span>` },
   { key: "cap", label: "Börsenwert", num: true, get: r => r.market_cap_usd ?? -1, html: r => fmtCap(r.market_cap_usd) },
   { key: "fib", label: "Fib", num: true, get: r => r.fib_retracement ?? -1, html: r => fmt(r.fib_retracement, 2) + (r.fib_zone ? " ★" : "") },
   { key: "div", label: "Divergenz", get: r => r.cluster.divergence_age,
@@ -419,7 +419,7 @@ const COLUMNS = [
 // ---------- Zustand ----------
 let data = null;
 const open = new Set();
-const DEFAULTS = { pick: "top", region: "", minUpside: "30", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
+const DEFAULTS = { pick: "top", region: "", minUpside: "-999", minCap: "0", sort: "score", status: "", fib: "", div: "", macd: "", mbi: "" };
 const state = { tab: "cards", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const newestAge = r => Math.min(r.cluster.divergence_age, r.cluster.macd_age, r.cluster.mbi_age);
 const SORTS = {
@@ -517,7 +517,7 @@ function syncOpts() {
 const openFilters = v => document.body.classList.toggle("filters-open", v);
 
 // ---------- Einstellungen merken (nur auf diesem Gerät) ----------
-const PREF_KEY = "aktienfinder-v5";
+const PREF_KEY = "aktienfinder-v6";
 function savePrefs() {
   try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF_KEY, JSON.stringify(p)); } catch (e) {}
 }

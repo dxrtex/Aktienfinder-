@@ -18,7 +18,7 @@ class Config:
 
     # Pflicht-Filter aus dem eigenen Analyse-Ablauf (zusätzlich zu den drei Signalen)
     require_fib_zone: bool = True     # Rücksetzer hat mind. die Golden Zone erreicht (s. fib_required)
-    min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem 52-Wochen-Hoch
+    min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem Hoch der letzten 3 Monate
     macd_line_rising: bool = True     # MACD-Linie fällt nicht mehr (seitwärts oder steigend)
     macd_line_lookback: int = 3       # … verglichen mit dem Wert vor so vielen Tagen
     macd_line_tolerance: float = 0.10 # minimaler Rückgang zählt als „seitwärts“: Anteil der
@@ -48,7 +48,7 @@ class Config:
     mbi_std_mult: float = 3.0
 
     # Weiche Kriterien (nur Score)
-    drawdown_lookback: int = 252   # ca. 1 Jahr
+    drawdown_lookback: int = 63    # Rückgang vom Hoch der letzten ca. 3 Monate („in den letzten Wochen“)
     drawdown_full: float = 0.20    # ab 20 % unter Hoch volle Punkte
     drawdown_min: float = 0.05     # unter 5 % keine Punkte
     volume_avg_length: int = 20
@@ -58,9 +58,9 @@ class Config:
     # Stop unter dem Tief, +20 % Ziel, max. 60 Tage; ausgewählt auf 2021–2024, bestätigt auf 2024–2026).
     # Voraussetzung ist immer das vollständige Setup (Rückgang, Fibonacci, Divergenz, MACD, MBI-X).
     top_core5: bool = True                 # MACD heute: Histogramm rot & schrumpfend, Linien fallen nicht mehr stark
-    top_min_upside: float = 30.0           # Analysten-Kursziel mind. so viel % über dem Kurs
+    top_min_upside: float = -999.0           # Analysten-Kursziel mind. so viel % über dem Kurs
     top_min_crv: float = 0.0               # Chance/Risiko mindestens (Backtest: Filter verschlechtert das Ergebnis)
-    top_min_pullback: float = 20.0         # Rücksetzer vom 52-Wochen-Hoch in %
+    top_min_pullback: float = 20.0         # Rücksetzer vom 3-Monats-Hoch in %
     top_market: bool = False               # Gesamtmarkt über EMA 200
     top_trend: bool = False                # EMA 200 der Aktie steigt
     top_rel_strength: bool = False         # relative Stärke 3 Monate > 0 (auf Wunsch aus)
