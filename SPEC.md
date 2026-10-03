@@ -32,7 +32,7 @@ Ausbruch aus der Bodenzone erfolgt.
 |---|---|
 | RSI-Divergenz (RSI 14) | **Klassisch:** Kurs tieferes Tief, RSI höheres Tief. **Versteckt:** Kurs höheres Tief, RSI tieferes Tief. Pivot-Tiefs auf dem RSI (3 Balken links/rechts). Jedes Tief wird mit **allen** früheren Tiefs im Abstand von 4–60 Tagen verglichen. |
 | MACD-Histogramm (12/26/9) | Histogramm noch negativ, die Balken werden seit ≥ 3 Tagen kleiner und haben sich um ≥ 50 % vom Tiefpunkt erholt (kurz vor dem Wechsel ins Positive). |
-| Momentum Bias Index (AlgoAlpha, close 10 5 10 30 3) | Grünes X = Spitze eines roten Bergs, die mindestens die gepunktete Linie (Impulse Boundary) erreicht. |
+| Momentum Bias Index (AlgoAlpha, close 10 5 10 30 3) | Grünes X („Bullish TP Signal“, exakt wie im Original): roter Balken wird nach einer Spitze kleiner, liegt über der gepunkteten Linie (Impulse Boundary) und über dem grünen Balken. |
 
 ### Weich (Score 0–100, kein Ausschluss)
 | Kriterium | Punkte |
@@ -64,5 +64,5 @@ und Link zum TradingView-Chart.
 3. Scanner für Stufe 1 (große US-Werte), lokaler Testlauf
 4. Website (sortierbare Tabelle)
 5. GitHub Actions + GitHub Pages (täglicher Auto-Scan, Link)
-5b. Abgleich mit den Referenz-Trades auf echten Daten, MBI-Original-Code einbauen
+5b. Abgleich mit den Referenz-Trades auf echten Daten, Trefferquote kalibrieren
 6. Ausbau des Universums (Stufe 2–4)

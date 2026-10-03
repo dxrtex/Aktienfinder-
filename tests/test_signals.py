@@ -97,18 +97,3 @@ def test_fib_retracement():
     idx = pd.bdate_range("2026-01-01", periods=len(closes))
     df = pd.DataFrame({"High": closes, "Low": closes, "Close": closes}, index=idx)
     assert fib_retracement(df) == pytest.approx(0.7)
-
-
-def test_mbi_green_x_at_end_of_selloff():
-    from aktienfinder.indicators import momentum_bias_index
-    rng = np.random.default_rng(5)
-    # Seitwärts mit kleinem Rauschen, dann ein heftiger Abverkauf, dann Erholung
-    flat = 100 + rng.normal(0, 0.3, 120)
-    crash = np.linspace(100, 70, 15)
-    rebound = np.linspace(70, 78, 25)
-    close = pd.Series(np.concatenate([flat, crash, rebound]))
-    mbi = momentum_bias_index(close)
-    xs = np.flatnonzero(mbi["green_x"])
-    # ein X kurz nach dem Tief des Abverkaufs (Index 134), wenn der Verkaufsdruck abdreht
-    assert any(134 <= x <= 145 for x in xs)
-    assert not mbi["green_x"].iloc[120:134].any()   # nicht mitten im Abverkauf

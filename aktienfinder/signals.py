@@ -6,7 +6,8 @@ import numpy as np
 import pandas as pd
 
 from .config import DEFAULT, Config
-from .indicators import ema, macd, momentum_bias_index, pivot_low, rsi
+from .indicators import ema, macd, pivot_low, rsi
+from .mbi import momentum_bias_index
 
 
 @dataclass
@@ -195,13 +196,13 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     # Pflicht 3: grünes X im Momentum Bias Index
     mbi = momentum_bias_index(
         close,
+        df["High"],
+        df["Low"],
         cfg.mbi_momentum_length,
         cfg.mbi_bias_length,
         cfg.mbi_smooth_length,
         cfg.mbi_impulse_length,
         cfg.mbi_std_mult,
-        cfg.mbi_boundary_std,
-        cfg.mbi_boundary_tolerance,
     )
     buyers_lead = bool(mbi["upper_bias"].iloc[-1] > mbi["lower_bias"].iloc[-1])
     mbi_status = "grün" if buyers_lead else "rot"

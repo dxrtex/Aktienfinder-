@@ -23,12 +23,13 @@ python -m aktienfinder.scanner --all --file tickers/beispiele.txt   # Referenz-T
 Parameter (Zeitfenster, RSI-Länge, MACD-Einstellungen …) stehen in `aktienfinder/config.py`.
 
 ## Stand
-- [x] Indikatoren: RSI, MACD, Momentum Bias Index (vorläufig, siehe unten)
+- [x] Indikatoren: RSI, MACD, Momentum Bias Index (1:1 nach dem Original-Pine-Code)
 - [x] Signal-Erkennung und Score (abgestimmt auf 5 Referenz-Trades)
 - [x] Scanner-Kommandozeile
-- [ ] Momentum Bias Index exakt nach dem Original-Pine-Code
 - [ ] Ticker-Listen (USA, Europa, global)
 - [ ] Website + täglicher Auto-Scan (GitHub Actions/Pages)
 
-**Hinweis:** Der Momentum Bias Index ist derzeit eine Rekonstruktion nach der
-Beschreibung des Originals. Er wird ersetzt, sobald der Original-Pine-Code vorliegt.
+## Lizenz-Hinweis
+`aktienfinder/mbi.py` ist eine Portierung des TradingView-Indikators
+„Momentum Bias Index [AlgoAlpha]“ (© AlgoAlpha) und steht wie das Original unter der
+[Mozilla Public License 2.0](https://mozilla.org/MPL/2.0/).

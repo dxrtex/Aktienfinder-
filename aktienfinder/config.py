@@ -37,11 +37,6 @@ class Config:
     mbi_smooth_length: int = 10
     mbi_impulse_length: int = 30
     mbi_std_mult: float = 3.0
-    # Rekonstruktion der gepunkteten Linie (Impulse Boundary); muss mit echten
-    # Daten gegen TradingView kalibriert werden.
-    mbi_boundary_std: float = 1.0
-    # Spitze muss mind. so hoch sein wie die Linie × Toleranz (Infineon Anfang Aug.: knapp)
-    mbi_boundary_tolerance: float = 0.95
 
     # Weiche Kriterien (nur Score)
     drawdown_lookback: int = 252   # ca. 1 Jahr
