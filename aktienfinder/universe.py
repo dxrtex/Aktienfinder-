@@ -18,7 +18,7 @@ import sys
 import pandas as pd
 import requests
 
-from .markets import MARKETS, market_cap_usd
+from .markets import FX_USD, MARKETS, market_cap_usd
 
 MIN_MARKET_CAP_USD = 2_000_000_000   # ab 2 Mrd. $ = Mid Cap
 COLUMNS = ["ticker", "name", "region", "source", "market_cap_usd"]
@@ -26,6 +26,8 @@ COLUMNS = ["ticker", "name", "region", "source", "market_cap_usd"]
 HEADERS = {"User-Agent": "Mozilla/5.0 (Aktienfinder; +https://github.com/dxrtex/Aktienfinder-)"}
 NASDAQ_TRADED = "https://www.nasdaqtrader.com/dynamic/SymDir/nasdaqtraded.txt"
 OTC_EXCHANGES = {"PNK", "OQB", "OQX", "OEM", "OTC", "OBB"}
+US_EXCHANGES = ["NMS", "NYQ", "NGM", "NCM", "ASE", "BTS"]   # NASDAQ, NYSE, NYSE American, Cboe
+MAX_PAGES = 80
 
 # Namensbestandteile, die keine Stammaktien sind
 _NON_COMMON = re.compile(
@@ -74,37 +76,35 @@ def _is_home_listing(symbol: str, quote: dict, suffixes: tuple) -> bool:
 def screener(region: str, min_cap_usd: float = MIN_MARKET_CAP_USD, page_size: int = 250) -> pd.DataFrame:
     """Yahoo-Screener: je Land alle Aktien der Heimatbörse ab `min_cap_usd` Börsenwert.
 
-    Die Treffer kommen nach Börsenwert absteigend sortiert; sobald ein Wert unter die
-    Schwelle fällt, ist das Land abgeschlossen.
+    Yahoo filtert den Börsenwert in der Landeswährung; die Schwelle wird deshalb je Land
+    umgerechnet. Zusätzlich wird jeder Treffer einzeln in US-Dollar geprüft, weil an
+    manchen Börsen auch Auslandswerte in Fremdwährung notieren (z. B. Toyota in London).
     """
     import yfinance as yf
     from yfinance import EquityQuery
 
     rows = []
     for m in (m for m in MARKETS if m.region == region):
-        query = EquityQuery("eq", ["region", m.country])
-        found, offset, done = 0, 0, False
-        while not done:
+        parts = [EquityQuery("eq", ["region", m.country]),
+                 EquityQuery("gte", ["intradaymarketcap", min_cap_usd / FX_USD[m.currency]])]
+        if m.country == "us":
+            parts.append(EquityQuery("is-in", ["exchange", *US_EXCHANGES]))
+        query = EquityQuery("and", parts)
+        offset = 0
+        for _ in range(MAX_PAGES):
             res = yf.screen(query, offset=offset, size=page_size, sortField="intradaymarketcap", sortAsc=False)
             quotes = res.get("quotes", [])
             for q in quotes:
                 cap = market_cap_usd(q.get("marketCap"), q.get("currency"))
-                if cap is not None and cap < min_cap_usd:
-                    done = True
-                    break
                 sym = q.get("symbol", "")
                 name = q.get("longName") or q.get("shortName", "")
-                if (cap is not None and q.get("quoteType", "EQUITY") == "EQUITY"
+                if (cap is not None and cap >= min_cap_usd and q.get("quoteType", "EQUITY") == "EQUITY"
                         and _is_home_listing(sym, q, m.suffixes) and not _NOT_A_COMPANY.search(name)):
-                    rows.append((sym, name, region,
-                                 f"Yahoo-Screener {m.country}", round(cap)))
-                    found += 1
-                    if found >= m.top_n:
-                        done = True
-                        break
+                    rows.append((sym, name, region, f"Yahoo-Screener {m.country}", round(cap)))
             offset += len(quotes)
-            if not quotes or offset >= res.get("total", 0):
-                done = True
+            total = res.get("total")
+            if not quotes or (total is not None and offset >= total):
+                break
     return pd.DataFrame(rows, columns=COLUMNS)
 
 

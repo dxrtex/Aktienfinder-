@@ -25,17 +25,26 @@ def q(sym, cap, cur="EUR", exchange="GER", qt="EQUITY"):
 def test_screener_home_exchange_and_min_cap(monkeypatch):
     _fake_yf(monkeypatch, {0: [q("SAP.DE", 2e11), q("SAP.F", 2e11), q("SIE.DE", 1.5e11),
                                q("RHM.DE", 4e10), q("SMALL.DE", 1e9), q("LATE.DE", 3e9)]})
-    monkeypatch.setattr(universe, "MARKETS", [markets.Market("de", (".DE",), "europe", 1.1, 100)])
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("de", (".DE",), "europe", 1.1, "EUR")])
     df = universe.screener("europe", min_cap_usd=2e9)
-    # Zweitlisting SAP.F verworfen, Abbruch beim ersten Wert unter 2 Mrd. $
-    assert list(df["ticker"]) == ["SAP.DE", "SIE.DE", "RHM.DE"]
+    # Zweitlisting SAP.F verworfen, Werte unter 2 Mrd. $ verworfen (ohne Abbruch)
+    assert list(df["ticker"]) == ["SAP.DE", "SIE.DE", "RHM.DE", "LATE.DE"]
     assert df["market_cap_usd"].iloc[0] == round(2e11 * 1.10)
+
+
+def test_screener_reads_all_pages_and_converts_foreign_currency(monkeypatch):
+    # Seite 1 enthält einen Auslandswert in Yen (klein umgerechnet) – darf nicht zum Abbruch führen
+    _fake_yf(monkeypatch, {0: [q("SHEL.L", 1.6e11, "GBp", "LSE"), q("TYT.L", 3e12, "JPY", "LSE")],
+                           2: [q("BP.L", 6e10, "GBp", "LSE")]})
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("gb", (".L",), "europe", 0.013, "GBP")])
+    df = universe.screener("europe", page_size=2)
+    assert list(df["ticker"]) == ["SHEL.L", "TYT.L", "BP.L"]   # TYT.L: 3e12 Yen ≈ 20 Mrd. $
 
 
 def test_screener_us_skips_otc_and_converts_pence(monkeypatch):
     _fake_yf(monkeypatch, {0: [q("NVDA", 4e12, "USD", "NMS"), q("NSRGY", 3e11, "USD", "PNK"),
                                q("BRK-B", 1e12, "USD", "NYQ")]})
-    monkeypatch.setattr(universe, "MARKETS", [markets.Market("us", ("",), "us", 1.0, 100)])
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("us", ("",), "us", 1.0, "USD")])
     assert list(universe.screener("us")["ticker"]) == ["NVDA", "BRK-B"]
     # London: Kurs in Pence, Börsenwert in Pfund
     assert markets.market_cap_usd(1e10, "GBp") == 1e10 * 1.30
@@ -88,6 +97,6 @@ def test_company_key_and_dedupe(monkeypatch):
 
 def test_screener_skips_trusts(monkeypatch):
     _fake_yf(monkeypatch, {0: [dict(q("U-UN.TO", 5e9, "CAD", "TOR"), longName="Sprott Physical Uranium Trust"), q("SHOP.TO", 1e11, "CAD", "TOR")]})
-    monkeypatch.setattr(universe, "MARKETS", [markets.Market("ca", (".TO",), "global", 0.73, 100)])
+    monkeypatch.setattr(universe, "MARKETS", [markets.Market("ca", (".TO",), "global", 0.73, "CAD")])
     q0 = universe.screener("global")
     assert "U-UN.TO" not in list(q0["ticker"])

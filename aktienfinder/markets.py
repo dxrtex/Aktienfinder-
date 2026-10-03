@@ -13,44 +13,44 @@ class Market:
     country: str          # Yahoo-Regionscode
     suffixes: tuple       # Yahoo-Suffixe der Heimatbörse(n)
     region: str           # "europe" oder "global"
-    usd: float            # US-Dollar je Kurseinheit
-    top_n: int            # Obergrenze, falls der Mindest-Börsenwert sehr viele Werte zulässt
+    usd: float            # US-Dollar je Kurseinheit (London: Pence)
+    currency: str         # Währung, in der Yahoo den Börsenwert des Landes angibt
 
 
 MARKETS = [
     # USA (Yahoo-Ticker ohne Suffix)
-    Market("us", ("",), "us", 1.0, 4000),
+    Market("us", ("",), "us", 1.0, "USD"),
     # Europa
-    Market("de", (".DE",), "europe", 1.10, 600),
-    Market("gb", (".L",), "europe", 0.0130, 800),
-    Market("fr", (".PA",), "europe", 1.10, 400),
-    Market("nl", (".AS",), "europe", 1.10, 120),
-    Market("ch", (".SW",), "europe", 1.15, 200),
-    Market("es", (".MC",), "europe", 1.10, 120),
-    Market("it", (".MI",), "europe", 1.10, 250),
-    Market("se", (".ST",), "europe", 0.095, 300),
-    Market("dk", (".CO",), "europe", 0.15, 120),
-    Market("no", (".OL",), "europe", 0.095, 150),
-    Market("fi", (".HE",), "europe", 1.10, 100),
-    Market("be", (".BR",), "europe", 1.10, 80),
-    Market("at", (".VI",), "europe", 1.10, 50),
-    Market("ie", (".IR",), "europe", 1.10, 30),
-    Market("pt", (".LS",), "europe", 1.10, 30),
-    Market("pl", (".WA",), "europe", 0.25, 120),
+    Market("de", (".DE",), "europe", 1.10, "EUR"),
+    Market("gb", (".L",), "europe", 0.0130, "GBP"),
+    Market("fr", (".PA",), "europe", 1.10, "EUR"),
+    Market("nl", (".AS",), "europe", 1.10, "EUR"),
+    Market("ch", (".SW",), "europe", 1.15, "CHF"),
+    Market("es", (".MC",), "europe", 1.10, "EUR"),
+    Market("it", (".MI",), "europe", 1.10, "EUR"),
+    Market("se", (".ST",), "europe", 0.095, "SEK"),
+    Market("dk", (".CO",), "europe", 0.15, "DKK"),
+    Market("no", (".OL",), "europe", 0.095, "NOK"),
+    Market("fi", (".HE",), "europe", 1.10, "EUR"),
+    Market("be", (".BR",), "europe", 1.10, "EUR"),
+    Market("at", (".VI",), "europe", 1.10, "EUR"),
+    Market("ie", (".IR",), "europe", 1.10, "EUR"),
+    Market("pt", (".LS",), "europe", 1.10, "EUR"),
+    Market("pl", (".WA",), "europe", 0.25, "PLN"),
     # Rest der Welt
-    Market("jp", (".T",), "global", 0.0068, 1000),
-    Market("hk", (".HK",), "global", 0.13, 400),
-    Market("ca", (".TO",), "global", 0.73, 500),
-    Market("au", (".AX",), "global", 0.65, 400),
-    Market("in", (".NS",), "global", 0.012, 500),
-    Market("kr", (".KS", ".KQ"), "global", 0.00073, 400),
-    Market("tw", (".TW", ".TWO"), "global", 0.031, 400),
-    Market("sg", (".SI",), "global", 0.74, 80),
-    Market("br", (".SA",), "global", 0.18, 150),
-    Market("mx", (".MX",), "global", 0.055, 60),
-    Market("za", (".JO",), "global", 0.00055, 100),
-    Market("il", (".TA",), "global", 0.0027, 80),
-    Market("nz", (".NZ",), "global", 0.60, 40),
+    Market("jp", (".T",), "global", 0.0068, "JPY"),
+    Market("hk", (".HK",), "global", 0.13, "HKD"),
+    Market("ca", (".TO",), "global", 0.73, "CAD"),
+    Market("au", (".AX",), "global", 0.65, "AUD"),
+    Market("in", (".NS",), "global", 0.012, "INR"),
+    Market("kr", (".KS", ".KQ"), "global", 0.00073, "KRW"),
+    Market("tw", (".TW", ".TWO"), "global", 0.031, "TWD"),
+    Market("sg", (".SI",), "global", 0.74, "SGD"),
+    Market("br", (".SA",), "global", 0.18, "BRL"),
+    Market("mx", (".MX",), "global", 0.055, "MXN"),
+    Market("za", (".JO",), "global", 0.00055, "ZAR"),
+    Market("il", (".TA",), "global", 0.0027, "ILS"),
+    Market("nz", (".NZ",), "global", 0.60, "NZD"),
 ]
 
 _BY_SUFFIX = {s: m for m in MARKETS for s in m.suffixes if s}
