@@ -155,6 +155,11 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
         fib = fib_retracement(df.iloc[: day + 1], cfg)
         lo_r, hi_r = cfg.fib_required
         fwd["fib_zone"] = fib is not None and lo_r - cfg.fib_tolerance <= fib <= hi_r + cfg.fib_tolerance
+        if fwd["fib_zone"] and fwd["pullback_drawdown"] >= cfg.min_drawdown:
+            res = evaluate(df.iloc[: day + 1], cfg)     # wie viele Kernkriterien waren an diesem Tag erfüllt?
+            fwd["core_count"] = len(res.core_met)
+            fwd["core_met"] = "+".join(res.core_met)
+            fwd["score"] = res.score
         rows.append(fwd)
     return rows
 
@@ -183,6 +188,19 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     setup = base_p[(base_p["b_pullback_drawdown"] >= DEFAULT.min_drawdown) & base_p["b_fib_zone"]]
     out.append("Zufallseinstieg mit Fib-Zone + ≥20 % Rückgang:  " + _stats(setup, "b_")
                + "   ← Vergleichsmaßstab: gleiches Setup ohne RSI/MACD/MBI")
+    if "b_core_count" in base_p:
+        out.append("\nGesamtpaket (alle Tage mit Fib + ≥20 % Rückgang, jeden 5. Tag):")
+        cand = base_p.dropna(subset=["b_core_count"])
+        for k in (2, 3, 4, 5):
+            out.append(f"  {k} von 5 Kernkriterien:{'':<22}" + _stats(cand[cand["b_core_count"] == k], "b_"))
+        names = ("divergenz", "macd_jetzt", "mbi_x")
+        four = cand[cand["b_core_count"] == 4]
+        for n in names:
+            miss = four[~four["b_core_met"].str.contains(n)]
+            out.append(f"  4 von 5, es fehlt nur {n:<20}" + _stats(miss, "b_"))
+        for lo, hi in ((0, 40), (40, 60), (60, 70), (70, 80), (80, 101)):
+            out.append(f"  Score {lo}–{hi}:{'':<32}"
+                       + _stats(cand[(cand["b_score"] >= lo) & (cand["b_score"] < hi)], "b_"))
     if events.empty:
         out.append("keine Signale")
         return "\n".join(out)

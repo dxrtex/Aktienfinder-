@@ -57,6 +57,7 @@ class Result:
     still_falling: bool = False            # neues Tief in den letzten 2 Tagen
     criteria: dict = field(default_factory=dict)   # Einzelkriterien erfüllt ja/nein
     status: str = "kein_setup"             # bereit | abwarten | gelaufen | kein_setup
+    core_met: list = field(default_factory=list)   # erfüllte Kernkriterien des Gesamtpakets
     macd_closeness: float = 0.0            # rotes Histogramm: Anteil des tiefsten Balkens aufgeholt (1 = an 0)
     rsi_signal_gap: float = 0.0            # RSI minus gelbe Signallinie (≥ −2: „fast darauf“)
     dollar_volume: float = 0.0
@@ -347,6 +348,8 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         macd_red_shrinking and macd_lines_ok,        # Histogramm rot & schrumpfend, Linien fallen nicht mehr
         green_x_count >= 1,                          # grünes MBI-X
     ]
+    core_names = ("rueckgang", "fibonacci", "divergenz", "macd_jetzt", "mbi_x")
+    core_met = [n for n, ok in zip(core_names, core) if ok]
     score = 5.0 * sum(core) + 16 * all(core)         # Gesamtpaket: bis 41
     if macd_red_shrinking:
         score += 12 * macd_closeness                 # je näher das rote Histogramm an 0, desto besser
@@ -403,4 +406,5 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
         criteria=criteria,
         status=status,
         macd_closeness=round(macd_closeness, 2),
+        core_met=core_met,
     )
