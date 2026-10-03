@@ -285,10 +285,14 @@ const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : nf(d).format(v);
 const pct = (v, d = 1) => v == null ? "–" : fmt(100 * v, d) + " %";
 const fmtCap = v => v == null ? "–" : v >= 1e12 ? fmt(v / 1e12, 1) + " Bio. $" : fmt(v / 1e9, v >= 1e10 ? 0 : 1) + " Mrd. $";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const ddFmt = (v, d = 1) => v == null ? "–" : v >= 0 ? "−" + pct(v, d) : "+" + pct(-v, d);
 const dateDE = s => s ? new Date(s + "T12:00:00").toLocaleDateString("de-DE") : "–";
 const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter EMAs", flattening: "Abflachung",
   zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
   mbi: "MBI grünes X", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
+const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>`
+  : r.fast_hit ? `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`
+  : `<span class="status st-kein_setup">Kein Setup · ${r.missing.length} Kriterien fehlen</span>`;
 const SETUP_KEYS = ["drawdown", "no_crash", "structure", "flattening", "zone", "rsi_div", "rsi_range", "macd_below0", "macd_turn", "mbi", "crv"];
 const tvUrl = t => {
   const m = t.match(/^(.*)\.(DE|L|PA|AS|SW|MC|MI|ST|CO|OL|HE|BR|VI|IR|LS|WA|AT)$/);
@@ -313,6 +317,10 @@ const SORTS = {
 
 function rows(kind) {
   const q = $("search").value.trim().toLowerCase();
+  if (kind === "watch")   // Watchlist: alle eigenen Aktien, nur Suche und Börsenwert-Filter greifen
+    return data.results.filter(r => r.in_watchlist && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
+      && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9))
+      .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
   return data.results.filter(r => (kind === "all" ? (r.passed || r.fast_hit) : kind === "fast" ? r.fast_hit : r.passed)
     && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
     && (r.score >= +state.minScore || !r.passed)
@@ -340,16 +348,16 @@ function card(r) {
   return `<article class="card">
     <div class="card-top">
       <div class="card-title">
-        <h2 title="${esc(r.name)}">${esc(r.name || r.ticker)}</h2>
+        <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
-        ${r.passed ? `<span class="status st-bereit">Treffer</span>` : `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`}
+        ${statusBadge(r)}
         <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}</span>
         ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
       <div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>
     </div>
     <div class="figures">
-      <div class="fig"><span>Rückgang</span><b class="down">−${pct(r.drawdown, 0)}</b></div>
+      <div class="fig"><span>Rückgang</span><b class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown, 0)}</b></div>
       <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
       <div class="fig"><span>CRV</span><b class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmt(r.crv, 1)}</b></div>
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
@@ -398,12 +406,12 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 
 // ---------- Tabelle ----------
 const COLS = [
-  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>` },
+  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
   { k: "name", l: "Name", g: r => r.name, h: r => esc((r.name || "").slice(0, 28)) },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
   { k: "close", l: "Kurs", n: 1, g: r => r.close, h: r => fmt(r.close) },
-  { k: "dd", l: "Rückgang", n: 1, g: r => r.drawdown ?? 0, h: r => `<span class="down">−${pct(r.drawdown)}</span>` },
+  { k: "dd", l: "Rückgang", n: 1, g: r => r.drawdown ?? 0, h: r => `<span class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown)}</span>` },
   { k: "zone", l: "Zone", g: r => r.zone_type, h: r => esc(r.zone_type) },
   { k: "rsi", l: "RSI", n: 1, g: r => r.rsi, h: r => fmt(r.rsi, 1) },
   { k: "div", l: "Divergenz", g: r => r.divergence || "", h: r => esc(r.divergence || "–") },
@@ -413,8 +421,11 @@ const COLS = [
   { k: "score", l: "Score", n: 1, g: r => r.score, h: r => `<b>${r.score}</b>` },
   { k: "earn", l: "Earnings", g: r => r.earnings_date || "9", h: r => `<span class="${r.earnings_risk ? "down" : ""}">${dateDE(r.earnings_date)}</span>` },
   { k: "amp", l: "Kriterien", g: r => -r.missing.length, h: r => ampel(r) },
+  { k: "met", l: "Erfüllt", n: 1, watch: 1, g: r => r.met ?? 0, h: r => `<b class="${r.passed ? "up" : r.fast_hit ? "" : "muted"}">${r.met ?? "–"} / ${r.total ?? 11}</b>` },
   { k: "miss", l: "Fehlt", fast: 1, g: r => r.missing[0] || "", h: r => { if (r.passed) return `<span class="up">– (Treffer)</span>`;
-    const c = r.criteria.find(x => !x.ok); return `<span class="down" title="${esc(r.missing[0])}">${esc(SHORT[c && c.key] || r.missing[0])}</span>`; } },
+    const miss = r.criteria.filter(x => !x.ok && SETUP_KEYS.includes(x.key)).map(x => SHORT[x.key]);
+    const text = miss.length <= 2 ? miss.join(", ") : `${miss.slice(0, 2).join(", ")} +${miss.length - 2}`;
+    return `<span class="down" title="${esc(r.missing.join(" · "))}">${esc(text || r.missing[0] || "–")}</span>`; } },
 ];
 
 // ---------- Einstellungen ----------
@@ -447,23 +458,25 @@ function render() {
   const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   const list = rows(kind);
   const title = { fast: "Fast-Treffer · genau 1 Pflichtkriterium fehlt", hit: "Treffer · alle Pflichtkriterien erfüllt",
-                  all: "Treffer und Fast-Treffer" }[kind];
-  const seg = state.tab === "table" ? `<div class="opts seg">${[["hit", "Treffer"], ["fast", "Fast-Treffer"], ["all", "beide"]].map(([v, l]) =>
+                  all: "Treffer und Fast-Treffer", watch: "Deine Watchlist · alle Aktien, nach Erfüllung sortiert" }[kind];
+  const seg = state.tab === "table" ? `<div class="opts seg">${[["hit", "Treffer"], ["fast", "Fast-Treffer"], ["all", "beide"], ["watch", "★ Watchlist"]].map(([v, l]) =>
     `<button class="opt${state.tableKind === v ? " on" : ""}" data-tk="${v}">${l}</button>`).join("")}</div>` : "";
   const toTable = state.tab === "watch" ? `<div class="opts seg"><button class="opt on">Karten</button><button class="opt" data-totable="fast">Tabelle</button></div>` : "";
   const head = seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
   if (!list.length) {
-    $("main").innerHTML = head + `<div class="empty">${kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
+    $("main").innerHTML = head + `<div class="empty">${kind === "watch" ? "Keine Watchlist-Aktie gefunden." : kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
       : `Heute erfüllt keine Aktie alle Pflichtkriterien${hits ? " mit diesen Filtern" : ""}.<br>Die Fast-Treffer (unten in der Leiste) zeigen, wem nur ein Kriterium fehlt.`}</div>`;
     return;
   }
   if (state.tab === "table") {
     const col = COLS.find(c => c.k === state.tableSort) || COLS[12];
-    list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
+    if (!(kind === "watch" && state.tableSort === "score")) list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
     // Bei Fast-Treffern steht „Fehlt“ direkt hinter dem Namen
     const miss = COLS.find(c => c.k === "miss");
-    const cols = kind === "hit" ? COLS.filter(c => !c.fast)
-      : [...COLS.slice(0, 2), miss, ...COLS.slice(2).filter(c => !c.fast)];
+    const met = COLS.find(c => c.k === "met");
+    const cols = kind === "hit" ? COLS.filter(c => !c.fast && !c.watch)
+      : kind === "watch" ? [...COLS.slice(0, 2), met, miss, ...COLS.slice(2).filter(c => !c.fast && !c.watch)]
+      : [...COLS.slice(0, 2), miss, ...COLS.slice(2).filter(c => !c.fast && !c.watch)];
     $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
       <tbody>${list.map(r => `<tr>${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
     return;
@@ -495,7 +508,7 @@ async function openDetail(t) {
   $("detailBody").innerHTML = `
     <div class="d-head"><div><h2>${esc(r.name)}</h2>
       <div class="meta muted">${esc(r.ticker)} · ${esc(r.exchange)} · ${REGION[r.region] || ""} · ${esc(r.sector || "")} · Stand ${dateDE(r.date)}</div>
-      ${r.passed ? `<span class="status st-bereit">Treffer · Score ${r.score}</span>` : `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`}
+      ${statusBadge(r)}
       ${r.earnings_risk ? `<span class="warn">⚠ Earnings-Risiko (${dateDE(r.earnings_date)})</span>` : ""}
       <span class="flag">MBI: ${esc(f.mbi_source || "")}</span></div>
       <button class="close" id="closeDetail" aria-label="Schließen">✕</button></div>
@@ -546,8 +559,8 @@ function drawCharts(c, r) {
   [["e20", "#f4b740"], ["e50", "#4aa3ff"], ["e100", "#b07cff"], ["e200", "#ff8a65"]].forEach(([k, col]) =>
     main.addLineSeries({ color: col, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false }).setData(pts(k)));
   const vol = main.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
-  main.priceScale("vol").applyOptions({ scaleMargins: { top: .82, bottom: 0 } });
-  vol.setData(T.map((t, i) => ({ time: t, value: c.v[i] || 0, color: c.c[i] >= c.o[i] ? "rgba(34,211,155,.35)" : "rgba(255,95,87,.35)" })));
+  main.priceScale("vol").applyOptions({ scaleMargins: { top: .87, bottom: 0 } });
+  vol.setData(T.map((t, i) => ({ time: t, value: c.v[i] || 0, color: c.c[i] >= c.o[i] ? "rgba(34,211,155,.22)" : "rgba(255,95,87,.22)" })));
   const line = (price, title, color, style = 2) => price != null && candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true });
   const fib = r.zone && r.zone.fib, sup = r.zone && r.zone.support, p = r.plan || {};
   if (fib) [["0", "Fib 0"], ["0.618", "0,618"], ["0.706", "0,706"], ["0.79", "0,79"], ["1", "Fib 1"]].forEach(([k, l]) => line(fib.levels[k], l, "#f4b740"));
