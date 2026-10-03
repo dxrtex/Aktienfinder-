@@ -64,10 +64,10 @@ class Config:
     top_market: bool = False               # Gesamtmarkt über EMA 200
     top_trend: bool = False                # EMA 200 der Aktie steigt
     top_rel_strength: bool = True          # relative Stärke 3 Monate > 0 (stärkster Einzelfilter)
-    top_rise_min: float = 5.0              # Kurs mind. so viel % über dem Tief
-    top_rise_max: float = 20.0             # … und höchstens so viel (Erholung hat begonnen)
-    top_min_green_x: int = 2
-    top_no_earnings_days: int = 10         # keine Quartalszahlen in so vielen Tagen
+    top_rise_min: float = 0.0              # Kurs mind. so viel % über dem Tief
+    top_rise_max: float = 1000.0             # … und höchstens so viel (1000 = aus)
+    top_min_green_x: int = 1
+    top_no_earnings_days: int = -1         # keine Quartalszahlen in so vielen Tagen (−1 = aus)
     stop_buffer: float = 0.03      # Stop so weit unter dem Rücksetzer-Tief
     fib_low_lookback: int = 300    # großer Schwung: Schwungtief bis so viele Tage vor dem Hoch
     # Golden Zone 0,618–0,79 (Anzeige „★“ auf der Website, mit Toleranz)

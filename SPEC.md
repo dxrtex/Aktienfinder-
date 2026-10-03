@@ -149,3 +149,8 @@ Daraus folgt: Top-Auswahl und Status „Einstiegsbereit“ = vollständiges Setu
 Stärke > 0 + Kurs 5–20 % über dem Tief + ≥ 2 grüne MBI-X + keine Quartalszahlen in 10 Tagen.
 „Schon gelaufen“ erst ab +20 % über dem Tief. Chance/Risiko wird nur angezeigt, nicht gefiltert.
 Hinweis: Vergangene Ergebnisse sind keine Garantie; der Zeitraum enthält keinen langen Bärenmarkt.
+
+## Aktuelle Top-Auswahl (Entscheidung Okt. 2026)
+Vollständiges Setup (Rückgang ≥ 20 %, Fibonacci, RSI-Divergenz, MACD, mind. 1 grünes MBI-X) + Analysten-Kursziel
+≥ 40 % + relative Stärke 3 Monate > 0. Kein Filter auf Abstand zum Tief, keine Quartalszahlen-Regel.
+Sortiert nach Score. Backtests laufen nur noch manuell.
