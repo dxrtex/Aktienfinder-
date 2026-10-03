@@ -30,7 +30,7 @@ Reihenfolge wie bei der manuellen Analyse; jede Stufe ist Pflicht:
 |---|---|---|
 | 1 | Analysten-Kursziel ≥ 40 % über Kurs | Ø Kursziel von Yahoo Finance (nur live, für Treffer abgefragt); Website-Filter, Standard „ab 40 %“ |
 | 2 | Starker Rückgang | Rücksetzer-Tief der letzten 30 Handelstage mind. 20 % unter dem 52-Wochen-Hoch |
-| 3 | Fibonacci-Golden-Zone | Der Rücksetzer seit dem letzten Hoch hat 0,618 erreicht und 0,886 nicht unterschritten (± 0,03); Schwung = höchstes Hoch der letzten 150 Tage und tiefstes Tief davor |
+| 3 | Fibonacci-Golden-Zone | Der Rücksetzer seit dem letzten Hoch hat mind. 0,618 erreicht; tiefer ist erlaubt (oft das stärkere Setup, wenn sich dabei Divergenzen bilden), nur nicht unter das Schwungtief (> 1,0; Toleranz ± 0,03). Schwung = höchstes Hoch der letzten 150 Tage und tiefstes Tief davor. „★“ auf der Website = in der Golden Zone 0,618–0,79 |
 | 4 | RSI-Divergenz (RSI 14) | klassisch oder versteckt; Pivot-Tiefs 3/3, Vergleich mit allen früheren Tiefs im Abstand von 4–60 Tagen |
 | 5 | MACD (12/26/9) | rote Balken werden seit ≥ 3 Tagen kleiner, ≥ 50 % vom Tiefpunkt erholt **und die MACD-Linie steigt** |
 | 6 | Momentum Bias Index (AlgoAlpha) | grünes X („Bullish TP Signal“) auf der Spitze der roten Balken über der Impulse Boundary |

@@ -118,7 +118,7 @@ def stock_events(ticker: str, df: pd.DataFrame, cfg: Config = DEFAULT) -> list[d
             "div_rsi_min": min(min(d.rsi_low, d.prev_rsi_low) for d in res.divergences
                                if d.age == res.cluster.divergence_age),
             "span": res.cluster.span, "macd_red_now": res.macd_status.startswith("rot"),
-            "fib_zone": res.fib_zone, "ema_breakout_age": res.ema_breakout_age,
+            "fib_zone": res.fib_zone, "fib": res.fib_retracement, "ema_breakout_age": res.ema_breakout_age,
             "volume_spike": res.volume_spike, "volume_breakout": res.volume_breakout,
         }
         ev.update({f"sig_{k}": v for k, v in _forward(df, day + 1).items()})
@@ -142,7 +142,6 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
     high52 = df["High"].rolling(cfg.drawdown_lookback, min_periods=1).max()
     recent_low = df["Low"].rolling(cfg.max_signal_age, min_periods=1).min()
-    lo_z, hi_z = cfg.fib_zone
     rows = []
     for day in range(MIN_HISTORY, len(df) - 1, step):
         fwd = _forward(df, day + 1)
@@ -151,7 +150,8 @@ def baseline_returns(df: pd.DataFrame, step: int = 5, cfg: Config = DEFAULT) -> 
         fwd["drawdown_pct"] = 100 * (1 - df["Close"].iloc[day] / high52.iloc[day])
         fwd["pullback_drawdown"] = 1 - recent_low.iloc[day] / high52.iloc[day]
         fib = fib_retracement(df.iloc[: day + 1], cfg)
-        fwd["fib_zone"] = fib is not None and lo_z - cfg.fib_tolerance <= fib <= hi_z + cfg.fib_tolerance
+        lo_r, hi_r = cfg.fib_required
+        fwd["fib_zone"] = fib is not None and lo_r - cfg.fib_tolerance <= fib <= hi_r + cfg.fib_tolerance
         rows.append(fwd)
     return rows
 
@@ -202,7 +202,8 @@ def summarize(events: pd.DataFrame, base: pd.DataFrame) -> str:
     for lim in (5, 10):
         variant(f"Bündel-Spanne ≤ {lim} Tage", events["span"] <= lim)
     variant("MACD noch rot", events["macd_red_now"])
-    variant("in Fibonacci-Zone", events["fib_zone"])
+    variant("Fib: in der Golden Zone (0,618–0,79)", events["fib_zone"])
+    variant("Fib: darunter gefallen (0,79–1,0)", ~events["fib_zone"] & (events["fib"] > 0.79))
     variant("Volumen-Spike am Tief", events["volume_spike"])
     variant("RSI ≤ 35 und Abstand ≥ 20 %", (events["div_rsi_min"] <= 35) & (events["drawdown_pct"] >= 20))
 

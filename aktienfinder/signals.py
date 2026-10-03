@@ -226,14 +226,16 @@ def evaluate(df: pd.DataFrame, cfg: Config = DEFAULT) -> Result:
     recent_low = float(df["Low"].iloc[-cfg.max_signal_age :].min())
     pullback_drawdown = float(1 - recent_low / high.iloc[-1])
 
-    # Pflicht 5: Fibonacci – Rücksetzer hat die Golden Zone erreicht und nicht durchbrochen
+    # Pflicht 5: Fibonacci – Rücksetzer hat mind. die Golden Zone erreicht, nicht das Schwungtief gebrochen
     fib = fib_retracement(df, cfg)
     lo_z, hi_z = cfg.fib_zone
     fib_zone = fib is not None and lo_z - cfg.fib_tolerance <= fib <= hi_z + cfg.fib_tolerance
+    lo_r, hi_r = cfg.fib_required
+    fib_ok = fib is not None and lo_r - cfg.fib_tolerance <= fib <= hi_r + cfg.fib_tolerance
 
     signals_ok = cluster is not None
     passed = (signals_ok and pullback_drawdown >= cfg.min_drawdown
-              and (fib_zone or not cfg.require_fib_zone))
+              and (fib_ok or not cfg.require_fib_zone))
 
     # Weich: Ausbruch über die EMA 20 (Einstiegs-Trigger)
     e20 = ema(close, cfg.ema_trigger_length)

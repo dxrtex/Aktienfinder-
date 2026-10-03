@@ -17,7 +17,7 @@ class Config:
     max_signal_age: int = 30
 
     # Pflicht-Filter aus dem eigenen Analyse-Ablauf (zusätzlich zu den drei Signalen)
-    require_fib_zone: bool = True     # Rücksetzer hat die Golden Zone erreicht, nicht durchbrochen
+    require_fib_zone: bool = True     # Rücksetzer hat mind. die Golden Zone erreicht (s. fib_required)
     min_drawdown: float = 0.20        # Rücksetzer-Tief mind. 20 % unter dem 52-Wochen-Hoch
     macd_line_rising: bool = True     # MACD-Linie steigt bereits (nicht nur das Histogramm)
     min_analyst_upside: float = 0.40  # Analysten-Kursziel mind. 40 % über Kurs (Website-Filter)
@@ -51,9 +51,12 @@ class Config:
     volume_avg_length: int = 20
     volume_spike: float = 1.5      # Volumen ≥ 1,5 × Durchschnitt
     fib_lookback: int = 150        # Suchbereich für den letzten Aufwärtsschwung
-    # Rücksetzer bis in die Zone 0,618–0,886 (Uber lag knapp unter 0,79, TUI in 0,706–0,79)
-    fib_zone: tuple = (0.618, 0.886)
+    # Golden Zone 0,618–0,79 (Anzeige „★“ auf der Website, mit Toleranz)
+    fib_zone: tuple = (0.618, 0.79)
     fib_tolerance: float = 0.03    # etwas Spielraum um die Zone
+    # Pflicht: Rücksetzer mind. bis 0,618; tiefer ist erlaubt (Rocket Lab: unter die Zone
+    # gefallen, gleichzeitig Divergenzen), nur unter das Schwungtief (> 1,0) nicht
+    fib_required: tuple = (0.618, 1.0)
     ema_trigger_length: int = 20   # Ausbruch über die EMA 20 als Einstiegs-Trigger
     trigger_max_age: int = 5
 
