@@ -25,7 +25,9 @@ Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 Leiste unten: **Scanner** (Unterpunkte Treffer, Tabelle, Fast-Treffer, Filter), **Kalender**, **Depot**, **Einstellungen**.
 
 - **Kalender:** Quartalszahlen, Ex-Dividende und Dividendenzahlung (Yahoo Finance) für Watchlist-, Depot- und
-  Treffer-Aktien, dazu Fed-/EZB-Zinsentscheide (`data/macro_events.json`, von Hand gepflegt) und der große Verfall.
+  Treffer-Aktien, dazu Fed- und EZB-Zinsentscheide, US-Inflation (CPI) und US-Arbeitsmarktbericht – automatisch von den offiziellen Seiten
+  (`backend/macro.py`, Ersatz: `data/macro_events.json`) – und der große Verfall. Fehlende Quartalstermine von Watchlist-Aktien
+  werden einzeln nachgeholt.
   Datei: `site/data/calendar.json`.
 - **Depot:** Positionen von Hand oder per CSV-Import (Transaktions-Export aus Scalable Capital) – gespeichert nur im
   Browser des Geräts. Bewertung in Euro zum Tageskurs, technische Einschätzung je Position (Trend über/unter EMA 20/50/200,

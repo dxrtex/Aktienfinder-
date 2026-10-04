@@ -24,6 +24,7 @@ import pandas as pd
 from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
+from .macro import fetch_macro_events
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
@@ -103,6 +104,31 @@ def search_row(res, meta: dict, h: dict) -> dict:
                    "vola": f.get("volatility")})
 
 
+def ticker_calendar(t: str) -> dict:
+    """Ersatzquelle für einzelne Aktien: yfinance Ticker.calendar (Quartalszahlen, Dividenden)."""
+    import yfinance as yf
+
+    today = pd.Timestamp.now().normalize()
+    for attempt in range(3):
+        try:
+            cal = yf.Ticker(t).calendar or {}
+            break
+        except Exception:
+            time.sleep(3 * (attempt + 1))
+    else:
+        return {}
+    def first_future(v):
+        vals = v if isinstance(v, (list, tuple)) else [v]
+        ds = sorted(pd.Timestamp(x) for x in vals if x is not None and not (isinstance(x, float) and math.isnan(x)))
+        ds = [d for d in ds if d.tz_localize(None) >= today] if ds else []
+        return str(ds[0].date()) if ds else None
+    try:
+        return {"earnings_date": first_future(cal.get("Earnings Date")),
+                "ex_dividend_date": first_future(cal.get("Ex-Dividend Date")), "dividend_date": first_future(cal.get("Dividend Date"))}
+    except Exception:
+        return {}
+
+
 def big_expiry_dates(start: pd.Timestamp, days: int = 120) -> list[str]:
     """Großer Verfall: dritter Freitag im März, Juni, September und Dezember."""
     out = []
@@ -128,12 +154,20 @@ def build_calendar(rows: list[dict], infos: dict) -> dict:
                                   ("dividend", i.get("dividend_date"), {"rate": i.get("dividend_rate")})):
             if date and today <= pd.Timestamp(date) <= horizon:
                 events.append({**base, "kind": kind, "date": date, **extra})
+    macro, stats = fetch_macro_events()
+    print(f"Markt-Termine automatisch: {stats}")
     macro_path = ROOT / "data" / "macro_events.json"
-    if macro_path.exists():
+    if macro_path.exists():                       # von Hand gepflegte Termine als Ersatz/Ergänzung
         with open(macro_path, encoding="utf-8") as f:
-            for e in json.load(f).get("events", []):
-                if today <= pd.Timestamp(e["date"]) <= horizon:
-                    events.append({"kind": "macro", "date": e["date"], "title": e["title"], "region": e.get("region", "all")})
+            manual = json.load(f).get("events", [])
+        have = {e["title"] for e in macro}
+        macro += [e for e in manual if e["title"] not in have]
+    seen = set()
+    for e in sorted(macro, key=lambda e: e["date"]):
+        if (e["date"], e["title"]) in seen or not today <= pd.Timestamp(e["date"]) <= horizon:
+            continue
+        seen.add((e["date"], e["title"]))
+        events.append({"kind": "macro", "date": e["date"], "title": e["title"], "region": e.get("region", "all")})
     for d in big_expiry_dates(today):
         events.append({"kind": "expiry", "date": d, "title": "Großer Verfall (Optionen & Futures)", "region": "all"})
     events.sort(key=lambda e: (e["date"], e["kind"], e.get("name", "")))
@@ -207,6 +241,13 @@ def main(argv=None) -> int:
         meta[t]["name"] = meta[t].get("name") or name
     tickers = list(meta)
     print(f"Universum: {len(tickers)} Aktien")
+    # Termine der Watchlist zuerst holen: nach dem Massen-Download blockt Yahoo Einzelabfragen oft
+    watch_dates = {}
+    if not args.end:
+        for t in watch:
+            watch_dates[t] = ticker_calendar(t)
+            time.sleep(0.3)
+        print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
     yf = YFinanceProvider()
     prov = CachedProvider(yf) if not args.end else yf
     data = prov.history(tickers, CONFIG.history.period, end=args.end)
@@ -268,7 +309,16 @@ def main(argv=None) -> int:
         for k in ("earnings_date", "earnings_estimate", "ex_dividend_date", "dividend_date", "dividend_rate"):
             if not i.get(k) and m.get(k) not in (None, "", False):
                 i[k] = m[k]
+        for k, v in watch_dates.get(r["ticker"], {}).items():
+            if v and not i.get(k):
+                i[k] = v
         dated[r["ticker"]] = i
+    missing = [r["ticker"] for r in rows if r.get("in_watchlist") and not dated[r["ticker"]].get("earnings_date")]
+    for t in missing:                            # Watchlist: fehlende Quartalstermine einzeln nachholen
+        cal = ticker_calendar(t)
+        dated[t].update({k: v for k, v in cal.items() if v and not dated[t].get(k)})
+    still = [t for t in missing if not dated[t].get("earnings_date")]
+    print(f"Watchlist ohne Quartalstermin: {len(missing)} → nachgeholt {len(missing) - len(still)}, offen: {', '.join(still) or '–'}")
     print(f"Termine: {sum(1 for i in infos.values() if i.get('earnings_date'))} Earnings aus .info, "
           f"{sum(1 for i in dated.values() if i.get('earnings_date'))} insgesamt")
     cal = build_calendar(rows, dated)
