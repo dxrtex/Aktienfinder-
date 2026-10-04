@@ -581,7 +581,7 @@ function calendarHtml() {
       return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.name || e.ticker)}${dep.has(e.ticker) ? '<span class="pill dep">Depot</span>' : e.watch ? '<span class="pill">★</span>' : ""}</b><span>${esc(e.ticker)} · ${sub}</span></div>
         ${inRes ? `<a class="btnlink" href="#" data-open="${esc(e.ticker)}">Chart</a>` : ""}</div>`;
     }).join("")}</div>`;
-  }).join("") + `<div class="note" style="margin:16px 2px 0">Quartalszahlen und Dividenden: Yahoo Finance (Watchlist-, Depot- und Treffer-Aktien, sofern im Scan). Notenbank-Termine: von Hand gepflegt in <code>data/macro_events.json</code>. Keine Gewähr – vor wichtigen Entscheidungen bitte gegenprüfen.</div>`;
+  }).join("") + `<div class="note" style="margin:16px 2px 0">Quartalszahlen und Dividenden: Yahoo Finance (Watchlist-, Depot- und Treffer-Aktien, sofern im Scan). Notenbank- und Wirtschaftstermine: automatisch von Fed, EZB und US-Arbeitsministerium (BLS), Ersatz in <code>data/macro_events.json</code>. Keine Gewähr – vor wichtigen Entscheidungen bitte gegenprüfen.</div>`;
 }
 
 // ---------- Depot (bleibt nur auf diesem Gerät gespeichert) ----------
