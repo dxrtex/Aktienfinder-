@@ -68,15 +68,15 @@ def atr(df: pd.DataFrame, length: int = 14) -> pd.Series:
     return rma(true_range(df), length)
 
 
-def pivot_lows(low: pd.Series, length: int, ties: bool = False) -> np.ndarray:
+def pivot_lows(low: pd.Series, length: int, tol: float = 0.0) -> np.ndarray:
     """Positionen der Pivot-Tiefs: tiefster Punkt mit je `length` Kerzen links und rechts.
 
     Für die letzten `length` Kerzen gibt es noch keine volle rechte Seite – dort zählt der
     aktuelle Kurs: ein Tief ist ein (vorläufiges) Pivot, wenn es tiefer ist als die `length`
     Kerzen davor und nicht tiefer als alle Kerzen danach bis heute.
-    ties=True: ein gleich tiefes Tief (Doppelboden) zählt ebenfalls als eigenes Pivot.
+    tol > 0: ein fast gleich tiefes Tief (höchstens tol über dem Tief links, Doppelboden) zählt ebenfalls.
     """
-    return _pivots(low.to_numpy(dtype=float), length, lower=True, ties=ties)
+    return _pivots(low.to_numpy(dtype=float), length, lower=True, tol=tol)
 
 
 def pivot_highs(high: pd.Series, length: int) -> np.ndarray:
@@ -84,7 +84,7 @@ def pivot_highs(high: pd.Series, length: int) -> np.ndarray:
     return _pivots(high.to_numpy(dtype=float), length, lower=False)
 
 
-def _pivots(v: np.ndarray, length: int, lower: bool, ties: bool = False) -> np.ndarray:
+def _pivots(v: np.ndarray, length: int, lower: bool, tol: float = 0.0) -> np.ndarray:
     x = -v if not lower else v
     n = len(x)
     out = []
@@ -96,6 +96,6 @@ def _pivots(v: np.ndarray, length: int, lower: bool, ties: bool = False) -> np.n
         if np.isnan(left).any():
             continue
         # strikt tiefer als links, nicht tiefer als rechts (wie ta.pivotlow bei Gleichstand rechts)
-        if (x[i] <= left.min() if ties else x[i] < left.min()) and (len(right) == 0 or x[i] <= np.nanmin(right)):
+        if (x[i] <= left.min() * (1 + tol) if tol > 0 else x[i] < left.min()) and (len(right) == 0 or x[i] <= np.nanmin(right)):
             out.append(i)
     return np.array(out, dtype=int)

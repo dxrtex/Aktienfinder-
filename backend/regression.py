@@ -80,7 +80,7 @@ def timeline(tickers: list[str], days: int) -> str:
         tail = df.iloc[-(days + 15):]
         out += ["", f"Tageswerte (letzte {len(tail)} Kerzen), * = Pivot-Tief (Länge {CONFIG.rsi.pivot_len}):", "",
                 "| Datum | Tief | RSI | |", "|---|---|---|---|"]
-        piv = set(pivot_lows(df["Low"], CONFIG.rsi.pivot_len, getattr(CONFIG.rsi, "pivot_ties", False)))
+        piv = set(pivot_lows(df["Low"], CONFIG.rsi.pivot_len, getattr(CONFIG.rsi, "pivot_tolerance", 0.0)))
         for k in range(len(df) - len(tail), len(df)):
             out.append(f"| {df.index[k].date()} | {de(df['Low'].iloc[k])} | {de(r[k], 1)} | {'*' if k in piv else ''} |")
         out.append("")

@@ -73,21 +73,21 @@ class Result:
 def find_rsi_divergence(low: pd.Series, r: np.ndarray, rc: SimpleNamespace):
     """Bullische RSI-Divergenz (2.4). Rückgabe: ((Art, T1, T2) oder None, jüngste Kurs-Tiefs ≤ 10 T.).
 
-    Pivot-Tiefs des Kurses (Länge rsi.pivot_len) der letzten 60 Tage; T2 = jüngstes Tief (max. 10 Tage alt),
-    T1 = früheres Tief rsi.t1_min_gap–t1_max_gap Tage vor T2. Klassisch: Kurs T2 ≤ T1 × 1,01 und RSI T2 ≥ RSI T1 + 3.
-    Versteckt: Kurs T2 > T1 und RSI T2 ≤ RSI T1 − 3. Klassisch hat Vorrang.
+    Pivot-Tiefs des Kurses (Länge rsi.pivot_len, fast gleich tiefe Doppelböden zählen mit) der letzten
+    60 Tage; T2 = ein Tief der letzten 10 Tage (das jüngste zuerst), T1 = früheres Tief rsi.t1_min_gap–t1_max_gap
+    Tage vor T2. Klassisch: Kurs T2 ≤ T1 × 1,01 und RSI T2 ≥ RSI T1 + 3.
+    Versteckt: Kurs T2 > T1 × 1,01 und RSI T2 ≤ RSI T1 − 3. Klassisch hat Vorrang.
     """
     l = low.to_numpy(dtype=float)
     n = len(l)
-    rp = [i for i in pivot_lows(low, rc.pivot_len, getattr(rc, "pivot_ties", False)) if n - 1 - i <= rc.lookback]
+    rp = [i for i in pivot_lows(low, rc.pivot_len, getattr(rc, "pivot_tolerance", 0.0)) if n - 1 - i <= rc.lookback]
     recent = [i for i in rp if n - 1 - i <= rc.t2_max_age]
     div = None
-    if recent:
-        t2 = recent[-1]
+    for t2 in reversed(recent):
         for t1 in reversed([i for i in rp if rc.t1_min_gap <= t2 - i <= rc.t1_max_gap]):
             if l[t2] <= l[t1] * rc.classic_price_tol and r[t2] >= r[t1] + rc.min_rsi_diff:
                 return ("klassisch", t1, t2), recent
-            if div is None and l[t2] > l[t1] and r[t2] <= r[t1] - rc.min_rsi_diff:
+            if div is None and l[t2] > l[t1] * rc.classic_price_tol and r[t2] <= r[t1] - rc.min_rsi_diff:
                 div = ("versteckt", t1, t2)
     return div, recent
 
