@@ -19,7 +19,9 @@ from .mbi import momentum_bias_index
 from .scoring import score_setup
 
 FX_USD = {"USD": 1.0, "EUR": 1.10, "GBP": 1.30, "GBp": 0.013, "GBX": 0.013, "CHF": 1.15, "SEK": 0.095,
-          "DKK": 0.15, "NOK": 0.095, "PLN": 0.25, "CZK": 0.044, "HUF": 0.0028}
+          "DKK": 0.15, "NOK": 0.095, "PLN": 0.25, "CZK": 0.044, "HUF": 0.0028, "CAD": 0.73, "JPY": 0.0068,
+          "CNY": 0.14, "HKD": 0.13, "KRW": 0.00073, "TWD": 0.031, "INR": 0.012, "SGD": 0.74, "AUD": 0.65,
+          "NZD": 0.60, "THB": 0.029, "IDR": 0.000062, "MYR": 0.22, "PHP": 0.017}
 
 
 def de(x: float | None, digits: int = 2) -> str:

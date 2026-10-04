@@ -1,7 +1,7 @@
-"""Universum (2.1): alle Aktien ab 2 Mrd. USD Börsenwert in den USA und Europa.
+"""Universum (2.1): alle Aktien ab 2 Mrd. USD Börsenwert in Nordamerika, Westeuropa und Asien/Pazifik.
 
 Quelle ist der Yahoo-Finance-Screener je Land (Heimatbörse, Börsenwert-Filter in Landeswährung).
-Ergebnis: `data/universe_us.csv` und `data/universe_eu.csv` – gepflegte Listen, die der Scanner
+Ergebnis: `data/universe_us.csv`, `data/universe_eu.csv`, `data/universe_asia.csv` – gepflegte Listen, die der Scanner
 liest. Ausgeschlossen: ETFs/Fonds/Trusts, SPACs, Optionsscheine, Vorzugs-Duplikate,
 Zweitlistings (USA nur NYSE/NASDAQ/NYSE American; Deutschland nur XETRA = .DE).
 
@@ -28,8 +28,18 @@ EUROPE = {
     "at": ((".VI",), "EUR", 1.10), "ie": ((".IR",), "EUR", 1.10), "pt": ((".LS",), "EUR", 1.10),
     "pl": ((".WA",), "PLN", 0.25), "gr": ((".AT",), "EUR", 1.10),
 }
+# Asien/Pazifik
+ASIA = {
+    "jp": ((".T",), "JPY", 0.0068), "cn": ((".SS", ".SZ"), "CNY", 0.14), "hk": ((".HK",), "HKD", 0.13),
+    "kr": ((".KS", ".KQ"), "KRW", 0.00073), "tw": ((".TW", ".TWO"), "TWD", 0.031), "in": ((".NS",), "INR", 0.012),
+    "sg": ((".SI",), "SGD", 0.74), "au": ((".AX",), "AUD", 0.65), "nz": ((".NZ",), "NZD", 0.60),
+    "th": ((".BK",), "THB", 0.029), "id": ((".JK",), "IDR", 0.000062), "my": ((".KL",), "MYR", 0.22),
+    "ph": ((".PS",), "PHP", 0.017),
+}
 FX_USD = {"USD": 1.0, "EUR": 1.10, "GBP": 1.30, "GBp": 0.013, "GBX": 0.013, "CHF": 1.15, "SEK": 0.095,
-          "DKK": 0.15, "NOK": 0.095, "PLN": 0.25}
+          "DKK": 0.15, "NOK": 0.095, "PLN": 0.25, "CAD": 0.73, "JPY": 0.0068, "CNY": 0.14, "HKD": 0.13,
+          "KRW": 0.00073, "TWD": 0.031, "INR": 0.012, "SGD": 0.74, "AUD": 0.65, "NZD": 0.60, "THB": 0.029,
+          "IDR": 0.000062, "MYR": 0.22, "PHP": 0.017}
 
 _NOT_COMMON = re.compile(r"\b(?:trust|fund|etf|etn|warrants?|units?|rights?|acquisition corp\w*|"
                          r"acquisition company|capital acquisition|spac)\b", re.IGNORECASE)
@@ -87,25 +97,41 @@ def dedupe(df: pd.DataFrame) -> pd.DataFrame:
     return df[keep].drop(columns=["_key", "_pref"]).sort_values("market_cap_usd", ascending=False)
 
 
+def _region(markets: dict, min_cap: float) -> pd.DataFrame:
+    rows = []
+    for country, (suffixes, cur, _) in markets.items():
+        found = screen(country, suffixes, cur, min_cap)
+        print(f"  {country}: {len(found)} Aktien")
+        rows += found
+    return dedupe(pd.DataFrame(rows, columns=COLUMNS).drop_duplicates("ticker"))
+
+
 def build() -> dict[str, pd.DataFrame]:
+    """Nordamerika (USA + Kanada), Westeuropa, Asien/Pazifik. Doppel-Listings zählen nur einmal:
+    USA vor Kanada vor Europa vor Asien."""
     min_cap = CONFIG.universe.min_market_cap_usd
-    us = pd.DataFrame(screen("us", ("",), "USD", min_cap), columns=COLUMNS)
-    eu_rows = []
-    for country, (suffixes, cur, _) in EUROPE.items():
-        rows = screen(country, suffixes, cur, min_cap)
-        print(f"  {country}: {len(rows)} Aktien")
-        eu_rows += rows
-    eu = pd.DataFrame(eu_rows, columns=COLUMNS)
-    us, eu = dedupe(us.drop_duplicates("ticker")), dedupe(eu.drop_duplicates("ticker"))
-    us_keys = set(us["name"].map(company_key))
-    eu = eu[~eu["name"].map(company_key).isin(us_keys - {""})]   # Doppel-Listing USA/Europa: USA zählt
-    return {"us": us, "eu": eu}
+    us = dedupe(pd.DataFrame(screen("us", ("",), "USD", min_cap), columns=COLUMNS).drop_duplicates("ticker"))
+    print(f"  us: {len(us)} Aktien")
+    ca = _region({"ca": ((".TO",), "CAD", 0.73)}, min_cap)
+    eu = _region(EUROPE, min_cap)
+    asia = _region(ASIA, min_cap)
+    seen = set(us["name"].map(company_key)) - {""}
+    out = {"us": us}
+    for name, df in (("ca", ca), ("eu", eu), ("asia", asia)):
+        keys = df["name"].map(company_key)
+        out[name] = df[~keys.isin(seen)]
+        seen |= set(keys) - {""}
+    out["us"] = pd.concat([out["us"], out.pop("ca")], ignore_index=True)   # Nordamerika in einer Liste
+    return out
+
+
+REGION_FILES = (("us", "universe_us.csv"), ("europe", "universe_eu.csv"), ("asia", "universe_asia.csv"))
 
 
 def load() -> pd.DataFrame:
-    """Beide Listen für den Scanner (Region us/europe)."""
+    """Alle Listen für den Scanner (Region us = Nordamerika, europe, asia = Asien/Pazifik)."""
     frames = []
-    for region, name in (("us", "universe_us.csv"), ("europe", "universe_eu.csv")):
+    for region, name in REGION_FILES:
         path = ROOT / "data" / name
         if path.exists():
             frames.append(pd.read_csv(path, dtype={"ticker": str}).assign(region=region))
