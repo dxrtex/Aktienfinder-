@@ -74,6 +74,15 @@ def timeline(tickers: list[str], days: int) -> str:
             status = f"TREFFER (Score {res.score})" if res.passed else "Fast-Treffer" if res.fast_hit else f"{len(res.missing)} fehlen"
             miss = "; ".join(f"{c.label.split(' (')[0]} [{c.value}]" for c in res.missing)
             out.append(f"| {res.date} | {de(res.close)} | {status} | {miss or '–'} | {hint(res)['title']} |")
+        # Kurs-Tiefs (Pivot-Länge rsi.pivot_len) mit RSI – zum Nachvollziehen der Divergenz
+        from .indicators import pivot_lows, rsi
+        r = rsi(df["Close"], CONFIG.rsi.length).to_numpy()
+        tail = df.iloc[-(days + 15):]
+        out += ["", f"Tageswerte (letzte {len(tail)} Kerzen), * = Pivot-Tief (Länge {CONFIG.rsi.pivot_len}):", "",
+                "| Datum | Tief | RSI | |", "|---|---|---|---|"]
+        piv = set(pivot_lows(df["Low"], CONFIG.rsi.pivot_len, getattr(CONFIG.rsi, "pivot_tolerance", 0.0)))
+        for k in range(len(df) - len(tail), len(df)):
+            out.append(f"| {df.index[k].date()} | {de(df['Low'].iloc[k])} | {de(r[k], 1)} | {'*' if k in piv else ''} |")
         out.append("")
     return "\n".join(out)
 
