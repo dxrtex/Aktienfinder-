@@ -12,21 +12,28 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kairo">
-<meta name="theme-color" content="#0b0d10">
+<meta name="theme-color" content="#0b0b0c">
 <style>
-  /* Dunkel wie TradingView, grüner Akzent, stark abgerundet, luftig */
+  /* Graphit mono + Kairo-Orange: Orange = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
   :root {
-    --bg: #0b0d10; --surface: #14181e; --surface-2: #1b2028; --surface-3: #232a34; --line: #262d38;
-    --text: #eceef2; --muted: #8d96a7; --faint: #5d6676;
-    --accent: #22d39b; --accent-ink: #04140e; --accent-bg: rgba(34, 211, 155, .13);
-    --red: #ff5f57; --red-bg: rgba(255, 95, 87, .12);
-    --gold: #f4b740; --gold-bg: rgba(244, 183, 64, .14); --zone: rgba(244, 183, 64, .17);
-    --candle-up: #22d39b; --candle-down: #ff5f57;
+    --bg: #0b0b0c; --surface: #151516; --surface-2: #1d1d1f; --surface-3: #2a2a2d; --line: #2a2a2d;
+    --glass: rgba(255, 255, 255, .055); --glass-line: rgba(255, 255, 255, .11);
+    --text: #f2f2f2; --muted: #9a9a9f; --faint: #66666b;
+    --accent: #FF5A1F; --accent-ink: #ffffff; --accent-bg: rgba(255, 90, 31, .14);
+    --up: #30d158; --up-bg: rgba(48, 209, 88, .13);
+    --red: #ff453a; --red-bg: rgba(255, 69, 58, .13);
+    --gold: #ffd60a; --gold-bg: rgba(255, 214, 10, .13); --zone: rgba(255, 90, 31, .16);
+    --candle-up: #30d158; --candle-down: #ff453a;
     --radius: 24px; --radius-s: 16px; --nav-h: 68px;
     color-scheme: dark;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
+  body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+                 background: radial-gradient(420px 420px at 0% 0%, rgba(255,255,255,.07), transparent 70%),
+                             radial-gradient(480px 480px at 100% 55%, rgba(255,255,255,.05), transparent 70%); }
+  .card, .table-wrap, .pane, .search input, nav.tabbar { -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); }
+  .card, .pane { background: var(--glass) !important; border-color: var(--glass-line) !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
          font: 16px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
          padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 24px); }
@@ -46,7 +53,7 @@
   .search input { width: 100%; background: var(--surface); color: var(--text); border: 1px solid var(--line);
                   border-radius: 999px; padding: 15px 20px 15px 52px; font: inherit; font-size: 17px; outline: none; }
   .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-bg); }
-  .search svg { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .search svg { position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: var(--muted); z-index: 1; pointer-events: none; }
 
   .section-title { margin: 30px 2px 14px; font-size: 14px; font-weight: 600; color: var(--muted);
                    text-transform: uppercase; letter-spacing: .08em; display: flex; justify-content: space-between; }
@@ -57,8 +64,7 @@
   @media (min-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } }
   .card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
           display: flex; flex-direction: column; gap: 18px; }
-  .card.hero { border-color: rgba(34, 211, 155, .45);
-               background: linear-gradient(160deg, rgba(34, 211, 155, .10), var(--surface) 45%); }
+  .card.hero { border-color: rgba(255, 90, 31, .4); }
   .hero-label { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 700; font-size: 13px;
                 text-transform: uppercase; letter-spacing: .08em; }
   @media (min-width: 900px) {
@@ -80,16 +86,18 @@
   .st-abwarten { color: var(--gold); background: var(--gold-bg); }
   .st-gelaufen { color: var(--red); background: var(--red-bg); }
   .st-kein_setup { color: var(--muted); background: var(--surface-2); }
-  .chip.miss { background: transparent; color: var(--faint); border: 1px dashed var(--line); }
+  .chip.miss { background: var(--red-bg); color: var(--red); border: 0; }
   .top, .warn { display: inline-block; margin: 8px 8px 0 0; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px; }
   .top { color: var(--accent-ink); background: var(--accent); }
   .warn { color: var(--red); background: var(--red-bg); }
   .hint { margin: 8px 2px 0; font-size: 13px; color: var(--muted); line-height: 1.4; }
-  .wl { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--gold); background: var(--gold-bg);
+  .wl { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 600; color: #c8c8cc; background: var(--surface-2);
         padding: 4px 12px; border-radius: 999px; }
   .score { flex: none; width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center;
            background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--surface-3) 0); position: relative; }
-  .score::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: var(--surface); }
+  .score::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #18181a; }
+  .score.fast { background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--surface-3) 0); }
+  .score.fast span { font-size: 14px; color: var(--gold); }
   .score span { position: relative; font-weight: 700; font-size: 18px; }
   .card { container-type: inline-size; }
   .figures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -98,7 +106,7 @@
   .fig span { display: block; color: var(--muted); font-size: 13px; }
   .fig b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; white-space: nowrap; letter-spacing: -.01em;
            overflow: hidden; text-overflow: ellipsis; }
-  .up { color: var(--accent); } .down { color: var(--red); } .muted { color: var(--muted); }
+  .up { color: var(--up); } .down { color: var(--red); } .muted { color: var(--muted); }
 
   .candles { width: 100%; height: 150px; display: block; background: var(--surface-2); border-radius: var(--radius-s); }
   .candles .zone { fill: var(--zone); }
@@ -110,7 +118,8 @@
 
   .chips { display: flex; flex-wrap: wrap; gap: 8px; }
   .chip { font-size: 14px; padding: 6px 13px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
-  .chip.ok { background: var(--accent-bg); color: var(--accent); }
+  .chip.ok { background: var(--surface-2); color: #d6d6d6; } .chip.ok i { font-style: normal; color: var(--up); }
+  .chip i { font-style: normal; }
   .chip.star { background: var(--gold-bg); color: var(--gold); font-weight: 600; }
 
   .actions { display: flex; gap: 10px; align-items: center; }
@@ -138,7 +147,7 @@
   footer details pre { white-space: pre-wrap; font-size: 12px; }
 
   /* Leiste unten (App-Stil) */
-  nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(20, 24, 30, .92);
+  nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(22, 22, 24, .82);
                -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line);
                padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
   .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
@@ -170,11 +179,11 @@
   .tabs { max-width: 720px; grid-template-columns: repeat(5, 1fr); }
   .card h2 a { color: inherit; text-decoration: none; }
   .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
-  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); display: inline-block; }
+  .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--up); display: inline-block; }
   .dot.no { background: var(--red); }
   .btn.ghost { background: var(--surface-2); color: var(--text); }
   .flag { display: inline-block; margin: 8px 8px 0 0; font-size: 13px; font-weight: 700; padding: 4px 12px; border-radius: 999px;
-          color: var(--gold); background: var(--gold-bg); }
+          color: #c8c8cc; background: var(--surface-2); }
 
   /* Detailseite */
   .detail { position: fixed; inset: 0; z-index: 40; background: var(--bg); overflow-y: auto; display: none;
@@ -194,7 +203,7 @@
   .check { width: 100%; border-collapse: collapse; min-width: 0; font-size: 14px; }
   .check td { padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: normal; vertical-align: top; }
   .check tr:last-child td { border-bottom: 0; }
-  .check .ok { color: var(--accent); font-weight: 700; } .check .no { color: var(--red); font-weight: 700; }
+  .check .ok { color: var(--up); font-weight: 700; } .check .no { color: var(--red); font-weight: 700; }
   .check .th { color: var(--faint); font-size: 12px; }
   .plan { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
   .plan .fig b { font-size: 18px; }
@@ -207,13 +216,13 @@
   td .ampel { flex-wrap: nowrap; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   /* Kurz-Hinweis (Suche, Karten, Detailseite) */
-  .tip { --c: var(--muted); --cb: var(--surface-2); border-left: 4px solid var(--c); background: var(--cb); border-radius: var(--radius-s);
+  .tip { --c: var(--muted); border-left: 3px solid var(--c); background: var(--surface-2); border-radius: var(--radius-s);
          padding: 12px 14px; font-size: 14px; line-height: 1.5; color: var(--text); }
   .tip b.t { display: block; color: var(--c); font-size: 15px; margin-bottom: 2px; }
   .tip .days { float: right; margin: 0 0 6px 12px; text-align: center; background: var(--surface); border-radius: 12px; padding: 6px 10px;
                color: var(--c); font-weight: 700; font-size: 20px; line-height: 1.1; }
   .tip .days small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
-  .tone-green { --c: var(--accent); --cb: var(--accent-bg); } .tone-yellow { --c: var(--gold); --cb: var(--gold-bg); }
+  .tone-green { --c: var(--up); --cb: var(--up-bg); } .tone-yellow { --c: var(--gold); --cb: var(--gold-bg); }
   .tone-orange { --c: #ff9f43; --cb: rgba(255, 159, 67, .12); } .tone-red { --c: var(--red); --cb: var(--red-bg); }
   .tone-gray { --c: var(--muted); --cb: var(--surface-2); }
   .sres { display: grid; grid-template-columns: 1fr; gap: 14px; }
@@ -373,7 +382,7 @@ function ampel(r) {
 function chips(r) {
   return SETUP_KEYS.map(k => {
     const c = r.criteria.find(x => x.key === k); if (!c) return "";
-    return `<span class="chip ${c.ok ? "ok" : "miss"}">${c.ok ? "✓" : "✗"} ${esc(SHORT[k])}</span>`;
+    return `<span class="chip ${c.ok ? "ok" : "miss"}"><i>${c.ok ? "✓" : "✗"}</i> ${esc(SHORT[k])}</span>`;
   }).join("");
 }
 function card(r) {
@@ -386,7 +395,8 @@ function card(r) {
         <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}${r.volatility != null ? " · Vola " + pct(r.volatility, 0) : ""}</span>
         ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
-      <div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>
+      ${r.passed ? `<div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>`
+        : `<div class="score fast" style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt"><span>${r.met ?? "–"}/${r.total ?? 11}</span></div>`}
     </div>
     <div class="figures">
       <div class="fig"><span>Rückgang</span><b class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown, 0)}</b></div>
@@ -618,47 +628,47 @@ async function openDetail(t) {
 function drawCharts(c, r) {
   if (!window.LightweightCharts) return;
   const LW = window.LightweightCharts, css = getComputedStyle(document.documentElement);
-  const opts = el => ({ width: el.clientWidth, height: el.clientHeight, layout: { background: { color: "transparent" }, textColor: "#8d96a7",
+  const opts = el => ({ width: el.clientWidth, height: el.clientHeight, layout: { background: { color: "transparent" }, textColor: "#9a9a9f",
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
-    grid: { vertLines: { color: "#1b2028" }, horzLines: { color: "#1b2028" } }, rightPriceScale: { borderColor: "#262d38" },
-    timeScale: { borderColor: "#262d38" }, crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) } });
+    grid: { vertLines: { color: "#1d1d1f" }, horzLines: { color: "#1d1d1f" } }, rightPriceScale: { borderColor: "#2a2a2d" },
+    timeScale: { borderColor: "#2a2a2d" }, crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) } });
   const T = c.t, pts = (k, f = v => v) => T.map((t, i) => c[k][i] == null ? null : { time: t, value: f(c[k][i]) }).filter(Boolean);
   const main = LW.createChart($("cMain"), opts($("cMain")));
-  const candles = main.addCandlestickSeries({ upColor: "#22d39b", downColor: "#ff5f57", borderVisible: false, wickUpColor: "#22d39b", wickDownColor: "#ff5f57" });
+  const candles = main.addCandlestickSeries({ upColor: "#30d158", downColor: "#ff453a", borderVisible: false, wickUpColor: "#30d158", wickDownColor: "#ff453a" });
   candles.setData(T.map((t, i) => ({ time: t, open: c.o[i], high: c.h[i], low: c.l[i], close: c.c[i] })));
   [["e20", "#f4b740"], ["e50", "#4aa3ff"], ["e100", "#b07cff"], ["e200", "#ff8a65"]].forEach(([k, col]) =>
     main.addLineSeries({ color: col, lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false }).setData(pts(k)));
   const vol = main.addHistogramSeries({ priceScaleId: "vol", priceFormat: { type: "volume" }, lastValueVisible: false, priceLineVisible: false });
   main.priceScale("vol").applyOptions({ scaleMargins: { top: .87, bottom: 0 } });
-  vol.setData(T.map((t, i) => ({ time: t, value: c.v[i] || 0, color: c.c[i] >= c.o[i] ? "rgba(34,211,155,.22)" : "rgba(255,95,87,.22)" })));
+  vol.setData(T.map((t, i) => ({ time: t, value: c.v[i] || 0, color: c.c[i] >= c.o[i] ? "rgba(48,209,88,.22)" : "rgba(255,69,58,.22)" })));
   const line = (price, title, color, style = 2) => price != null && candles.createPriceLine({ price, title, color, lineWidth: 1, lineStyle: style, axisLabelVisible: true });
   const fib = r.zone && r.zone.fib, sup = r.zone && r.zone.support, p = r.plan || {};
   if (fib) [["0", "Fib 0"], ["0.618", "0,618"], ["0.706", "0,706"], ["0.79", "0,79"], ["1", "Fib 1"]].forEach(([k, l]) => line(fib.levels[k], l, "#f4b740"));
   if (sup) { line(sup.band[1], "Support oben", "#4aa3ff"); line(sup.center, "Support", "#4aa3ff", 0); line(sup.band[0], "Support unten", "#4aa3ff"); }
-  line(p.entry, "Entry", "#eceef2", 0); line(p.stop, "Stop", "#ff5f57", 0); line(p.target1, "Ziel 1", "#22d39b", 0); line(p.target2, "Ziel 2", "#22d39b", 0);
+  line(p.entry, "Entry", "#eceef2", 0); line(p.stop, "Stop", "#ff453a", 0); line(p.target1, "Ziel 1", "#30d158", 0); line(p.target2, "Ziel 2", "#30d158", 0);
 
   const rsiC = LW.createChart($("cRsi"), opts($("cRsi")));
   const rs = rsiC.addLineSeries({ color: "#b07cff", lineWidth: 1.5, priceLineVisible: false });
   rs.setData(pts("rsi"));
   rsiC.addLineSeries({ color: "#f4b740", lineWidth: 1, priceLineVisible: false, lastValueVisible: false }).setData(pts("rsi_sma"));
   [30, 50, 70].forEach(v => rs.createPriceLine({ price: v, color: "#5d6676", lineWidth: 1, lineStyle: 2, axisLabelVisible: false }));
-  if (r.div && r.div.t1) rsiC.addLineSeries({ color: "#22d39b", lineWidth: 2, priceLineVisible: false, lastValueVisible: false })
+  if (r.div && r.div.t1) rsiC.addLineSeries({ color: "#30d158", lineWidth: 2, priceLineVisible: false, lastValueVisible: false })
     .setData([{ time: r.div.t1, value: r.div.rsi_t1 }, { time: r.div.t2, value: r.div.rsi_t2 }]);
 
   const macdC = LW.createChart($("cMacd"), opts($("cMacd")));
   macdC.addHistogramSeries({ priceLineVisible: false, lastValueVisible: false }).setData(T.map((t, i) => c.hist[i] == null ? null :
-    ({ time: t, value: c.hist[i], color: c.hist[i] >= 0 ? (i && c.hist[i] < c.hist[i - 1] ? "rgba(34,211,155,.5)" : "#22d39b") : (i && c.hist[i] > c.hist[i - 1] ? "rgba(255,95,87,.5)" : "#ff5f57") })).filter(Boolean));
+    ({ time: t, value: c.hist[i], color: c.hist[i] >= 0 ? (i && c.hist[i] < c.hist[i - 1] ? "rgba(48,209,88,.5)" : "#30d158") : (i && c.hist[i] > c.hist[i - 1] ? "rgba(255,69,58,.5)" : "#ff453a") })).filter(Boolean));
   macdC.addLineSeries({ color: "#4aa3ff", lineWidth: 1.5, priceLineVisible: false }).setData(pts("macd"));
   macdC.addLineSeries({ color: "#f4b740", lineWidth: 1.5, priceLineVisible: false }).setData(pts("sig"));
 
   const mbiC = LW.createChart($("cMbi"), opts($("cMbi")));
-  mbiC.addHistogramSeries({ color: "rgba(34,211,155,.75)", priceLineVisible: false, lastValueVisible: false }).setData(pts("mbi_up"));
-  const lo = mbiC.addHistogramSeries({ color: "rgba(255,95,87,.75)", priceLineVisible: false, lastValueVisible: false });
+  mbiC.addHistogramSeries({ color: "rgba(48,209,88,.75)", priceLineVisible: false, lastValueVisible: false }).setData(pts("mbi_up"));
+  const lo = mbiC.addHistogramSeries({ color: "rgba(255,69,58,.75)", priceLineVisible: false, lastValueVisible: false });
   lo.setData(pts("mbi_lo"));
   mbiC.addLineSeries({ color: "#8d96a7", lineWidth: 1, lineStyle: 1, priceLineVisible: false, lastValueVisible: false }).setData(pts("mbi_ref"));
   lo.setMarkers(T.flatMap((t, i) => [
-    ...(c.gx[i] ? [{ time: t, position: "aboveBar", color: "#22d39b", shape: "circle", text: "X" }] : []),
-    ...(c.rx[i] ? [{ time: t, position: "aboveBar", color: "#ff5f57", shape: "circle", text: "X" }] : [])]));
+    ...(c.gx[i] ? [{ time: t, position: "aboveBar", color: "#30d158", shape: "circle", text: "X" }] : []),
+    ...(c.rx[i] ? [{ time: t, position: "aboveBar", color: "#ff453a", shape: "circle", text: "X" }] : [])]));
 
   charts = [main, rsiC, macdC, mbiC];
   // Zeitachsen koppeln
