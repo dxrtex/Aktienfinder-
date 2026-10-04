@@ -249,7 +249,7 @@ def main(argv=None) -> int:
             watch_dates[t] = ticker_calendar(t)
             time.sleep(0.3)
         print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
-    news = fetch_news(list(watch)) if not args.end else {}
+    news = fetch_news(watch) if not args.end else {}
     print(f"Nachrichten: {len(news)} von {len(watch)} Watchlist-Aktien")
     yf = YFinanceProvider()
     ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)

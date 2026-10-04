@@ -251,21 +251,27 @@ def news_tone(title: str) -> int:
     return (1 if re.search(rf"\b({POS_WORDS})\b", t) else 0) - (1 if re.search(rf"\b({NEG_WORDS})\b", t) else 0)
 
 
-def fetch_news(tickers: list[str], per: int = 4) -> dict[str, list[dict]]:
-    """Jüngste Schlagzeilen je Aktie (Yahoo Finance). Stimmung nur grob per Stichwort."""
+def fetch_news(names: dict[str, str], per: int = 4) -> dict[str, list[dict]]:
+    """Jüngste Schlagzeilen je Aktie {Ticker: Name} (Yahoo Finance). Nur Schlagzeilen, die die Firma nennen.
+    Stimmung nur grob per Stichwort."""
     import yfinance as yf
 
     out, errors = {}, []
-    for t in tickers:
+    for t, name in names.items():
+        key = next((w for w in re.split(r"[\s,]+", name or "") if len(w) >= 3), t.split(".")[0]).lower()
+        base = t.split(".")[0].lower()
         items = []
-        for attempt in range(2):           # 1. Ticker-News, 2. Suche (andere Yahoo-Schnittstelle)
+        for q in (t, name):                # 1. Ticker-News, 2. Suche nach dem Namen
             try:
-                items = (yf.Ticker(t).get_news(count=8) if attempt == 0 else yf.Search(t, max_results=1, news_count=8).news) or []
+                got = (yf.Ticker(t).get_news(count=10) if q == t else yf.Search(q, max_results=1, news_count=10).news) or []
             except Exception as exc:
                 errors.append(f"{t}: {exc!r}"[:160])
+                got = []
                 time.sleep(1)
-            if items:
-                break
+            items += got
+        def title_of(it):
+            return ((it.get("content") or it).get("title") or "")
+        items = [it for it in items if re.search(rf"\b({re.escape(key)}|{re.escape(base)})\b", title_of(it).lower())]
         rows = []
         for it in items:
             cnt = it.get("content") or it
@@ -278,6 +284,7 @@ def fetch_news(tickers: list[str], per: int = 4) -> dict[str, list[dict]]:
             url = (cnt.get("canonicalUrl") or {}).get("url") or (cnt.get("clickThroughUrl") or {}).get("url") or it.get("link")
             pub = (cnt.get("provider") or {}).get("displayName") or it.get("publisher") or ""
             rows.append({"title": title, "date": str(date or "")[:10], "url": url, "pub": pub, "tone": news_tone(title)})
+        rows = list({x["title"]: x for x in rows}.values())
         rows.sort(key=lambda x: x["date"], reverse=True)
         if rows:
             out[t] = rows[:per]
