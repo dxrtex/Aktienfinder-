@@ -21,6 +21,11 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
 Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
+## Volatilität
+Zu jeder Aktie wird die **historische Volatilität** berechnet: Standardabweichung der Tagesrenditen der letzten 30 Tage,
+hochgerechnet aufs Jahr (× √252), dazu die Ø Tagesspanne (ATR 14 in % vom Kurs). Kein Pflichtkriterium – nur Filter
+(niedrig < 30 %, mittel 30–50 %, hoch 50–80 %, sehr hoch > 80 %), Sortierung und Tabellenspalte. Zeitraum: `volatility.days`.
+
 ## Suche mit Kurz-Hinweis
 Die Suche oben findet **jede geprüfte Aktie** (nicht nur Treffer) und zeigt einen kurzen Hinweis, wo sie im Setup steht,
 z. B. „Fällt noch stark – Konsolidierung frühestens in ca. 3 Tagen“, „In der Zone – MACD-Kreuz in ca. 4 Tagen“ oder
