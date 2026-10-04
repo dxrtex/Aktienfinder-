@@ -176,7 +176,7 @@
   .opt.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .sheet .btn { width: 100%; margin-top: 26px; display: block; }
 
-  .tabs { max-width: 720px; grid-template-columns: repeat(5, 1fr); }
+  .tabs { max-width: 620px; grid-template-columns: repeat(4, 1fr); }
   .card h2 a { color: inherit; text-decoration: none; }
   .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
   .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--up); display: inline-block; }
@@ -215,6 +215,36 @@
   .seg { margin: 4px 0 6px; }
   td .ampel { flex-wrap: nowrap; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  /* Unterpunkte im Scanner */
+  .subnav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px;
+            background: var(--glass); border: 1px solid var(--glass-line); margin: 0 0 18px; }
+  .subnav button { border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 14px; padding: 10px 4px; border-radius: 12px; cursor: pointer; }
+  .subnav button.on { background: var(--accent); color: var(--accent-ink); }
+  /* Kalender */
+  .cal-day { margin: 22px 2px 10px; display: flex; justify-content: space-between; align-items: baseline; }
+  .cal-day b { font-size: 16px; } .cal-day span { color: var(--muted); font-size: 13px; }
+  .cal-list { display: flex; flex-direction: column; border-radius: var(--radius-s); overflow: hidden; border: 1px solid var(--glass-line); background: var(--glass); }
+  .ev { display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+  .ev:last-child { border-bottom: 0; }
+  .ev .k { flex: none; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+  .ev .b { flex: 1; min-width: 0; } .ev .b b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ev .b span { font-size: 13px; color: var(--muted); }
+  .ev a.btnlink { color: var(--accent); font-weight: 650; font-size: 14px; text-decoration: none; }
+  .k-earn { background: var(--accent-bg); color: var(--accent); } .k-div { background: var(--up-bg); color: var(--up); }
+  .k-macro { background: var(--gold-bg); color: var(--gold); } .k-exp { background: var(--surface-3); color: var(--text); }
+  .pill { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-3); color: var(--text); margin-left: 6px; vertical-align: 1px; }
+  .pill.dep { background: var(--accent-bg); color: var(--accent); }
+  /* Depot */
+  .dep-sum { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  @media (min-width: 760px) { .dep-sum { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+  .form label.full { grid-column: 1 / -1; }
+  .form input { font: inherit; font-size: 16px; color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+  .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .row-actions .btn { flex: 1 1 140px; }
+  .mini-btn { border: 0; background: var(--surface-2); color: var(--text); border-radius: 999px; padding: 8px 14px; font-weight: 600; font-size: 14px; cursor: pointer; }
+  .mini-btn.del { color: var(--red); }
   /* Kurz-Hinweis (Suche, Karten, Detailseite) */
   .tip { --c: var(--muted); border-left: 3px solid var(--c); background: var(--surface-2); border-radius: var(--radius-s);
          padding: 12px 14px; font-size: 14px; line-height: 1.5; color: var(--text); }
@@ -256,21 +286,18 @@
 
 <nav class="tabbar" aria-label="Navigation">
   <div class="tabs">
-    <button class="tab on" data-tab="cards">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2.5"/><rect x="13" y="3" width="8" height="8" rx="2.5"/><rect x="3" y="13" width="8" height="8" rx="2.5"/><rect x="13" y="13" width="8" height="8" rx="2.5"/></svg>
-      Treffer</button>
-    <button class="tab" data-tab="table">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-      Tabelle</button>
-    <button class="tab" data-tab="watch">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>
-      Fast-Treffer<span class="badge" id="wlBadge" hidden></span></button>
-    <button class="tab" data-tab="settings">
+    <button class="tab on" data-sec="scanner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8 11h6M11 8v6"/></svg>
+      Scanner<span class="badge" id="wlBadge" hidden></span></button>
+    <button class="tab" data-sec="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+      Kalender<span class="badge" id="calBadge" hidden></span></button>
+    <button class="tab" data-sec="depot">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 7"/></svg>
+      Depot</button>
+    <button class="tab" data-sec="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       Einstellungen</button>
-    <button class="tab" data-tab="filter">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
-      Filter</button>
   </div>
 </nav>
 
@@ -341,9 +368,10 @@ const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", vola: "", region: ""
 const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
 const volaIn = r => { const b = VOLA[state.vola]; return !b || (r.volatility != null && r.volatility >= b[0] && r.volatility < b[1]); };
 const volaCls = v => v == null ? "muted" : v < .3 ? "up" : v < .5 ? "" : "down";
-const state = { tab: "cards", tableKind: "hit", ...DEFAULTS, tableSort: "score", tableAsc: false };
+const state = { sec: "scanner", tab: "cards", tableKind: "hit", calScope: "mine", calKind: "", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
+if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
 const SORTS = {
@@ -473,10 +501,10 @@ const COLS = [
 ];
 
 // ---------- Suche in allen Aktien mit Kurz-Hinweis ----------
-let searchIdx = null, searchLoading = null;
+let searchIdx = null, searchLoading = null, fxEur = { EUR: 1 };
 function loadSearch() {
   if (!searchLoading) searchLoading = fetch("data/search.json", { cache: "no-store" }).then(r => r.json())
-    .then(d => { searchIdx = d.rows || []; render(); }).catch(() => { searchIdx = []; render(); });
+    .then(d => { searchIdx = d.rows || []; fxEur = d.fx_eur || { EUR: 1 }; render(); }).catch(() => { searchIdx = []; render(); });
   return searchLoading;
 }
 function tipHtml(h) {
@@ -504,6 +532,220 @@ function searchHtml() {
     <div class="note" style="margin:8px 2px 0">Tage sind Handelstage und grobe Schätzungen aus den Regeln (z. B. bis ein Signal sein Zeitfenster verlässt). Stand: letzter Scan.</div>`;
 }
 
+// ---------- Kalender ----------
+let calData = null, calLoading = null;
+function loadCalendar() {
+  if (!calLoading) calLoading = fetch("data/calendar.json", { cache: "no-store" }).then(r => r.json())
+    .then(d => { calData = d.events || []; calBadge(); if (state.sec === "calendar") render(); })
+    .catch(() => { calData = []; if (state.sec === "calendar") render(); });
+  return calLoading;
+}
+const daysUntil = iso => Math.round((new Date(iso + "T12:00:00") - new Date(new Date().toDateString() + " 12:00")) / 864e5);
+const depotTickers = () => new Set(depotLoad().map(p => p.t));
+function calRelevant(e) {   // betrifft Watchlist oder Depot?
+  if (!e.ticker) return true;
+  return e.watch || depotTickers().has(e.ticker);
+}
+function calBadge() {
+  if (!calData) return;
+  const n = calData.filter(e => e.ticker && calRelevant(e) && daysUntil(e.date) >= 0 && daysUntil(e.date) <= 7).length;
+  $("calBadge").hidden = !n; $("calBadge").textContent = n;
+}
+const CAL_KIND = { earnings: ["Q", "k-earn", "Quartalszahlen"], exdiv: ["Div", "k-div", "Ex-Dividende"], dividend: ["Div", "k-div", "Dividendenzahlung"],
+                   macro: ["%", "k-macro", "Notenbank"], expiry: ["V", "k-exp", "Großer Verfall"] };
+function calendarHtml() {
+  if (!calData) return `<div class="section-title"><span>Kalender</span><span>lädt …</span></div>`;
+  const dep = depotTickers();
+  const watchByRegion = reg => data.results.filter(r => (r.in_watchlist || dep.has(r.ticker)) && (reg === "all" || r.region === reg)).length;
+  const kinds = { "": () => true, earnings: e => e.kind === "earnings", div: e => e.kind === "exdiv" || e.kind === "dividend", macro: e => e.kind === "macro" || e.kind === "expiry" };
+  const list = calData.filter(e => daysUntil(e.date) >= 0 && (state.calScope === "all" || calRelevant(e)) && kinds[state.calKind || ""](e));
+  const seg = (key, opts) => `<div class="opts seg">${opts.map(([v, l]) => `<button class="opt${(state[key] || "") === v ? " on" : ""}" data-cal="${key}" data-v="${v}">${l}</button>`).join("")}</div>`;
+  const head = `<div class="section-title"><span>Kalender · Termine für deine Aktien</span><span>${list.length} Termine</span></div>`
+    + seg("calScope", [["mine", "★ Watchlist & Depot"], ["all", "inkl. Treffer"]])
+    + seg("calKind", [["", "Alle"], ["earnings", "Quartalszahlen"], ["div", "Dividenden"], ["macro", "Notenbanken & Markt"]]);
+  if (!list.length) return head + `<div class="empty">Keine Termine in den nächsten Wochen.</div>`;
+  const byDay = {};
+  list.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+  return head + Object.entries(byDay).map(([d, evs]) => {
+    const n = daysUntil(d), when = n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`;
+    const wd = new Date(d + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
+    return `<div class="cal-day"><b>${wd}</b><span>${when}</span></div><div class="cal-list">${evs.map(e => {
+      const [icon, cls, label] = CAL_KIND[e.kind] || ["•", "k-exp", ""];
+      if (!e.ticker) {
+        const reg = e.region || "all", n2 = watchByRegion(reg);
+        return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.title)}</b><span>${reg === "us" ? "wichtig für US-Aktien" : reg === "europe" ? "wichtig für europäische Aktien" : "betrifft den ganzen Markt"} · ${n2} deiner Aktien</span></div></div>`;
+      }
+      const inRes = data.results.some(r => r.ticker === e.ticker);
+      const sub = e.kind === "earnings" ? (e.estimate ? "Quartalszahlen · Datum geschätzt" : "Quartalszahlen")
+        : e.kind === "exdiv" ? `Ex-Dividende${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}` : `Dividendenzahlung${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}`;
+      return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.name || e.ticker)}${dep.has(e.ticker) ? '<span class="pill dep">Depot</span>' : e.watch ? '<span class="pill">★</span>' : ""}</b><span>${esc(e.ticker)} · ${sub}</span></div>
+        ${inRes ? `<a class="btnlink" href="#" data-open="${esc(e.ticker)}">Chart</a>` : ""}</div>`;
+    }).join("")}</div>`;
+  }).join("") + `<div class="note" style="margin:16px 2px 0">Quartalszahlen und Dividenden: Yahoo Finance (Watchlist-, Depot- und Treffer-Aktien, sofern im Scan). Notenbank-Termine: von Hand gepflegt in <code>data/macro_events.json</code>. Keine Gewähr – vor wichtigen Entscheidungen bitte gegenprüfen.</div>`;
+}
+
+// ---------- Depot (bleibt nur auf diesem Gerät gespeichert) ----------
+const DEPOT_KEY = "kairo-depot-v1";
+function depotLoad() { try { return JSON.parse(localStorage.getItem(DEPOT_KEY) || "[]"); } catch (e) { return []; } }
+function depotSave(list) { try { localStorage.setItem(DEPOT_KEY, JSON.stringify(list)); } catch (e) {} calBadge(); }
+let depotEdit = null, depotMsg = "";
+const rowOf = t => searchIdx && searchIdx.find(r => r.t === t);
+const toEur = (v, cur) => v == null ? null : v * (fxEur[cur] ?? (cur === "EUR" ? 1 : NaN));
+function holdSignal(r) {
+  if (!r || r.c == null || r.e50 == null) return { tone: "gray", title: "Keine Kursdaten", text: "Die Aktie ist nicht im Scan-Universum (unter 2 Mrd. USD Börsenwert oder anderer Ticker)." };
+  const c = r.c, out = [];
+  let tone, title;
+  if (c < r.e50 && r.e200 != null && c < r.e200) { tone = "red"; title = "Abwärtstrend"; out.push("Kurs unter EMA 50 und EMA 200 – technisch kein Halte-Signal. Stop prüfen oder Position verkleinern."); }
+  else if (c < r.e50) { tone = "orange"; title = "Schwächephase"; out.push(`Kurs unter der EMA 50 (${fmt(r.e50)}). Fällt er weiter, ist der mittelfristige Trend gebrochen – Stop eng halten.`); }
+  else if (r.H && c >= r.H * 0.97) { tone = "yellow"; title = "Nahe am Hoch"; out.push(`Kurs nur ${pct(1 - c / r.H)} unter dem letzten Hoch ${fmt(r.H)} – häufiger Widerstand. Teilgewinne mitnehmen oder Stop nachziehen.`); }
+  else if (c >= (r.e20 ?? c) && !r.e20f) { tone = "green"; title = "Trend intakt"; out.push("Kurs über EMA 20 und EMA 50, kurzfristiger Trend steigt – technisch halten."); }
+  else { tone = "green"; title = "Aufwärtstrend, Verschnaufpause"; out.push(`Kurs über der EMA 50, aber unter der EMA 20 (${fmt(r.e20)}) – normale Konsolidierung, solange die EMA 50 hält.`); }
+  if (r.rsi >= 75) out.push(`RSI ${fmt(r.rsi, 0)}: überkauft – Rücksetzer wahrscheinlicher.`);
+  if (r.rsi != null && r.rsi <= 30) out.push(`RSI ${fmt(r.rsi, 0)}: überverkauft.`);
+  const stop = r.atr ? (c > r.e50 ? Math.max(r.e50 * 0.98, c - 2.5 * r.atr) : c - 2 * r.atr) : null;
+  return { tone, title, text: out.join(" "), stop };
+}
+function nextEvent(t) {
+  if (!calData) return null;
+  return calData.find(e => e.ticker === t && daysUntil(e.date) >= 0) || null;
+}
+function depotHtml() {
+  const list = depotLoad();
+  if (!searchIdx) { loadSearch(); return `<div class="section-title"><span>Depot</span><span>lädt Kurse …</span></div>`; }
+  let wert = 0, einstand = 0, missingFx = false, valued = 0;
+  const items = list.map((p, i) => {
+    const r = rowOf(p.t), cur = r ? r.cur : null;
+    const nowEur = r ? toEur(r.c, cur) : null;
+    if (nowEur == null || isNaN(nowEur)) missingFx = missingFx || !!r;
+    const val = nowEur != null && !isNaN(nowEur) ? nowEur * p.qty : null, cost = p.price * p.qty;
+    if (val != null) { wert += val; einstand += cost; valued++; }
+    return { p, i, r, cur, nowEur, val, cost };
+  });
+  const gv = wert - einstand;
+  const head = `<div class="section-title"><span>Mein Depot</span><span>${list.length} Positionen</span></div>`;
+  const sum = list.length && valued ? `<div class="dep-sum">
+      <div class="fig"><span>Depotwert</span><b>${fmt(wert)} €</b></div>
+      <div class="fig"><span>Einstand</span><b>${fmt(einstand)} €</b></div>
+      <div class="fig"><span>Gewinn / Verlust</span><b class="${gv >= 0 ? "up" : "down"}">${gv >= 0 ? "+" : ""}${fmt(gv)} €</b></div>
+      <div class="fig"><span>in %</span><b class="${gv >= 0 ? "up" : "down"}">${einstand ? (gv >= 0 ? "+" : "") + pct(gv / einstand) : "–"}</b></div></div>` : "";
+  const form = depotEdit != null ? depotFormHtml(depotEdit >= 0 ? list[depotEdit] : null) : "";
+  const actions = `<div class="row-actions" style="margin:16px 0">
+      <button class="btn" data-dep="add">+ Position</button>
+      <label class="btn ghost" style="cursor:pointer">CSV importieren<input type="file" accept=".csv,text/csv" id="depCsv" hidden></label>
+      <button class="btn ghost" data-dep="claude">Für Claude kopieren</button></div>
+    ${depotMsg ? `<div class="tip tone-gray" style="margin-bottom:14px">${depotMsg}</div>` : ""}`;
+  const cards = items.map(({ p, i, r, cur, nowEur, val, cost }) => {
+    const sig = holdSignal(r), held = p.date ? Math.max(0, -daysUntil(p.date)) : null, ev = nextEvent(p.t);
+    const g = val != null ? val - cost : null;
+    const inRes = data.results.some(x => x.ticker === p.t);
+    return `<article class="card">
+      <div class="card-top"><div class="card-title"><h2>${esc(p.n || (r && r.n) || p.t)}</h2>
+        <div class="meta">${esc(p.t)} · ${fmt(p.qty, p.qty % 1 ? 4 : 0)} Stück${p.date ? ` · gekauft am ${dateDE(p.date)} (vor ${held} Tagen)` : ""}</div></div></div>
+      <div class="figures">
+        <div class="fig"><span>Einstand je Aktie</span><b>${fmt(p.price)} €</b></div>
+        <div class="fig"><span>Aktuell je Aktie</span><b>${nowEur != null && !isNaN(nowEur) ? fmt(nowEur) + " €" : r ? fmt(r.c) + " " + esc(cur || "") : "–"}</b></div>
+        <div class="fig"><span>Wert</span><b>${val != null ? fmt(val) + " €" : "–"}</b></div>
+        <div class="fig"><span>Gewinn / Verlust</span><b class="${(g ?? 0) >= 0 ? "up" : "down"}">${g != null ? (g >= 0 ? "+" : "") + pct(g / cost) : "–"}</b></div></div>
+      ${tipHtml({ tone: sig.tone, title: "Technisch: " + sig.title, text: sig.text + (sig.stop ? ` Technischer Stop: ${fmt(sig.stop)} ${esc(cur || "")}${cur && cur !== "EUR" && fxEur[cur] ? ` (≈ ${fmt(toEur(sig.stop, cur))} €)` : ""}.` : "") })}
+      ${ev ? `<div class="note" style="margin-top:0">Nächster Termin: <b>${dateDE(ev.date)}</b> – ${(CAL_KIND[ev.kind] || [])[2] || ""}${ev.estimate ? " (geschätzt)" : ""}</div>` : ""}
+      <div class="row-actions">${inRes ? `<button class="mini-btn" data-open="${esc(p.t)}">Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>
+        <button class="mini-btn" data-dep="edit" data-i="${i}">Bearbeiten</button><button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
+    </article>`;
+  }).join("");
+  const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere die CSV-Datei deiner Transaktionen aus Scalable Capital.</div>`;
+  return head + sum + actions + form + empty + `<div class="grid">${cards}</div>`
+    + `<div class="note" style="margin:16px 2px 0">Dein Depot wird nur auf diesem Gerät gespeichert (nicht im Internet). Kurse vom letzten Scan, Umrechnung in Euro zum Tageskurs${missingFx ? " – für einige Währungen fehlt der Wechselkurs" : ""}. Die Einschätzung ist rein technisch (Trend, EMAs, RSI) und keine Anlageberatung.</div>`;
+}
+function depotFormHtml(p) {
+  const opts = (searchIdx || []).map(r => `<option value="${esc(r.n)} (${esc(r.t)})"></option>`).join("");
+  return `<div class="card" style="margin-bottom:16px"><b>${p ? "Position bearbeiten" : "Neue Position"}</b>
+    <div class="form">
+      <label class="full">Aktie (Name oder Ticker)<input id="dfStock" list="dfList" value="${p ? esc(`${p.n} (${p.t})`) : ""}" placeholder="z. B. Rheinmetall"><datalist id="dfList">${opts}</datalist></label>
+      <label>Stück<input id="dfQty" type="number" step="any" min="0" inputmode="decimal" value="${p ? p.qty : ""}"></label>
+      <label>Kaufkurs je Aktie in €<input id="dfPrice" type="number" step="any" min="0" inputmode="decimal" value="${p ? p.price : ""}"></label>
+      <label class="full">Kaufdatum<input id="dfDate" type="date" value="${p ? p.date || "" : ""}"></label>
+    </div>
+    <div class="row-actions"><button class="btn" data-dep="save">Speichern</button><button class="btn ghost" data-dep="cancel">Abbrechen</button></div></div>`;
+}
+function findStock(text) {
+  const m = String(text).match(/\(([^()]+)\)\s*$/), t = (m ? m[1] : text).trim();
+  return searchIdx.find(r => r.t.toLowerCase() === t.toLowerCase())
+      || searchIdx.find(r => r.n.toLowerCase() === String(text).trim().toLowerCase())
+      || matchName(text);
+}
+const normName = s => String(s || "").toLowerCase().replace(/\b(inc|corp|corporation|co|ag|se|sa|nv|plc|ltd|limited|holdings?|group|the|class [a-z]|vz|vorzugsaktien|inhaber-aktien|namens-aktien|o\.n\.|adr)\b\.?/g, " ").replace(/[^a-z0-9]+/g, "");
+function matchName(name) {
+  const k = normName(name); if (k.length < 3) return null;
+  return searchIdx.find(r => normName(r.n) === k) || searchIdx.find(r => normName(r.n).startsWith(k) || k.startsWith(normName(r.n)) && normName(r.n).length >= 4) || null;
+}
+// CSV aus Scalable Capital (Transaktionen) oder ähnlich: Spalten werden am Namen erkannt
+function importCsv(text) {
+  const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
+  if (lines.length < 2) return "Die Datei enthält keine Zeilen.";
+  const sep = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
+  const split = l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); };
+  const head = split(lines[0]).map(h => h.toLowerCase());
+  const col = (...names) => { const ex = head.findIndex(h => names.includes(h)); return ex >= 0 ? ex : head.findIndex(h => names.some(n => h.includes(n))); };
+  const iDate = col("date", "datum"), iName = col("description", "name", "wertpapier", "bezeichnung", "titel"), iIsin = col("isin");
+  const iQty = col("shares", "stück", "stueck", "anzahl", "quantity", "menge"), iPrice = col("price", "kurs", "preis"), iType = col("type", "typ", "transaktion", "art");
+  if (iQty < 0 || iPrice < 0 || (iName < 0 && iIsin < 0)) return "Spalten nicht erkannt. Erwartet werden u. a. Name/Beschreibung, Stück und Kurs.";
+  const num = v => { v = String(v || "").replace(/[^\d,.\-]/g, ""); if (v.includes(",") && v.includes(".")) v = v.lastIndexOf(",") > v.lastIndexOf(".") ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, ""); else v = v.replace(",", "."); return parseFloat(v); };
+  const toIso = v => { v = String(v || ""); let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+  const pos = {};
+  lines.slice(1).map(split).sort((a, b) => toIso(a[iDate]).localeCompare(toIso(b[iDate]))).forEach(c => {
+    const type = iType >= 0 ? c[iType].toLowerCase() : "kauf";
+    const sell = /sell|verkauf/.test(type), buy = /buy|kauf|savings|spar|einbuch|transfer/.test(type) && !sell;
+    if (!sell && !buy) return;
+    const qty = Math.abs(num(c[iQty])), price = Math.abs(num(c[iPrice])); if (!qty) return;
+    const key = (iIsin >= 0 && c[iIsin]) || c[iName];
+    const p = pos[key] = pos[key] || { name: iName >= 0 ? c[iName] : key, qty: 0, cost: 0, date: "" };
+    if (buy) { if (!p.qty) p.date = toIso(c[iDate]); p.cost += qty * (price || 0); p.qty += qty; }
+    else { const avg = p.qty ? p.cost / p.qty : 0; p.qty = Math.max(0, p.qty - qty); p.cost = avg * p.qty; }
+  });
+  const list = depotLoad(), unmatched = [];
+  let added = 0;
+  Object.values(pos).filter(p => p.qty > 1e-9).forEach(p => {
+    const r = matchName(p.name);
+    if (!r) { unmatched.push(p.name); return; }
+    const entry = { t: r.t, n: r.n, qty: +p.qty.toFixed(6), price: +(p.cost / p.qty).toFixed(4), date: p.date };
+    const j = list.findIndex(x => x.t === r.t); if (j >= 0) list[j] = entry; else list.push(entry);
+    added++;
+  });
+  depotSave(list);
+  return `${added} Positionen importiert.` + (unmatched.length ? ` Nicht zugeordnet (bitte mit „+ Position“ von Hand anlegen): ${unmatched.map(esc).join(", ")}.` : "");
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-cal]");
+  if (b) { state[b.dataset.cal] = b.dataset.v; save(); render(); return; }
+  const d = e.target.closest("[data-dep]"); if (!d) return;
+  const list = depotLoad(), act = d.dataset.dep, i = +d.dataset.i;
+  depotMsg = "";
+  if (act === "add") depotEdit = -1;
+  else if (act === "edit") depotEdit = i;
+  else if (act === "cancel") depotEdit = null;
+  else if (act === "del") { if (confirm(`${list[i].n || list[i].t} aus dem Depot löschen?`)) { list.splice(i, 1); depotSave(list); } }
+  else if (act === "save") {
+    const r = findStock($("dfStock").value), qty = parseFloat(String($("dfQty").value).replace(",", ".")), price = parseFloat(String($("dfPrice").value).replace(",", "."));
+    if (!r) { depotMsg = "Aktie nicht gefunden – bitte aus der Vorschlagsliste wählen."; render(); return; }
+    if (!(qty > 0) || !(price > 0)) { depotMsg = "Bitte Stück und Kaufkurs angeben."; render(); return; }
+    const entry = { t: r.t, n: r.n, qty, price, date: $("dfDate").value || "" };
+    if (depotEdit >= 0) list[depotEdit] = entry; else list.push(entry);
+    depotSave(list); depotEdit = null;
+  } else if (act === "claude") {
+    const lines = list.map(p => { const r = rowOf(p.t), s = holdSignal(r); return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; });
+    const txt = "Mein Depot (Kairo, Stand " + new Date().toLocaleDateString("de-DE") + "):\n" + lines.join("\n");
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { depotMsg = "Kopiert – einfach im Chat mit Claude einfügen."; render(); },
+      () => { depotMsg = "Kopieren nicht möglich. Text:<br><pre style='white-space:pre-wrap'>" + esc(txt) + "</pre>"; render(); });
+    return;
+  }
+  render();
+});
+document.addEventListener("change", async e => {
+  if (e.target.id !== "depCsv" || !e.target.files[0]) return;
+  if (!searchIdx) await loadSearch();
+  depotMsg = importCsv(await e.target.files[0].text()); render();
+});
+
 // ---------- Einstellungen ----------
 const CFG_LABELS = { universe: "Universum (2.1)", correction: "Korrektur (2.2)", fib: "Fibonacci – Variante A (2.3)",
   support: "Support – Variante B (2.3)", rsi: "RSI (2.4)", macd: "MACD (2.5)", mbi: "Momentum Bias Index (2.6)",
@@ -530,7 +772,10 @@ function render() {
   if (!data) return;
   const hits = data.results.filter(r => r.passed).length, fast = data.results.filter(r => r.fast_hit).length;
   $("wlBadge").hidden = !fast; $("wlBadge").textContent = fast;
-  if (state.tab === "settings") { $("main").innerHTML = settingsHtml(); return; }
+  document.querySelector(".search").hidden = state.sec !== "scanner";
+  if (state.sec === "settings") { $("main").innerHTML = settingsHtml(); return; }
+  if (state.sec === "calendar") { $("main").innerHTML = calendarHtml(); return; }
+  if (state.sec === "depot") { $("main").innerHTML = depotHtml(); return; }
   const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   const list = rows(kind);
   const title = { fast: "Fast-Treffer · genau 1 Pflichtkriterium fehlt", hit: "Treffer · alle Pflichtkriterien erfüllt",
@@ -538,8 +783,10 @@ function render() {
   const seg = state.tab === "table" ? `<div class="opts seg">${[["hit", "Treffer"], ["fast", "Fast-Treffer"], ["all", "beide"], ["watch", "★ Watchlist"]].map(([v, l]) =>
     `<button class="opt${state.tableKind === v ? " on" : ""}" data-tk="${v}">${l}</button>`).join("")}</div>` : "";
   const toTable = state.tab === "watch" ? `<div class="opts seg"><button class="opt on">Karten</button><button class="opt" data-totable="fast">Tabelle</button></div>` : "";
-  const head = searchHtml() + seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
-  if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = searchHtml(); return; }
+  const sub = `<div class="subnav">${[["cards", "Treffer"], ["table", "Tabelle"], ["watch", "Fast-Treffer"], ["filter", "Filter"]].map(([v, l]) =>
+    `<button class="${state.tab === v ? "on" : ""}" data-sub="${v}">${l}</button>`).join("")}</div>`;
+  const head = sub + searchHtml() + seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = sub + searchHtml(); return; }
   if (!list.length) {
     $("main").innerHTML = head + `<div class="empty">${kind === "watch" ? "Keine Watchlist-Aktie gefunden." : kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
       : `Heute erfüllt keine Aktie alle Pflichtkriterien${hits ? " mit diesen Filtern" : ""}.<br>Die Fast-Treffer (unten in der Leiste) zeigen, wem nur ein Kriterium fehlt.`}</div>`;
@@ -572,7 +819,7 @@ function renderHead() {
 }
 function syncOpts() {
   document.querySelectorAll(".opts").forEach(g => g.querySelectorAll(".opt").forEach(b => b.classList.toggle("on", b.dataset.v === String(state[g.dataset.key] ?? ""))));
-  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.tab === state.tab));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.sec === state.sec));
 }
 
 // ---------- Detailseite ----------
@@ -706,8 +953,9 @@ $("xlsx").onclick = async () => {
 // ---------- Ereignisse ----------
 document.querySelector(".tabs").addEventListener("click", e => {
   const t = e.target.closest(".tab"); if (!t) return;
-  if (t.dataset.tab === "filter") { document.body.classList.add("filters-open"); return; }
-  state.tab = t.dataset.tab; syncOpts(); save(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+  state.sec = t.dataset.sec; syncOpts(); save(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
+  if (state.sec === "calendar") loadCalendar();
+  if (state.sec === "depot") loadSearch();
 });
 $("sheet").addEventListener("click", e => { const b = e.target.closest(".opt"); if (!b || !b.closest(".opts")) return; state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); save(); render(); });
 $("done").onclick = () => document.body.classList.remove("filters-open");
@@ -715,6 +963,8 @@ $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
 document.addEventListener("click", e => {
+  const sb = e.target.closest("[data-sub]"); if (sb) { if (sb.dataset.sub === "filter") { document.body.classList.add("filters-open"); return; }
+    state.tab = sb.dataset.sub; save(); render(); return; }
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
   const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openDetail(o.dataset.open); return; }
@@ -723,7 +973,8 @@ document.addEventListener("click", e => {
 document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
 
 fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
-  data = d; renderHead(); syncOpts(); render();
+  data = d; renderHead(); syncOpts(); render(); loadCalendar();
+  if (state.sec === "depot") loadSearch();
   if (location.hash) openDetail(decodeURIComponent(location.hash.slice(1)));
 }).catch(() => { $("sub").textContent = "Noch keine Scan-Ergebnisse vorhanden."; });
 </script>

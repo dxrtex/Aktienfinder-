@@ -3,7 +3,9 @@
 Ausgabe:
   site/data/results.json        Treffer + Fast-Treffer (Kriterien, Score, Trade-Plan, Zone)
   site/data/charts/<TICKER>.json Chartdaten je Treffer/Fast-Treffer (Kerzen, EMAs, RSI, MACD, MBI)
-  site/data/search.json         Suchindex: alle geprüften Aktien mit Kurz-Hinweis (backend/hints.py)
+  site/data/search.json         Suchindex: alle geprüften Aktien mit Kurz-Hinweis (backend/hints.py),
+                                technische Eckdaten fürs Depot und Wechselkurse in EUR
+  site/data/calendar.json       Termine: Quartalszahlen, Dividenden, Notenbanken, großer Verfall
 
 Aufruf:  python -m backend.run_scan [--tickers UBER,TUI1.DE] [--end 2026-10-03]
 """
@@ -89,11 +91,73 @@ def load_watchlist() -> dict[str, str]:
 
 def search_row(res, meta: dict, h: dict) -> dict:
     """Kompakte Zeile für den Suchindex (alle Aktien)."""
+    f = res.flags
     return _clean({"t": res.ticker, "n": meta.get("name") or res.ticker, "r": meta.get("region") or region_of(res.ticker),
                    "x": meta.get("exchange") or "", "c": round(res.close, 4), "cur": res.flags.get("currency"),
                    "s": "hit" if res.passed else "fast" if res.fast_hit else "",
                    "m": sum(c.ok for c in res.criteria if c.key not in ("cap", "liquidity", "price", "history")),
-                   "tone": h["tone"], "title": h["title"], "text": h["text"], "d": h["days"], "dl": h["days_label"]})
+                   "tone": h["tone"], "title": h["title"], "text": h["text"], "d": h["days"], "dl": h["days_label"],
+                   # technische Eckdaten für die Depot-Einschätzung
+                   "e20": f.get("ema20"), "e50": f.get("ema50"), "e200": f.get("ema200"), "atr": f.get("atr"),
+                   "rsi": f.get("rsi"), "mh": f.get("macd_hist"), "e20f": f.get("ema20_falling"), "H": res.zone.get("H"),
+                   "vola": f.get("volatility")})
+
+
+def big_expiry_dates(start: pd.Timestamp, days: int = 120) -> list[str]:
+    """Großer Verfall: dritter Freitag im März, Juni, September und Dezember."""
+    out = []
+    for y in (start.year, start.year + 1):
+        for mth in (3, 6, 9, 12):
+            first = pd.Timestamp(year=y, month=mth, day=1)
+            third_friday = first + pd.Timedelta(days=(4 - first.weekday()) % 7 + 14)
+            if start <= third_friday <= start + pd.Timedelta(days=days):
+                out.append(str(third_friday.date()))
+    return out
+
+
+def build_calendar(rows: list[dict], infos: dict) -> dict:
+    """Termine der geprüften Watchlist-/Treffer-Aktien + Notenbanken + großer Verfall (nächste ~4 Monate)."""
+    today = pd.Timestamp.now().normalize()
+    horizon = today + pd.Timedelta(days=120)
+    events = []
+    for r in rows:
+        i = infos.get(r["ticker"], {})
+        base = {"ticker": r["ticker"], "name": r["name"], "region": r.get("region"), "watch": r.get("in_watchlist", False)}
+        for kind, date, extra in (("earnings", i.get("earnings_date"), {"estimate": i.get("earnings_estimate")}),
+                                  ("exdiv", i.get("ex_dividend_date"), {"rate": i.get("dividend_rate")}),
+                                  ("dividend", i.get("dividend_date"), {"rate": i.get("dividend_rate")})):
+            if date and today <= pd.Timestamp(date) <= horizon:
+                events.append({**base, "kind": kind, "date": date, **extra})
+    macro_path = ROOT / "data" / "macro_events.json"
+    if macro_path.exists():
+        with open(macro_path, encoding="utf-8") as f:
+            for e in json.load(f).get("events", []):
+                if today <= pd.Timestamp(e["date"]) <= horizon:
+                    events.append({"kind": "macro", "date": e["date"], "title": e["title"], "region": e.get("region", "all")})
+    for d in big_expiry_dates(today):
+        events.append({"kind": "expiry", "date": d, "title": "Großer Verfall (Optionen & Futures)", "region": "all"})
+    events.sort(key=lambda e: (e["date"], e["kind"], e.get("name", "")))
+    return {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "events": _clean(events)}
+
+
+def fx_to_eur(currencies: set[str]) -> dict[str, float]:
+    """Wechselkurse: 1 Einheit Währung = x EUR (für die Depot-Bewertung in Euro)."""
+    out = {"EUR": 1.0}
+    pairs = {c: f"EUR{c}=X" for c in currencies if c and c not in ("EUR", "GBp", "GBX")}
+    if "GBp" in currencies or "GBX" in currencies:
+        pairs.setdefault("GBP", "EURGBP=X")
+    try:
+        data = YFinanceProvider().history(list(pairs.values()), "5d")
+    except Exception as exc:
+        print(f"Wechselkurse: Fehler {exc!r}")
+        data = {}
+    for cur, sym in pairs.items():
+        df = data.get(sym)
+        if df is not None and len(df) and df["Close"].iloc[-1] > 0:
+            out[cur] = round(1 / float(df["Close"].iloc[-1]), 6)
+    if "GBP" in out:
+        out["GBp"] = out["GBX"] = round(out["GBP"] / 100, 8)
+    return out
 
 
 def result_row(res, meta: dict) -> dict:
@@ -192,9 +256,15 @@ def main(argv=None) -> int:
     SITE.mkdir(parents=True, exist_ok=True)
     with open(SITE / "results.json", "w", encoding="utf-8") as f:
         json.dump(_clean(out), f, ensure_ascii=False, separators=(",", ":"))
+    fx = fx_to_eur({r.get("cur") for r in search.values()})
     with open(SITE / "search.json", "w", encoding="utf-8") as f:
-        json.dump({"generated": out["generated"], "rows": sorted(search.values(), key=lambda r: r["n"].lower())},
+        json.dump({"generated": out["generated"], "fx_eur": fx,
+                   "rows": sorted(search.values(), key=lambda r: r["n"].lower())},
                   f, ensure_ascii=False, separators=(",", ":"))
+    cal = build_calendar(rows, infos)
+    with open(SITE / "calendar.json", "w", encoding="utf-8") as f:
+        json.dump(cal, f, ensure_ascii=False, separators=(",", ":"))
+    print(f"Kalender: {len(cal['events'])} Termine, Wechselkurse: {fx}")
     print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Fehler: {stats['errors']}, "
           f"Dauer {stats['duration_s']} s")
     for r in rows[:30]:

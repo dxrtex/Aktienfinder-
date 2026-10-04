@@ -21,6 +21,17 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
 Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
+## Aufbau der App
+Leiste unten: **Scanner** (Unterpunkte Treffer, Tabelle, Fast-Treffer, Filter), **Kalender**, **Depot**, **Einstellungen**.
+
+- **Kalender:** Quartalszahlen, Ex-Dividende und Dividendenzahlung (Yahoo Finance) für Watchlist-, Depot- und
+  Treffer-Aktien, dazu Fed-/EZB-Zinsentscheide (`data/macro_events.json`, von Hand gepflegt) und der große Verfall.
+  Datei: `site/data/calendar.json`.
+- **Depot:** Positionen von Hand oder per CSV-Import (Transaktions-Export aus Scalable Capital) – gespeichert nur im
+  Browser des Geräts. Bewertung in Euro zum Tageskurs, technische Einschätzung je Position (Trend über/unter EMA 20/50/200,
+  Nähe zum Hoch, RSI) mit technischem Stop und nächstem Termin. „Für Claude kopieren“ erzeugt einen Text fürs Gespräch.
+  Eine direkte Verbindung zu Scalable Capital gibt es nicht (keine offizielle Schnittstelle).
+
 ## Volatilität
 Zu jeder Aktie wird die **historische Volatilität** berechnet: Standardabweichung der Tagesrenditen der letzten 30 Tage,
 hochgerechnet aufs Jahr (× √252), dazu die Ø Tagesspanne (ATR 14 in % vom Kurs). Kein Pflichtkriterium – nur Filter

@@ -1,0 +1,9 @@
+{
+  "_hinweis": "Notenbank-Termine (Zinsentscheid = zweiter Sitzungstag). Von Hand gepflegt – bitte jährlich mit den offiziellen Kalendern abgleichen (federalreserve.gov, ecb.europa.eu). region: us / europe / all.",
+  "events": [
+    {"date": "2026-10-28", "title": "Fed-Zinsentscheid (FOMC)", "region": "us"},
+    {"date": "2026-10-29", "title": "EZB-Zinsentscheid", "region": "europe"},
+    {"date": "2026-12-09", "title": "Fed-Zinsentscheid (FOMC)", "region": "us"},
+    {"date": "2026-12-17", "title": "EZB-Zinsentscheid", "region": "europe"}
+  ]
+}
