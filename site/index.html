@@ -271,6 +271,8 @@
     <div class="opts" data-key="minCap"><button class="opt" data-v="0">2 Mrd. $ (alle)</button><button class="opt" data-v="5">5 Mrd. $</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Marktkapitalisierung bis</div>
     <div class="opts" data-key="maxCap"><button class="opt" data-v="0">egal</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
+  <div class="group"><div class="group-label">Volatilität (30 Tage, annualisiert)</div>
+    <div class="opts" data-key="vola"><button class="opt" data-v="">alle</button><button class="opt" data-v="low">niedrig &lt; 30 %</button><button class="opt" data-v="mid">mittel 30–50 %</button><button class="opt" data-v="high">hoch 50–80 %</button><button class="opt" data-v="xhigh">sehr hoch &gt; 80 %</button></div></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">Nordamerika</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="asia">Asien/Pazifik</button></div></div>
   <div class="group"><div class="group-label">Zonen-Typ</div>
@@ -280,7 +282,7 @@
   <div class="group"><div class="group-label">Sektor</div>
     <div class="opts" data-key="sector" id="sectorOpts"><button class="opt" data-v="">alle</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button><button class="opt" data-v="vola">Volatilität ↓</button><button class="opt" data-v="vola_asc">Volatilität ↑</button></div></div>
   <div class="group"><div class="group-label">Export der angezeigten Liste</div>
     <div class="links"><button class="btn ghost" id="csv">CSV</button><button class="btn ghost" id="xlsx">Excel</button></div></div>
   <button class="btn" id="done">Fertig</button>
@@ -322,7 +324,10 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
+const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", vola: "", region: "", zone: "", div: "", sector: "", sort: "score" };
+const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
+const volaIn = r => { const b = VOLA[state.vola]; return !b || (r.volatility != null && r.volatility >= b[0] && r.volatility < b[1]); };
+const volaCls = v => v == null ? "muted" : v < .3 ? "up" : v < .5 ? "" : "down";
 const state = { tab: "cards", tableKind: "hit", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
@@ -333,19 +338,22 @@ const SORTS = {
   crv: (a, b) => (b.crv ?? -1) - (a.crv ?? -1),
   drawdown: (a, b) => (b.drawdown ?? 0) - (a.drawdown ?? 0),
   cap: (a, b) => (b.market_cap_usd ?? 0) - (a.market_cap_usd ?? 0),
+  vola: (a, b) => (b.volatility ?? -1) - (a.volatility ?? -1),
+  vola_asc: (a, b) => (a.volatility ?? 9) - (b.volatility ?? 9),
 };
 
 function rows(kind) {
   const q = $("search").value.trim().toLowerCase();
   if (kind === "watch")   // Watchlist: alle eigenen Aktien, nur Suche und Börsenwert-Filter greifen
     return data.results.filter(r => r.in_watchlist && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
-      && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9))
+      && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9) && volaIn(r))
       .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
   return data.results.filter(r => (kind === "all" ? (r.passed || r.fast_hit) : kind === "fast" ? r.fast_hit : r.passed)
     && (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
     && (r.score >= +state.minScore || !r.passed)
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9)
     && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9)
+    && volaIn(r)
     && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone))
     && (!state.div || r.divergence === state.div)
@@ -371,7 +379,7 @@ function card(r) {
         <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
         ${statusBadge(r)}
-        <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}</span>
+        <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}${r.volatility != null ? " · Vola " + pct(r.volatility, 0) : ""}</span>
         ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
       <div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>
@@ -434,6 +442,7 @@ const COLS = [
   { k: "close", l: "Kurs", n: 1, g: r => r.close, h: r => fmt(r.close) },
   { k: "dd", l: "Rückgang", n: 1, g: r => r.drawdown ?? 0, h: r => `<span class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown)}</span>` },
   { k: "zone", l: "Zone", g: r => r.zone_type, h: r => esc(r.zone_type) },
+  { k: "vola", l: "Volatilität", n: 1, g: r => r.volatility ?? -1, h: r => `<span class="${volaCls(r.volatility)}" title="Ø Tagesspanne (ATR) ${pct(r.atr_pct)}">${pct(r.volatility, 0)}</span>` },
   { k: "rsi", l: "RSI", n: 1, g: r => r.rsi, h: r => fmt(r.rsi, 1) },
   { k: "div", l: "Divergenz", g: r => r.divergence || "", h: r => esc(r.divergence || "–") },
   { k: "macd", l: "MACD", g: r => r.macd_status, h: r => esc(r.macd_status) },
@@ -523,7 +532,7 @@ function render() {
     return;
   }
   if (state.tab === "table") {
-    const col = COLS.find(c => c.k === state.tableSort) || COLS[12];
+    const col = COLS.find(c => c.k === state.tableSort) || COLS.find(c => c.k === "score");
     if (!(kind === "watch" && state.tableSort === "score")) list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
     // Bei Fast-Treffern steht „Fehlt“ direkt hinter dem Namen
     const miss = COLS.find(c => c.k === "miss");
@@ -585,6 +594,8 @@ async function openDetail(t) {
           <div class="fig"><span>Ziel 1</span><b class="up">${fmt(p.target1)}</b></div>
           <div class="fig"><span>Ziel 2 (Swing-High)</span><b class="up">${fmt(p.target2)}</b></div>
           <div class="fig"><span>CRV</span><b class="${(p.crv ?? 0) >= 2 ? "up" : "down"}">${fmt(p.crv, 2)}</b></div>
+          <div class="fig"><span>Volatilität (30 T.)</span><b class="${volaCls(r.volatility)}">${pct(r.volatility, 0)}</b></div>
+          <div class="fig"><span>Ø Tagesspanne (ATR)</span><b>${pct(r.atr_pct, 1)}</b></div>
           <div class="fig"><span>max. sinnvoller Hebel</span><b>${fmt(p.max_leverage, 1)}</b></div></div>
           <div class="note">Hebel-Hinweis: max. sinnvoller Hebel = 1 / (Stop-Abstand × 1,5). Ziel 1 = EMA 50 bzw. Fib 0,382, Ziel 2 = Swing-High (Fib 0).</div>`
           : `<div class="note">Kein Trade-Plan – keine gültige Unterstützungszone.</div>`}
@@ -660,7 +671,7 @@ function exportRows() {
   const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   return rows(kind).map(r => ({ Ticker: r.ticker, Name: r.name, "Börse": r.exchange, Region: REGION[r.region] || "", Sektor: r.sector,
     "Market Cap (Mrd. USD)": r.market_cap_usd ? +(r.market_cap_usd / 1e9).toFixed(2) : "", Kurs: r.close,
-    "Rückgang %": r.drawdown != null ? +(100 * r.drawdown).toFixed(1) : "", Zone: r.zone_type, RSI: r.rsi != null ? +r.rsi.toFixed(1) : "",
+    "Rückgang %": r.drawdown != null ? +(100 * r.drawdown).toFixed(1) : "", "Volatilität %": r.volatility != null ? +(100 * r.volatility).toFixed(1) : "", "ATR %": r.atr_pct != null ? +(100 * r.atr_pct).toFixed(2) : "", Zone: r.zone_type, RSI: r.rsi != null ? +r.rsi.toFixed(1) : "",
     Divergenz: r.divergence || "", MACD: r.macd_status, MBI: r.mbi_status, CRV: r.crv != null ? +r.crv.toFixed(2) : "", Score: r.score,
     Earnings: r.earnings_date || "", Entry: r.plan && r.plan.entry, Stop: r.plan && r.plan.stop, "Ziel 1": r.plan && r.plan.target1,
     "Ziel 2": r.plan && r.plan.target2, Status: r.passed ? "Treffer" : "Fast-Treffer: " + r.missing[0] }));

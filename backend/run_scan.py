@@ -113,6 +113,7 @@ def result_row(res, meta: dict) -> dict:
         "macd_status": ("Kreuz vor %d T." % res.flags["macd_cross_age"]) if res.flags.get("macd_cross_done")
                        else ("Histogramm steigt" if res.flags.get("macd_hist", 0) < 0 else "grün"),
         "mbi_status": "grün" if res.flags.get("mbi_green") else "rot, X gesetzt",
+        "volatility": res.flags.get("volatility"), "atr_pct": res.flags.get("atr_pct"),
         "crv": res.plan.get("crv"), "earnings_date": res.flags.get("earnings_date"),
         "earnings_risk": res.flags.get("earnings_risk"),
         "criteria": [{"key": c.key, "label": c.label, "ok": c.ok, "value": c.value, "threshold": c.threshold}

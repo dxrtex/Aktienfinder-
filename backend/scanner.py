@@ -117,6 +117,10 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     up_b, lo_b, bound = (mbi[k].to_numpy() for k in ("upper_bias", "lower_bias", "impulse_boundary"))
     gx = mbi["green_x"].to_numpy()
     res.flags.update(ema20=e20[-1], ema50=e50[-1], ema100=e100[-1], ema200=e200[-1], atr=a14[-1], rsi=r[-1])
+    vd = getattr(getattr(cfg, "volatility", None), "days", 30)
+    rets = np.diff(np.log(c[-(vd + 1):]))
+    res.flags.update(volatility=float(np.std(rets, ddof=1) * math.sqrt(252)) if len(rets) > 2 else None,
+                     atr_pct=float(a14[-1] / close) if close else None)
 
     # ---------- 2.1 Universum ----------
     u = cfg.universe
