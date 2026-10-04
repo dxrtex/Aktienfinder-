@@ -23,7 +23,15 @@ from .data_provider import CachedProvider, YFinanceProvider
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
-from .universe import load as load_universe
+from .universe import ASIA, load as load_universe
+
+_ASIA_SUFFIXES = {suf for sufs, _, _ in ASIA.values() for suf in sufs}
+
+
+def region_of(ticker: str) -> str:
+    if "." not in ticker or ticker.endswith(".TO"):
+        return "us"
+    return "asia" if "." + ticker.rsplit(".", 1)[1] in _ASIA_SUFFIXES else "europe"
 
 SITE = ROOT / "site" / "data"
 CHART_BARS = 260
@@ -153,7 +161,7 @@ def main(argv=None) -> int:
                 "market_cap": i.get("market_cap"), "earnings_date": i.get("earnings_date")}
         res = evaluate(df, info, ticker=t)            # mit Earnings-Termin neu bewerten
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
-             "region": m.get("region") or ("us" if "." not in t else "europe"), "exchange": m.get("exchange") or i.get("exchange") or ""}
+             "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))

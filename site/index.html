@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Reversal-Setup-Finder</title>
-<meta name="description" content="Täglicher Scan aller Aktien ab 2 Mrd. USD (USA + Europa) auf das Long-Reversal-Setup">
+<meta name="description" content="Täglicher Scan aller Aktien ab 2 Mrd. USD (Nordamerika, Europa, Asien/Pazifik) auf das Long-Reversal-Setup">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
@@ -258,7 +258,7 @@
   <div class="group"><div class="group-label">Marktkapitalisierung bis</div>
     <div class="opts" data-key="maxCap"><button class="opt" data-v="0">egal</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Region</div>
-    <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">USA</button><button class="opt" data-v="europe">Europa</button></div></div>
+    <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">Nordamerika</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="asia">Asien/Pazifik</button></div></div>
   <div class="group"><div class="group-label">Zonen-Typ</div>
     <div class="opts" data-key="zone"><button class="opt" data-v="">egal</button><button class="opt" data-v="Fib">Fibonacci</button><button class="opt" data-v="Support">Support</button></div></div>
   <div class="group"><div class="group-label">Divergenz</div>
@@ -279,7 +279,7 @@
 <script>
 const $ = id => document.getElementById(id);
 const REPO = "https://github.com/dxrtex/Aktienfinder-";
-const REGION = { us: "USA", europe: "Europa" };
+const REGION = { us: "Nordamerika", europe: "Europa", asia: "Asien/Pazifik" };
 const nf = (d = 2) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : nf(d).format(v);
 const pct = (v, d = 1) => v == null ? "–" : fmt(100 * v, d) + " %";
@@ -295,10 +295,16 @@ const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.s
   : `<span class="status st-kein_setup">Kein Setup · ${r.missing.length} Kriterien fehlen</span>`;
 const SETUP_KEYS = ["drawdown", "no_crash", "structure", "flattening", "zone", "rsi_div", "rsi_range", "macd_below0", "macd_turn", "mbi", "crv"];
 const tvUrl = t => {
-  const m = t.match(/^(.*)\.(DE|L|PA|AS|SW|MC|MI|ST|CO|OL|HE|BR|VI|IR|LS|WA|AT)$/);
+  const m = t.match(/^(.*)\.([A-Z]+)$/);
   const ex = { DE: "XETR", L: "LSE", PA: "EURONEXT", AS: "EURONEXT", SW: "SIX", MC: "BME", MI: "MIL", ST: "OMXSTO", CO: "OMXCOP",
-               OL: "OSL", HE: "OMXHEX", BR: "EURONEXT", VI: "VIE", IR: "EURONEXT", LS: "EURONEXT", WA: "GPW", AT: "ATHEX" };
-  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(m ? `${ex[m[2]]}:${m[1]}` : t.replace("-", "."));
+               OL: "OSL", HE: "OMXHEX", BR: "EURONEXT", VI: "VIE", IR: "EURONEXT", LS: "EURONEXT", WA: "GPW", AT: "ATHEX",
+               TO: "TSX", T: "TSE", SS: "SSE", SZ: "SZSE", HK: "HKEX", KS: "KRX", KQ: "KRX", TW: "TWSE", TWO: "TPEX",
+               NS: "NSE", SI: "SGX", AX: "ASX", NZ: "NZX", BK: "SET", JK: "IDX", KL: "MYX", PS: "PSE" };
+  if (m && ex[m[2]]) {
+    const code = m[2] === "HK" ? m[1].replace(/^0+/, "") : m[2] === "TO" ? m[1].replace("-", ".") : m[1];
+    return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(`${ex[m[2]]}:${code}`);
+  }
+  return "https://www.tradingview.com/chart/?symbol=" + encodeURIComponent(t.replace("-", "."));
 };
 
 let data = null;

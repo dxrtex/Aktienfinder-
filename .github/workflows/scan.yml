@@ -64,6 +64,7 @@ jobs:
             site/data/results.json
             data/universe_us.csv
             data/universe_eu.csv
+            data/universe_asia.csv
     outputs:
       skip: ${{ steps.time.outputs.skip }}
 
