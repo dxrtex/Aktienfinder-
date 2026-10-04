@@ -255,15 +255,17 @@ def fetch_news(tickers: list[str], per: int = 4) -> dict[str, list[dict]]:
     """Jüngste Schlagzeilen je Aktie (Yahoo Finance). Stimmung nur grob per Stichwort."""
     import yfinance as yf
 
-    out = {}
+    out, errors = {}, []
     for t in tickers:
-        for attempt in range(2):
+        items = []
+        for attempt in range(2):           # 1. Ticker-News, 2. Suche (andere Yahoo-Schnittstelle)
             try:
-                items = yf.Ticker(t).news or []
+                items = (yf.Ticker(t).get_news(count=8) if attempt == 0 else yf.Search(t, max_results=1, news_count=8).news) or []
+            except Exception as exc:
+                errors.append(f"{t}: {exc!r}"[:160])
+                time.sleep(1)
+            if items:
                 break
-            except Exception:
-                items = []
-                time.sleep(1 + attempt)
         rows = []
         for it in items:
             cnt = it.get("content") or it
@@ -280,6 +282,8 @@ def fetch_news(tickers: list[str], per: int = 4) -> dict[str, list[dict]]:
         if rows:
             out[t] = rows[:per]
         time.sleep(0.3)
+    if errors:
+        print(f"Nachrichten: {len(errors)} Fehler, z. B. {errors[:3]}")
     return out
 
 
