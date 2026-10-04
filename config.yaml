@@ -51,10 +51,10 @@ support:                     # 2.3 Variante B
 
 rsi:                         # 2.4
   length: 14
-  pivot_len: 3
+  pivot_len: 2                # Pivot-Tiefs für die Divergenz (je 2 Kerzen links/rechts)
   lookback: 60
   t2_max_age: 10
-  t1_min_gap: 10             # T1 liegt 10 … 60 Tage vor T2
+  t1_min_gap: 3              # T1 liegt 3 … 60 Tage vor T2 (Test, vorher 10)
   t1_max_gap: 60
   classic_price_tol: 1.01    # Kurs T2 ≤ Kurs T1 × 1,01
   min_rsi_diff: 3.0          # RSI-Abstand in Punkten

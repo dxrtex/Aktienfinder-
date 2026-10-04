@@ -73,8 +73,8 @@ class Result:
 def find_rsi_divergence(low: pd.Series, r: np.ndarray, rc: SimpleNamespace):
     """Bullische RSI-Divergenz (2.4). Rückgabe: ((Art, T1, T2) oder None, jüngste Kurs-Tiefs ≤ 10 T.).
 
-    Pivot-Tiefs des Kurses (Länge 3) der letzten 60 Tage; T2 = jüngstes Tief (max. 10 Tage alt),
-    T1 = früheres Tief 10–60 Tage vor T2. Klassisch: Kurs T2 ≤ T1 × 1,01 und RSI T2 ≥ RSI T1 + 3.
+    Pivot-Tiefs des Kurses (Länge rsi.pivot_len) der letzten 60 Tage; T2 = jüngstes Tief (max. 10 Tage alt),
+    T1 = früheres Tief rsi.t1_min_gap–t1_max_gap Tage vor T2. Klassisch: Kurs T2 ≤ T1 × 1,01 und RSI T2 ≥ RSI T1 + 3.
     Versteckt: Kurs T2 > T1 und RSI T2 ≤ RSI T1 − 3. Klassisch hat Vorrang.
     """
     l = low.to_numpy(dtype=float)
@@ -244,7 +244,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     else:
         dv = "keine (jüngstes Tief " + (f"vom {df.index[recent[-1]].date():%d.%m.}" if recent else "älter als 10 T.") + ")"
     add("rsi_div", "RSI bullische Divergenz (klassisch/versteckt)", div is not None, dv,
-        "T2 ≤ 10 T. alt, T1 10–60 T. davor, RSI-Abstand ≥ 3 Punkte")
+        f"T2 ≤ {rc.t2_max_age} T. alt, T1 {rc.t1_min_gap}–{rc.t1_max_gap} T. davor, RSI-Abstand ≥ {de(rc.min_rsi_diff, 0)} Punkte")
     add("rsi_range", "RSI aktuell 28–48", rc.current_min <= r[-1] <= rc.current_max, de(r[-1], 1), "28–48")
     res.flags["div_t2_age"] = None if not div else n - 1 - div[2]
     res.flags["divergence"] = None if not div else {
