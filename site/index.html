@@ -132,6 +132,22 @@
   .details { font-size: 14px; color: var(--muted); background: var(--surface-2); border-radius: var(--radius-s); padding: 14px 16px; }
   .details ul { margin: 6px 0 0; padding-left: 18px; }
 
+  .verdict { flex: none; min-width: 64px; text-align: center; border-radius: 16px; padding: 8px 10px; background: var(--cb); color: var(--c); }
+  .verdict b { display: block; font-size: 24px; line-height: 1.1; } .verdict span { font-size: 12px; font-weight: 700; }
+  .ladder { width: 100%; height: auto; display: block; overflow: visible; }
+  .fig small { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .fig em.sub { display: block; font-style: normal; font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
+  .card.pos .fig b { font-size: 19px; }
+  .entry { font-size: 14px; border-radius: var(--radius-s); padding: 10px 14px; background: var(--cb); }
+  .entry b { color: var(--c); }
+  .chip.fac { font-size: 13px; padding: 5px 11px; } .chip.fac.pos { color: var(--up); } .chip.fac.neg { color: var(--red); }
+  .more-box { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; font-size: 14px; }
+  .more-box summary { cursor: pointer; color: var(--accent); font-weight: 600; }
+  .more-box h4 { margin: 12px 0 4px; font-size: 14px; }
+  .facts { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; } .facts li { margin: 3px 0; } .facts b { color: var(--text); }
+  .facts a { color: var(--text); }
+  .card.ctx { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
+
   /* Tabelle */
   .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
   table { border-collapse: collapse; width: 100%; min-width: 960px; font-size: 15px; }
@@ -638,7 +654,10 @@ function depotHtml() {
       <label class="btn ghost" style="cursor:pointer">Scalable-Export importieren<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="depCsv" hidden></label>
       <button class="btn ghost" data-dep="claude">Für Claude kopieren</button></div>
     ${depotMsg ? `<div class="tip tone-gray" style="margin-bottom:14px">${depotMsg}</div>` : ""}`;
+  if (!anaData) loadAnalysis();
   const cards = items.map(({ p, i, r, cur, nowEur, val, cost }) => {
+    const a = anaData && p.t && anaData.tickers[p.t];
+    if (a) return posCard(p, i, r, { ...a, cur: (r && r.cur) || "" });
     if (p.d) return turboCard(p, i, r);
     const sig = holdSignal(r), held = p.date ? Math.max(0, -daysUntil(p.date)) : null, ev = nextEvent(p.t);
     const g = val != null ? val - cost : null;
@@ -658,10 +677,149 @@ function depotHtml() {
     </article>`;
   }).join("");
   const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere den Transaktions-Export aus Scalable Capital (Web-Version → Transaktionen → Export).</div>`;
-  return head + sum + actions + form + empty + `<div class="grid">${cards}</div>`
+  return head + sum + depotContextHtml(list, items) + actions + form + empty + `<div class="grid">${cards}</div>`
     + `<div class="note" style="margin:16px 2px 0">Dein Depot wird nur auf diesem Gerät gespeichert (nicht im Internet). Kurse vom letzten Scan, Umrechnung in Euro zum Tageskurs${missingFx ? " – für einige Währungen fehlt der Wechselkurs" : ""}. Die Einschätzung ist rein technisch (Trend, EMAs, RSI) und keine Anlageberatung.</div>`;
 }
-// Turbo-/Knock-out-Zertifikat: Wert kennt Kairo nicht (keine Zertifikatskurse), aber den Basiswert
+// ---------- Positions-Analyse (Depot) ----------
+let anaData = null, anaLoading = null;
+const chartReady = {};
+function loadAnalysis() {
+  if (!anaLoading) anaLoading = fetch("data/analysis.json", { cache: "no-store" }).then(r => r.json())
+    .then(d => { anaData = d; if (state.sec === "depot") render(); }).catch(() => { anaData = { tickers: {}, market: {} }; });
+  return anaLoading;
+}
+function needChart(t) {
+  if (!t || chartReady[t] !== undefined) return chartReady[t] || null;
+  chartReady[t] = null;
+  loadChart(t).then(c => { chartReady[t] = c; if (state.sec === "depot") render(); }).catch(() => { chartReady[t] = false; });
+  return null;
+}
+// Einstieg bewerten: wo stand der Basiswert am Kauftag in seiner 20-Tage-Spanne, wie heiß war der RSI?
+function entryEval(c, date) {
+  if (!c || !date) return null;
+  let i = c.t.findIndex(d => d >= date); if (i < 0) i = c.t.length - 1;
+  if (i < 20) return null;
+  const hi = Math.max(...c.h.slice(i - 19, i + 1)), lo = Math.min(...c.l.slice(i - 19, i + 1)), u = c.c[i];
+  const pos = hi > lo ? (u - lo) / (hi - lo) : .5, r = c.rsi[i], e20 = c.e20[i], e50 = c.e50[i];
+  const atr = c.h.slice(i - 13, i + 1).reduce((s, h, k) => s + h - c.l[i - 13 + k], 0) / 14;
+  const ext = atr ? (u - e20) / atr : 0;
+  let tone, label;
+  if ((pos <= .35 && r <= 52) || (u > e50 && ext <= .3 && r <= 55)) { tone = "green"; label = "Guter Einstieg"; }
+  else if (pos >= .8 && (r >= 65 || ext >= 2)) { tone = "red"; label = "Später Einstieg"; }
+  else { tone = "yellow"; label = "Durchschnittlicher Einstieg"; }
+  const why = [`${pos <= .35 ? "nahe am" : pos >= .8 ? "nahe am" : "in der Mitte zwischen"} ${pos <= .35 ? "20-Tage-Tief" : pos >= .8 ? "20-Tage-Hoch" : "20-Tage-Tief und -Hoch"}`,
+               `RSI ${fmt(r, 0)}`, `${fmt(Math.abs(ext), 1)} ATR ${ext >= 0 ? "über" : "unter"} der EMA 20`];
+  return { tone, label, text: why.join(", "), u, date: c.t[i] };
+}
+// Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
+function turboModel(p, a, ent) {
+  const d = p.d, fx = fxEur[a.cur] ?? (a.cur === "EUR" ? 1 : null);
+  if (!fx || !ent || (d.cur && d.cur !== a.cur)) return null;
+  const sgn = d.dir === "long" ? 1 : -1, inner0 = sgn * (ent.u - d.ko);
+  if (inner0 <= 0) return null;
+  let ratio = p.price / (inner0 * fx);
+  const pw = Math.pow(10, Math.round(Math.log10(ratio)));
+  if (Math.abs(ratio / pw - 1) < .25) ratio = pw;                // übliche Bezugsverhältnisse 1 · 0,1 · 0,01 …
+  const val = x => Math.max(0, sgn * (x - d.ko)) * ratio * fx;
+  return { ratio, val, now: val(a.c) };
+}
+const VERDICT = s => s >= 65 ? ["green", "Gut"] : s >= 45 ? ["yellow", "Neutral"] : ["red", "Kritisch"];
+function ladderSvg(pts, cur) {
+  const vals = pts.map(x => x.v).filter(v => v != null && isFinite(v));
+  const lo = Math.min(...vals), hi = Math.max(...vals), W = 600, H = 92, pad = 34;
+  const X = v => pad + (W - 2 * pad) * (hi > lo ? (v - lo) / (hi - lo) : .5);
+  const col = { ko: "var(--red)", stop: "#ff9f43", entry: "var(--muted)", now: "var(--text)", tp: "var(--up)" };
+  const sorted = pts.filter(x => x.v != null && isFinite(x.v)).sort((a, b) => a.v - b.v);
+  const stopP = pts.find(x => x.k === "stop"), tpLast = pts.filter(x => x.k === "tp").pop();
+  let body = `<line x1="${pad}" x2="${W - pad}" y1="46" y2="46" stroke="var(--surface-3)" stroke-width="6" stroke-linecap="round"/>`;
+  if (stopP && tpLast) body += `<line x1="${X(stopP.v)}" x2="${X(a_now(pts))}" y1="46" y2="46" stroke="rgba(255,69,58,.45)" stroke-width="6"/>`
+    + `<line x1="${X(a_now(pts))}" x2="${X(tpLast.v)}" y1="46" y2="46" stroke="rgba(48,209,88,.45)" stroke-width="6"/>`;
+  sorted.forEach((x, k) => {
+    const up = k % 2 === 0, cx = X(x.v), big = x.k === "now";
+    body += `<circle cx="${cx}" cy="46" r="${big ? 8 : 5.5}" fill="${col[x.k]}" ${big ? 'stroke="var(--bg)" stroke-width="3"' : ""}/>`
+      + `<text x="${cx}" y="${up ? 24 : 80}" text-anchor="middle" font-size="19" font-weight="${big ? 700 : 500}" fill="${col[x.k]}">${esc(x.l)}</text>`;
+  });
+  return `<svg class="ladder" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kursleiter">${body}</svg>`;
+}
+const a_now = pts => pts.find(x => x.k === "now").v;
+function posCard(p, i, r, a) {
+  const d = p.d, short = d && d.dir === "short", cur = a.cur || (r && r.cur) || "";
+  const c = needChart(p.t), ent = entryEval(c, p.date), held = p.date ? Math.max(0, -daysUntil(p.date)) : null;
+  const tm = d && !short ? turboModel(p, { ...a, cur }, ent) : null;
+  const fxC = fxEur[cur] ?? (cur === "EUR" ? 1 : null);
+  // Gewinn/Verlust: Aktie direkt, Turbo über das geschätzte Bezugsverhältnis
+  const nowPos = d ? (tm ? tm.now : null) : (fxC ? a.c * fxC : null);
+  const pl = nowPos != null ? nowPos / p.price - 1 : null;
+  let score = a.score;
+  const dist = d ? (short ? (d.ko - a.c) / a.c : (a.c - d.ko) / a.c) : null;
+  const warn = [];
+  if (dist != null && dist < .05) { score = Math.min(score, 30); warn.push(`Nur ${pct(dist)} bis zum Knock-out!`); }
+  let stop = a.stop.p, stopNote = "";
+  if (d && !short && stop <= d.ko) { stopNote = " · liegt unter der K.-o.-Schwelle – der Knock-out käme zuerst"; }
+  const [tone, vlabel] = short ? ["gray", "Short"] : VERDICT(score);
+  const facs = a.fac.slice().sort((x, y) => Math.abs(y.s) - Math.abs(x.s));
+  const pos = facs.filter(f => f.s > 0).map(f => f.l), neg = facs.filter(f => f.s < 0).map(f => f.l);
+  const summary = short ? "Analyse aus Long-Sicht – für deine Short-Position umgekehrt lesen."
+    : `${pos.length ? "Stark: " + pos.slice(0, 3).join(", ") : "Kaum Stärken"}${neg.length ? " · Schwach: " + neg.slice(0, 3).join(", ") : ""}.`;
+  const pts = [{ k: "now", v: a.c, l: "Jetzt" }, { k: "stop", v: stop, l: "Stop" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }, { k: "tp", v: a.tp[1].p, l: "Ziel 2" }];
+  if (ent) pts.push({ k: "entry", v: ent.u, l: "Kauf" });
+  if (d && Math.abs(d.ko / a.c - 1) < .6) pts.push({ k: "ko", v: d.ko, l: "K.-o." });
+  const certAt = x => tm ? ` · Zertifikat ≈ ${fmt(tm.val(x))} €` : "";
+  const chance = pr => pr >= .6 ? "realistisch" : pr >= .4 ? "möglich" : "ambitioniert";
+  const tpFig = (t, k) => `<div class="fig"><span>Ziel ${k}${short ? "" : ` · Chance ${pct(t.prob, 0)}`}</span><b class="up">${fmt(t.p)} <small>+${pct(t.pct, 0)}</small></b>
+      <em class="sub">${short ? "" : `${chance(t.prob)}, ~${t.days} Handelstage · `}${esc(t.src)}${certAt(t.p)}</em></div>`;
+  const ev = nextEvent(p.t);
+  const inRes = data.results.some(x => x.ticker === p.t);
+  return `<article class="card pos">
+    <div class="card-top"><div class="card-title"><h2>${esc(d ? d.under : (p.n || (r && r.n) || p.t))}</h2>
+      <div class="meta">${d ? `<span class="pill" style="margin:0 4px 0 0">${short ? "Turbo Short" : "Turbo Long"}</span>` : ""}${esc(p.t)}${p.isin ? " · " + esc(p.isin) : ""} · ${fmt(p.qty, p.qty % 1 ? 4 : 0)} Stück${p.date ? ` · seit ${dateDE(p.date)} (${held} T.)` : ""}</div></div>
+      <div class="verdict tone-${tone}"><b>${short ? "–" : score}</b><span>${vlabel}</span></div></div>
+    <div class="tip tone-${tone}" style="margin:0"><b class="t">${warn.length ? esc(warn.join(" ")) : vlabel === "Gut" ? "Steht gut da" : vlabel === "Neutral" ? "Gemischtes Bild" : vlabel === "Kritisch" ? "Steht schlecht da" : "Short-Position"}</b>${esc(summary)}</div>
+    ${ladderSvg(pts)}
+    <div class="figures">
+      <div class="fig"><span>${d ? "Position (Schätzung)" : "Position"}</span><b class="${(pl ?? 0) >= 0 ? "up" : "down"}">${pl != null ? (pl >= 0 ? "+" : "") + pct(pl) : "–"}</b>
+        <em class="sub">${nowPos != null ? `≈ ${fmt(nowPos * p.qty)} € · Einstand ${fmt(p.price * p.qty)} €` : `Einstand ${fmt(p.price * p.qty)} €`}</em></div>
+      <div class="fig"><span>Kurs ${esc(d ? d.under : "")}</span><b>${fmt(a.c)} <small>${esc(cur)}</small></b>
+        <em class="sub">${ent ? `Kauf bei ≈ ${fmt(ent.u)} → ${(a.c / ent.u - 1) >= 0 ? "+" : ""}${pct(a.c / ent.u - 1)}` : `1 Mon. ${a.chg1m != null ? (a.chg1m >= 0 ? "+" : "") + pct(a.chg1m) : "–"}`}</em></div>
+      <div class="fig"><span>Stop-Loss</span><b class="down">${fmt(stop)} <small>${pct(a.stop.pct, 1)}</small></b>
+        <em class="sub">knapp unter ${esc(a.stop.src)}${certAt(stop)}${stopNote}</em></div>
+      ${d ? `<div class="fig"><span>Abstand Knock-out</span><b class="${dist == null ? "" : dist < .12 ? "down" : "up"}">${dist != null ? pct(dist) : "–"}</b>
+        <em class="sub">K.-o. ${fmt(d.ko)} ${esc(d.cur || "")} · Hebel ca. ${dist ? fmt(1 / Math.abs(dist), 1) + "×" : "–"}${r && r.atr ? ` · ${fmt(Math.abs(a.c - d.ko) / r.atr, 1)} Tagesspannen` : ""}</em></div>` : ""}
+      ${tpFig(a.tp[0], 1)}${tpFig(a.tp[1], 2)}
+    </div>
+    ${ent ? `<div class="entry tone-${ent.tone}"><b>${ent.label}</b> am ${dateDE(ent.date)}: ${esc(ent.text)}.</div>` : p.date ? `<div class="note" style="margin:0">Einstieg wird bewertet, sobald die Kursdaten geladen sind …</div>` : ""}
+    <div class="chips">${facs.map(f => `<span class="chip fac ${f.s > 0 ? "pos" : f.s < 0 ? "neg" : ""}">${f.s > 0 ? "▲" : f.s < 0 ? "▼" : "●"} ${esc(f.l)}</span>`).join("")}</div>
+    <details class="more-box"><summary>Details: alle Faktoren${a.news ? ", Nachrichten" : ""}, Marken</summary>
+      <ul class="facts">${facs.map(f => `<li><b class="${f.s > 0 ? "up" : f.s < 0 ? "down" : ""}">${esc(f.l)}:</b> ${esc(f.t)}</li>`).join("")}</ul>
+      ${a.news ? `<h4>Nachrichten</h4><ul class="facts">${a.news.map(n => `<li><span class="${n.tone > 0 ? "up" : n.tone < 0 ? "down" : "muted"}">${n.tone > 0 ? "▲" : n.tone < 0 ? "▼" : "●"}</span> ${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title)} <span class="muted">· ${esc(n.pub || "")} ${n.date ? dateDE(n.date) : ""}</span></li>`).join("")}</ul>` : ""}
+      <h4>Marken</h4><ul class="facts">
+        ${a.res.map(x => `<li><b class="up">Widerstand ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
+        ${a.sup.map(x => `<li><b class="down">Unterstützung ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
+        <li>Tagesschwankung ≈ ${fmt(a.sigma)} ${esc(cur)} (${pct(a.sigma / a.c)})${a.vola ? ` · Volatilität ${pct(a.vola, 0)} p. a.` : ""}</li></ul>
+      <div class="note" style="margin:6px 0 0">Chance „Ziel vor Stop“: Kurs als Zufallspfad mit leichter Trend-Drift – eine Faustregel, keine Prognose. Nachrichten-Ton: grobe Stichwortauswertung englischer Schlagzeilen.${d ? " Zertifikatswerte geschätzt aus Kaufkurs, Kurs des Basiswerts am Kauftag und K.-o.-Schwelle (ohne Spread/Finanzierungskosten)." : ""}</div>
+    </details>
+    ${ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(ev.date)}</b> – ${(CAL_KIND[ev.kind] || [])[2] || ""}${ev.estimate ? " (geschätzt)" : ""}${d ? " · mit Hebel besonders riskant" : ""}</div>` : ""}
+    <div class="row-actions">${inRes ? `<button class="mini-btn" data-open="${esc(p.t)}">Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>
+      ${d ? "" : `<button class="mini-btn" data-dep="edit" data-i="${i}">Bearbeiten</button>`}<button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
+  </article>`;
+}
+// Kopfzeile Depot: Marktlage + Termine der nächsten 14 Tage
+function depotContextHtml(list, items) {
+  const m = (anaData && anaData.market) || {}, reg = m.regime;
+  const idx = ["^GSPC", "^NDX", "^GDAXI", "^VIX"].filter(k => m[k]).map(k => `<span class="chip fac ${m[k].tone === "green" ? "pos" : m[k].tone === "red" ? "neg" : ""}">${esc(m[k].name)} ${k === "^VIX" ? fmt(m[k].c, 0) : (m[k].chg1m >= 0 ? "+" : "") + pct(m[k].chg1m, 0)}</span>`).join("");
+  const mine = new Set(list.map(p => p.t));
+  const evs = (calData || []).filter(e => daysUntil(e.date) >= 0 && daysUntil(e.date) <= 14 && (e.kind === "macro" || (e.ticker && mine.has(e.ticker) && e.kind === "earnings")))
+    .slice(0, 6).map(e => `<li><b>${dateDE(e.date)}</b> ${esc(e.kind === "macro" ? e.title : (e.name || e.ticker) + " – Quartalszahlen")}</li>`).join("");
+  const cnt = { green: 0, yellow: 0, red: 0 };
+  items.forEach(x => { const a = anaData && anaData.tickers[x.p.t]; if (a && !(x.p.d && x.p.d.dir === "short")) cnt[VERDICT(a.score)[0]]++; });
+  if (!reg && !evs) return "";
+  return `<div class="card ctx">
+    ${reg ? `<div class="tip tone-${reg.tone}" style="margin:0"><b class="t">Marktlage: ${esc(reg.label)}</b>${cnt.green + cnt.yellow + cnt.red ? `Deine Positionen: ${cnt.green} gut · ${cnt.yellow} neutral · ${cnt.red} kritisch.` : ""}</div>` : ""}
+    ${idx ? `<div class="chips">${idx}</div>` : ""}
+    ${evs ? `<div><b style="font-size:14px">Wichtige Termine (14 Tage)</b><ul class="facts">${evs}</ul></div>` : ""}
+  </div>`;
+}
+// Turbo-/Knock-out-Zertifikat ohne Analyse (Basiswert nicht auf der Watchlist) (keine Zertifikatskurse), aber den Basiswert
 function turboCard(p, i, r) {
   const d = p.d, held = p.date ? Math.max(0, -daysUntil(p.date)) : null, ev = p.t ? nextEvent(p.t) : null;
   const same = r && (!d.cur || d.cur === r.cur);
@@ -829,9 +987,13 @@ document.addEventListener("click", e => {
     if (depotEdit >= 0) list[depotEdit] = entry; else list.push(entry);
     depotSave(list); depotEdit = null;
   } else if (act === "claude") {
-    const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r);
+    const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r), a = anaData && p.t && anaData.tickers[p.t];
+      const extra = a ? ` | Kairo-Analyse ${a.score}/100 (${VERDICT(a.score)[1]}); Stop ${fmt(a.stop.p)}; Ziel 1 ${fmt(a.tp[0].p)} (Chance ${pct(a.tp[0].prob, 0)}), Ziel 2 ${fmt(a.tp[1].p)}; `
+        + a.fac.map(f => `${f.l}: ${f.t}`).join("; ") : "";
+      return base(p, r, s) + extra; });
+    function base(p, r, s) {
       if (p.d) return `${p.n} (ISIN ${p.isin}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €; Basiswert ${p.d.under} aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}, K.-o. ${fmt(p.d.ko)} ${p.d.cur || ""}; Kairo Basiswert: ${s.title}`;
-      return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; });
+      return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; }
     const txt = "Mein Depot (Kairo, Stand " + new Date().toLocaleDateString("de-DE") + "):\n" + lines.join("\n");
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { depotMsg = "Kopiert – einfach im Chat mit Claude einfügen."; render(); },
       () => { depotMsg = "Kopieren nicht möglich. Text:<br><pre style='white-space:pre-wrap'>" + esc(txt) + "</pre>"; render(); });

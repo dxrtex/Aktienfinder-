@@ -29,10 +29,16 @@ Leiste unten: **Scanner** (Unterpunkte Treffer, Tabelle, Fast-Treffer, Filter), 
   (`backend/macro.py`, Ersatz: `data/macro_events.json`) – und der große Verfall. Fehlende Quartalstermine von Watchlist-Aktien
   werden einzeln nachgeholt.
   Datei: `site/data/calendar.json`.
-- **Depot:** Positionen von Hand oder per CSV-Import (Transaktions-Export aus Scalable Capital) – gespeichert nur im
-  Browser des Geräts. Bewertung in Euro zum Tageskurs, technische Einschätzung je Position (Trend über/unter EMA 20/50/200,
-  Nähe zum Hoch, RSI) mit technischem Stop und nächstem Termin. „Für Claude kopieren“ erzeugt einen Text fürs Gespräch.
-  Eine direkte Verbindung zu Scalable Capital gibt es nicht (keine offizielle Schnittstelle).
+- **Depot:** Positionen von Hand oder per Import des Transaktions-Exports aus Scalable Capital (Excel, auch mit
+  Endung .csv) – gespeichert nur im Browser des Geräts. Turbo-/Knock-out-Zertifikate werden über den Basiswert bewertet.
+  Für Aktien mit Detailseite (Watchlist, Treffer, Fast-Treffer) gibt es die **Positions-Analyse** aus
+  `site/data/analysis.json` (`backend/analysis.py`): Urteil 0–100 aus Trend, MACD, RSI, MBI, Divergenz, Fibonacci,
+  relativer Stärke, Branche (Sektor-ETF), Gesamtmarkt (S&P 500, VIX), Quartalszahlen und Schlagzeilen; Stop-Loss unter
+  der nächsten Unterstützung (≥ 1 ATR entfernt), zwei Ziele an Widerständen bzw. Fib-Extensionen mit „Chance vor Stop“
+  (Zufallspfad mit leichter Trend-Drift) und typischer Dauer; Kursleiter mit K.-o., Stop, Kauf, Kurs und Zielen;
+  Bewertung des Einstiegs (Lage in der 20-Tage-Spanne, RSI, Abstand zur EMA 20). Bei Turbos schätzt die App das
+  Bezugsverhältnis aus dem Kaufkurs und rechnet Stop/Ziele in Zertifikatskurse um. Eine direkte Verbindung zu Scalable
+  Capital gibt es nicht (keine offizielle Schnittstelle).
 
 ## Volatilität
 Zu jeder Aktie wird die **historische Volatilität** berechnet: Standardabweichung der Tagesrenditen der letzten 30 Tage,
