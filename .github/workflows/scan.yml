@@ -52,9 +52,6 @@ jobs:
       - name: Scan
         if: steps.time.outputs.skip == 'false'
         run: python -m backend.run_scan
-      - name: Vergleich mit den alten Divergenz-Regeln (nur Test-Branch)
-        if: steps.time.outputs.skip == 'false' && github.ref != 'refs/heads/main'
-        run: python -m backend.compare rsi.t1_min_gap=10 rsi.pivot_len=3 rsi.pivot_tolerance=0
       - uses: actions/upload-pages-artifact@v3
         if: steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
         with:

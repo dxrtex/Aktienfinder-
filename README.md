@@ -44,7 +44,8 @@ Die Website zeigt die aktiven Werte unter **Einstellungen**.
 | Kurz-Hinweis je Aktie für die Suche | `backend/hints.py` |
 | Universum (Nordamerika, Westeuropa, Asien/Pazifik ab 2 Mrd. USD) | `backend/universe.py` → `data/universe_us.csv`, `data/universe_eu.csv`, `data/universe_asia.csv` |
 | Täglicher Scan → `site/data/` (inkl. Watchlist aus `data/watchlist.json`) | `backend/run_scan.py` |
-| Regressionstest mit den 5 Beispielen | `backend/regression.py` |
+| Regressionstest mit den 5 Beispielen, Rückblick (`--timeline TICKER`) | `backend/regression.py` |
+| Parameter-Vergleich auf dem Kurs-Cache (`python -m backend.compare rsi.t1_min_gap=10`) | `backend/compare.py` |
 | Website (Treffer, Tabelle, Fast-Treffer, Detailseite, Einstellungen, CSV/Excel) | `site/index.html` |
 
 Der Scan läuft **werktags um 22:30 Uhr (Berlin)** über GitHub Actions (`.github/workflows/scan.yml`) und veröffentlicht

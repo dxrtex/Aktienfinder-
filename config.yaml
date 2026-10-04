@@ -51,11 +51,11 @@ support:                     # 2.3 Variante B
 
 rsi:                         # 2.4
   length: 14
-  pivot_len: 2                # Pivot-Tiefs für die Divergenz (je 2 Kerzen links/rechts; vorher 3)
-  pivot_tolerance: 0.005      # fast gleich tiefes Tief (≤ 0,5 % darüber, Doppelboden) zählt als eigenes Tief (vorher 0)
+  pivot_len: 2                # Pivot-Tiefs für die Divergenz (je 2 Kerzen links/rechts)
+  pivot_tolerance: 0.005      # fast gleich tiefes Tief (≤ 0,5 % darüber, Doppelboden) zählt als eigenes Tief
   lookback: 60
-  t2_max_age: 10             # jedes Tief der letzten 10 Tage kann T2 sein (vorher nur das jüngste)
-  t1_min_gap: 2              # T1 liegt 2 … 60 Tage vor T2 (Test, vorher 10)
+  t2_max_age: 10             # jedes Tief der letzten 10 Tage kann T2 sein
+  t1_min_gap: 2              # T1 liegt 2 … 60 Tage vor T2
   t1_max_gap: 60
   classic_price_tol: 1.01    # Kurs T2 ≤ Kurs T1 × 1,01
   min_rsi_diff: 3.0          # RSI-Abstand in Punkten
