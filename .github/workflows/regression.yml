@@ -30,6 +30,8 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q backend/tests
       - run: python -m backend.regression --out regression.md
+      - name: Diagnose Termine
+        run: python -m backend.debug_dates || true
       - name: Rückblick
         run: python -m backend.regression --timeline "${{ inputs.timeline || 'TUI1.DE' }}" --days "${{ inputs.days || '20' }}"
       - uses: actions/upload-artifact@v4
