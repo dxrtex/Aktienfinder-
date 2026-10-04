@@ -147,6 +147,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
         "≥ 12 %")
     daily = c[-cc.crash_lookback:] / c[-cc.crash_lookback - 1:-1] - 1
     worst = float(daily.min())
+    res.flags["crash_age"] = int(len(daily) - 1 - int(np.argmin(daily)))
     add("no_crash", "Pullback statt Crash (max. Tagesverlust 10 T.)", worst > -cc.crash_max_daily_loss,
         pct(worst), "> −25 %")
     below = close < e20[-1] and close < e50[-1]
@@ -221,6 +222,14 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     wick = np.minimum(o[-k:], c[-k:]) - l[-k:]
     in_band = lambda x: any(lo * 0.99 <= x <= hi * 1.01 for lo, hi in bands)
     wicks = int(sum(1 for i in range(k) if rng[i] > 0 and wick[i] >= cc.wick_min_ratio * rng[i] and in_band(l[-k + i])))
+    # Schätzung für den Hinweis: nach wie vielen Seitwärts-Kerzen (Spanne ± ½ ATR um den Schluss) wäre die Spanne klein genug
+    flat_eta = k
+    for j in range(1, k + 1):
+        hi_, lo_ = max(h[-(k - j):].max() if j < k else -np.inf, close + a14[-1] / 2), min(l[-(k - j):].min() if j < k else np.inf, close - a14[-1] / 2)
+        if hi_ - lo_ < limit:
+            flat_eta = j
+            break
+    res.flags.update(flat_ok=bool(span < limit or wicks >= cc.wick_min_count), flat_eta=0 if span < limit else flat_eta)
     add("flattening", "Abflachung der letzten 10 Kerzen", span < limit or wicks >= cc.wick_min_count,
         f"Spanne {de(span)} vs. Grenze {de(limit)}; {wicks} Lunten-Kerzen in der Zone",
         "Spanne < 1,5 × ATR × √10 oder ≥ 2 lange untere Lunten")
@@ -237,6 +246,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     add("rsi_div", "RSI bullische Divergenz (klassisch/versteckt)", div is not None, dv,
         "T2 ≤ 10 T. alt, T1 10–60 T. davor, RSI-Abstand ≥ 3 Punkte")
     add("rsi_range", "RSI aktuell 28–48", rc.current_min <= r[-1] <= rc.current_max, de(r[-1], 1), "28–48")
+    res.flags["div_t2_age"] = None if not div else n - 1 - div[2]
     res.flags["divergence"] = None if not div else {
         "kind": div[0], "t1": str(df.index[div[1]].date()), "t2": str(df.index[div[2]].date()),
         "price_t1": l[div[1]], "price_t2": l[div[2]], "rsi_t1": r[div[1]], "rsi_t2": r[div[2]]}
@@ -267,12 +277,15 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
         mv += "; Fehlsignal (nach Kreuz wieder fallend)"
     add("macd_turn", "MACD dreht (Kreuz ≤ 7 T. oder Histogramm steigt Richtung 0)", bool((a_ok or b_ok) and not failed),
         mv, "(a) Kreuz ≤ 7 T. oder (b) ≥ 4 T. steigend und ≤ 25 % des Tiefs")
-    res.flags.update(macd_cross_done=bool(a_ok), macd_cross_age=cross_age, macd_hist=mh[-1],
+    res.flags.update(macd_cross_done=bool(a_ok), macd_cross_age=cross_age, macd_hist=mh[-1], macd_failed=bool(failed),
+                     macd_slope=float(np.mean(np.diff(mh[-4:]))), macd_rising=bool(rising), ema20_falling=bool(falling),
                      macd_divergence=bool(div and ml[div[2]] > ml[div[1]]))
 
     # ---------- 2.6 MBI ----------
     bc = cfg.mbi
     x_ok, xv = False, "kein grünes X in den letzten 15 Kerzen"
+    all_x = [i for i in range(2, n) if gx[i]]
+    res.flags.update(mbi_x_age=n - 1 - all_x[-1] if all_x else None, mbi_new_peak=False)
     for ix in reversed([i for i in range(max(2, n - bc.x_max_age), n) if gx[i]]):
         peak = float(lo_b[ix - 1])
         above_ref = peak > bound[ix - 1]
@@ -280,7 +293,10 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
         new_peak = float(np.nanmax(lo_b[ix:])) > peak
         xv = (f"grünes X vor {n - 1 - ix} T., Spitze {de(peak, 0)} (Linie {de(bound[ix - 1], 0)}), "
               f"jetzt rot {de(lo_b[-1], 0)} / grün {de(up_b[-1], 0)}" + ("; neue höhere rote Spitze" if new_peak else ""))
-        if above_ref and fading and not new_peak:
+        ok_x = above_ref and fading and not new_peak
+        if ok_x or ix == all_x[-1]:                 # Hinweis: genutztes bzw. jüngstes X beschreiben
+            res.flags.update(mbi_x_age=n - 1 - ix, mbi_new_peak=bool(new_peak), mbi_above_ref=bool(above_ref))
+        if ok_x:
             x_ok = True
             break
     add("mbi", "MBI: grünes X auf roter Spitze, Verkaufsdruck läuft aus", x_ok, xv,

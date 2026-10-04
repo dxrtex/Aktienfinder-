@@ -3,6 +3,7 @@
 Ausgabe:
   site/data/results.json        Treffer + Fast-Treffer (Kriterien, Score, Trade-Plan, Zone)
   site/data/charts/<TICKER>.json Chartdaten je Treffer/Fast-Treffer (Kerzen, EMAs, RSI, MACD, MBI)
+  site/data/search.json         Suchindex: alle geprüften Aktien mit Kurz-Hinweis (backend/hints.py)
 
 Aufruf:  python -m backend.run_scan [--tickers UBER,TUI1.DE] [--end 2026-10-03]
 """
@@ -20,6 +21,7 @@ import pandas as pd
 
 from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
+from .hints import hint
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
@@ -85,6 +87,15 @@ def load_watchlist() -> dict[str, str]:
     return {tickers[0]: name for name, tickers in raw.items() if not name.startswith("_") and tickers}
 
 
+def search_row(res, meta: dict, h: dict) -> dict:
+    """Kompakte Zeile für den Suchindex (alle Aktien)."""
+    return _clean({"t": res.ticker, "n": meta.get("name") or res.ticker, "r": meta.get("region") or region_of(res.ticker),
+                   "x": meta.get("exchange") or "", "c": round(res.close, 4), "cur": res.flags.get("currency"),
+                   "s": "hit" if res.passed else "fast" if res.fast_hit else "",
+                   "m": sum(c.ok for c in res.criteria if c.key not in ("cap", "liquidity", "price", "history")),
+                   "tone": h["tone"], "title": h["title"], "text": h["text"], "d": h["days"], "dl": h["days_label"]})
+
+
 def result_row(res, meta: dict) -> dict:
     div = res.flags.get("divergence") or {}
     fib, sup = res.zone.get("fib"), res.zone.get("support")
@@ -107,7 +118,7 @@ def result_row(res, meta: dict) -> dict:
         "criteria": [{"key": c.key, "label": c.label, "ok": c.ok, "value": c.value, "threshold": c.threshold}
                      for c in res.criteria],
         "bonuses": [{"label": k, "points": v} for k, v in res.bonuses],
-        "plan": res.plan, "zone": res.zone, "flags": {k: v for k, v in res.flags.items() if k != "divergence"},
+        "hint": hint(res), "plan": res.plan, "zone": res.zone, "flags": {k: v for k, v in res.flags.items() if k != "divergence"},
         "div": div,
     })
 
@@ -137,6 +148,7 @@ def main(argv=None) -> int:
     print(f"Kurse geladen: {len(data)}")
 
     results, stats = [], {"universe": len(tickers), "loaded": len(data), "errors": 0}
+    search = {}
     for t, df in data.items():
         m = meta.get(t, {})
         info = {"currency": m.get("currency"), "market_cap_usd": m.get("market_cap_usd")}
@@ -146,6 +158,10 @@ def main(argv=None) -> int:
             stats["errors"] += 1
             print(f"{t}: Fehler {exc!r}")
             continue
+        try:
+            search[t] = search_row(res, m, hint(res))
+        except Exception as exc:
+            print(f"{t}: Hinweis-Fehler {exc!r}")
         if res.passed or res.fast_hit or m.get("in_watchlist"):
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
@@ -163,6 +179,7 @@ def main(argv=None) -> int:
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
+        search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
@@ -174,6 +191,9 @@ def main(argv=None) -> int:
     SITE.mkdir(parents=True, exist_ok=True)
     with open(SITE / "results.json", "w", encoding="utf-8") as f:
         json.dump(_clean(out), f, ensure_ascii=False, separators=(",", ":"))
+    with open(SITE / "search.json", "w", encoding="utf-8") as f:
+        json.dump({"generated": out["generated"], "rows": sorted(search.values(), key=lambda r: r["n"].lower())},
+                  f, ensure_ascii=False, separators=(",", ":"))
     print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Fehler: {stats['errors']}, "
           f"Dauer {stats['duration_s']} s")
     for r in rows[:30]:
