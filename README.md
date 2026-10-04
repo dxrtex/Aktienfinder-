@@ -21,11 +21,10 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
 Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
-## Schwankung (Volatilität)
-Wie stark bewegt sich die Aktie typischerweise **in einem Monat**? Berechnet aus den Tagesrenditen des letzten Jahres
-(Standardabweichung × √21). Beispiel „± 25 %“: In etwa 2 von 3 Monaten bewegt sich die Aktie um bis zu 25 % rauf oder
-runter, in starken Monaten auch deutlich mehr. Kein Pflichtkriterium – nur Filter (ruhig < 10 %, mittel 10–20 %,
-stark 20–30 %, sehr stark > 30 %), Sortierung und Tabellenspalte. Zeitraum: `volatility.days`.
+## Volatilität
+Zu jeder Aktie wird die **historische Volatilität** berechnet: Standardabweichung der Tagesrenditen der letzten 30 Tage,
+hochgerechnet aufs Jahr (× √252), dazu die Ø Tagesspanne (ATR 14 in % vom Kurs). Kein Pflichtkriterium – nur Filter
+(niedrig < 30 %, mittel 30–50 %, hoch 50–80 %, sehr hoch > 80 %), Sortierung und Tabellenspalte. Zeitraum: `volatility.days`.
 
 ## Suche mit Kurz-Hinweis
 Die Suche oben findet **jede geprüfte Aktie** (nicht nur Treffer) und zeigt einen kurzen Hinweis, wo sie im Setup steht,
