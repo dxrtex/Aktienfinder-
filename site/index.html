@@ -199,6 +199,10 @@
   table.pos-t td small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
   table.pos-t td, table.pos-t th { white-space: nowrap; }
   .entry-d { margin-top: 10px; } .entry-d .th { font-size: 13px; }
+  .linkbtn { display: block; margin-left: auto; margin-top: 3px; background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; }
+  table.ord td small { display: block; font-size: 11.5px; color: var(--muted); }
+  table.ord td, table.ord th { white-space: nowrap; } table.ord tr.sl td b { color: var(--red); } table.ord tr.tp td b { color: var(--up); }
+  table.ord td[rowspan] b { color: var(--text) !important; }
   .grid.one { grid-template-columns: 1fr !important; }
   .card.ctx { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -774,14 +778,18 @@ function entryEval(c, date) {
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
 function turboModel(p, a, ent) {
   const d = p.d, fx = fxEur[a.cur] ?? (a.cur === "EUR" ? 1 : null);
-  if (!fx || !ent || (d.cur && d.cur !== a.cur)) return null;
-  const sgn = d.dir === "long" ? 1 : -1, inner0 = sgn * (ent.u - d.ko);
+  if (!fx || (d.cur && d.cur !== a.cur)) return null;
+  const sgn = d.dir === "long" ? 1 : -1;
+  // exakt: vom Nutzer eingetragener Zertifikatskurs (mit Kurs des Basiswerts zu dem Zeitpunkt); sonst Schätzung aus dem Kauf
+  const base = p.mark && p.markU ? { px: p.mark, u: p.markU, exact: true } : ent ? { px: p.price, u: ent.u, exact: false } : null;
+  if (!base) return null;
+  const inner0 = sgn * (base.u - d.ko);
   if (inner0 <= 0) return null;
-  let ratio = p.price / (inner0 * fx);
+  let ratio = base.px / (inner0 * fx);
   const pw = Math.pow(10, Math.round(Math.log10(ratio)));
-  if (Math.abs(ratio / pw - 1) < .25) ratio = pw;                // übliche Bezugsverhältnisse 1 · 0,1 · 0,01 …
+  if (Math.abs(ratio / pw - 1) < (base.exact ? .1 : .25)) ratio = pw;   // übliche Bezugsverhältnisse 1 · 0,1 · 0,01 …
   const val = x => Math.max(0, sgn * (x - d.ko)) * ratio * fx;
-  return { ratio, val, now: val(a.c) };
+  return { ratio, val, now: val(a.c), exact: base.exact };
 }
 const VERDICT = s => s >= 65 ? ["green", "Gut"] : s >= 45 ? ["yellow", "Neutral"] : ["red", "Kritisch"];
 // Alles, was eine Position ausmacht – einmal berechnet, von Übersicht und Karte genutzt
@@ -847,6 +855,8 @@ function groupPositions(items) {
     const atX = x => g.ms.reduce((s, m) => s + (m.valAt(x) ?? 0) * m.p.qty, 0);
     g.atStop = atX(stopX); g.atTp1 = atX(a.tp[0].p); g.atTp2 = atX(a.tp[1].p);
     g.risk = g.known ? Math.max(0, g.value - g.atStop) : null;
+    // ohne Stop-Loss: Turbos verlieren bis zum Knock-out den kompletten Wert
+    g.koRisk = g.known && g.ms.some(m => m.d && !m.short) ? g.ms.reduce((s, m) => s + (m.d ? m.nowPos * m.p.qty : 0), 0) : null;
     g.share = total ? g.invested / total : 0;
     g.koAtr = g.ko != null && a.atr ? (a.c - g.ko) / a.atr : null;
     g.crv = a.c > stopX ? (a.tp[0].p - a.c) / (a.c - stopX) : null;
@@ -925,7 +935,7 @@ function groupHtml(g) {
   const head = `<summary class="gsum">
       <div class="g1"><b class="gname">${esc(g.name)}</b><span class="muted">${g.ms.length > 1 ? `${g.ms.length} Zertifikate` : g.ms[0].d ? `Turbo ${g.ms[0].short ? "Short" : "Long"} ${fmt(g.ms[0].levNow, 1)}×` : "Aktie"} · ${pct(g.share, 0)} vom Einsatz</span></div>
       <div class="g2"><span class="muted">G/V</span><b class="${g.pl == null ? "" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnEur(g.value - g.invested) : "–"}</b><small class="${g.pl == null ? "muted" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnPct(g.pl) : "Wert unbekannt"}</small></div>
-      <div class="g2"><span class="muted">Risiko bis Stop</span><b class="down">${g.risk != null ? "−" + eur(g.risk) : "–"}</b><small class="muted">${g.koAtr != null ? `K.-o. in ${fmt(g.koAtr, 1)} TS` : ""}</small></div>
+      <div class="g2"><span class="muted">${g.koRisk != null ? "Risiko ohne Stop" : "Risiko bis Stop"}</span><b class="down">${g.koRisk != null ? "−" + eur(g.koRisk) : g.risk != null ? "−" + eur(g.risk) : "–"}</b><small class="muted">${g.koRisk != null && g.risk != null ? `mit Stop −${eur(g.risk)}` : ""}${g.koAtr != null ? ` · K.-o. in ${fmt(g.koAtr, 1)} TS` : ""}</small></div>
       <div class="g2"><span class="muted">Kaufgrund</span><b class="th tone-${th ? th.tone : "gray"}">${th ? th.label : "…"}</b><small class="muted">${th ? `${th.okN + (th.checks[0].ok ? 1 : 0)}/5 Signale` : ""}</small></div>
       <div class="gact tone-${act[1]}"><b>${esc(act[2])}</b><span>${esc(act[3])}</span></div>
     </summary>`;
@@ -949,12 +959,13 @@ function groupHtml(g) {
         return `<tr><td>${j + 1}</td><td><b>${m.p.date ? dateDE(m.p.date) : "–"}</b><small>${m.held != null ? `seit ${m.held} T. · ` : ""}${m.d ? `K.-o. ${fmt(m.d.ko)}` : "Aktie"}</small></td>
           <td class="num">${m.d ? fmt(m.levNow, 1) + "×" : "1×"}<small>${m.levBuy && m.d ? "Kauf " + fmt(m.levBuy, 1) + "×" : ""}</small></td>
           <td class="num">${eur(m.p.price * m.p.qty)}<small>${fmt(m.p.qty, 0)} × ${fmt(m.p.price)} €</small></td>
-          <td class="num">${m.nowPos != null ? eur(m.nowPos * m.p.qty) : "–"}<small>${m.nowPos != null ? fmt(m.nowPos) + " € je Stk." : ""}</small></td>
+          <td class="num">${m.nowPos != null ? eur(m.nowPos * m.p.qty) : "–"}<small>${m.nowPos != null ? fmt(m.nowPos) + " € je Stk." : ""}</small>${m.d ? `<button class="linkbtn" data-dep="mark" data-i="${m.i}">${m.tm && m.tm.exact ? `✓ exakt (${dateDE(m.p.markDate)})` : "Kurs eintragen"}</button>` : ""}</td>
           <td class="num ${(m.pl ?? 0) >= 0 ? "up" : "down"}">${sgnPct(m.pl)}</td>
           <td class="num up">${v1 != null ? eur(v1 * m.p.qty) : "–"}<small>${v1 != null ? fmt(v1) + " € je Stk." : ""}</small></td>
           <td>${m.ent ? `<span class="th tone-${m.ent.tone}">${m.ent.short}</span>` : "–"}</td></tr>`; }).join("")}
     </tbody></table></div>
-    <div class="note" style="margin:6px 2px 0">${g.ms.some(m => m.d) ? "Werte der Zertifikate geschätzt (Bezugsverhältnis aus Kaufkurs und Kurs des Basiswerts am Kauftag, ohne Spread). Open-End-Turbos kosten täglich Finanzierung – langes Warten verteuert die Position. " : ""}TS = typische Tagesschwankungen (ATR).</div></div>
+    <div class="note" style="margin:6px 2px 0">${g.ms.some(m => m.d) ? "Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag, ohne Spread) – mit „Kurs eintragen“ werden sie exakt. Open-End-Turbos kosten täglich Finanzierung – langes Warten verteuert die Position. " : ""}TS = typische Tagesschwankungen (ATR).</div></div>
+    ${ordersHtml(g)}
     ${ents.length ? `<details class="more-box"><summary>Einstiege im Detail</summary>${ents.map(m => `<div class="entry-d"><b>#${g.ms.indexOf(m) + 1} · ${dateDE(m.ent.date)} – <span class="th tone-${m.ent.tone}">${m.ent.label}</span></b>
       <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</details>` : ""}
     ${th ? `<details class="more-box"><summary>Indikatoren &amp; Marken</summary>
@@ -970,9 +981,30 @@ function groupHtml(g) {
   </div>`;
   return `<details class="card grp" data-grp="${esc(g.t)}" ${open ? "open" : ""}>${head}${body}</details>`;
 }
+// Fertige Orders für Scalable: Stop-Loss + zwei Limit-Verkäufe je Zertifikat
+function ordersHtml(g) {
+  const a = g.a, px = v => v == null ? "–" : fmt(v, v < 1 ? 3 : 2) + " €";
+  const rows = g.ms.filter(m => !m.short).map((m, j) => {
+    const q = m.p.qty, frac = m.levNow >= 4 ? 2 / 3 : 1 / 2, q1 = Math.min(q, Math.max(1, Math.round(q * frac))), q2 = q - q1;
+    const nr = g.ms.indexOf(m) + 1, tag = m.tm && m.tm.exact ? "" : m.d ? " ≈" : "";
+    const o = [];
+    if (g.stop != null) o.push(["Stop-Loss (Stop-Order)", q, m.valAt(g.stop), g.stop, "sl"]);
+    o.push(["Limit-Verkauf · Ziel 1", q1, m.valAt(a.tp[0].p), a.tp[0].p, "tp"]);
+    if (q2 > 0) o.push(["Limit-Verkauf · Ziel 2", q2, m.valAt(a.tp[1].p), a.tp[1].p, "tp"]);
+    return o.map((x, k) => `<tr class="${x[4]}">${k === 0 ? `<td rowspan="${o.length}"><b>#${nr}</b><small>${esc(m.p.isin || m.p.t)}</small></td>` : ""}
+      <td><b>${x[0]}</b></td><td class="num">${fmt(x[1], 0)}</td><td class="num"><b>${tag}${px(x[2])}</b></td><td class="num muted">${fmt(x[3])} ${esc(g.cur)}</td></tr>`).join("");
+  }).join("");
+  if (!rows) return "";
+  const est = g.ms.some(m => m.d && !(m.tm && m.tm.exact));
+  return `<div><div class="plan-h">Order-Vorschläge für Scalable</div>
+    ${g.stop == null ? `<div class="tip tone-red" style="margin:0 0 8px"><b class="t">Kein sinnvoller Stop möglich</b>Die nächste Unterstützung liegt unter dem Knock-out (${fmt(g.ko)}) – der K.-o. wirkt hier wie ein Stop. Position klein halten.</div>` : ""}
+    <div class="table-wrap plain"><table class="xplan ord"><thead><tr><th>Zertifikat</th><th>Order</th><th class="num">Stück</th><th class="num">Preis</th><th class="num">Basiswert</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note" style="margin:6px 2px 0">${est ? "≈ = geschätzter Zertifikatskurs – mit „Kurs eintragen“ (Tabelle oben) werden die Preise exakt. " : ""}Viele Broker sperren Stücke, die schon in einer Order stehen: dann zuerst den Stop-Loss setzen (Schutz geht vor) und bei Ziel 1 von Hand verkaufen – Kairo zeigt oben „Ziel 1 erreicht“, sobald es so weit ist. Nach Ziel 1 den Stop auf deinen Einstand nachziehen.</div></div>`;
+}
 function cockpitHtml(groups, items) {
   const inv = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
   const known = groups.filter(g => g.known), val = known.reduce((s, g) => s + g.value, 0), invK = known.reduce((s, g) => s + g.invested, 0);
+  const koRisk = groups.reduce((s, g) => s + (g.koRisk ?? 0), 0);
   const risk = groups.reduce((s, g) => s + (g.risk ?? 0), 0), big = groups.slice().sort((x, y) => y.share - x.share)[0];
   const urgent = groups.filter(g => g.urg >= 60);
   const m = (anaData && anaData.market) || {}, reg = m.regime;
@@ -980,7 +1012,7 @@ function cockpitHtml(groups, items) {
   return `<div class="cockpit">
     <div class="fig"><span>Eingesetzt</span><b>${eur(inv)}</b><em>${items.length} Positionen in ${groups.length + items.filter(x => !(anaData && x.p.t && anaData.tickers[x.p.t])).length} Werten</em></div>
     <div class="fig"><span>Wert (geschätzt)</span><b class="${val - invK >= 0 ? "up" : "down"}">${known.length ? eur(val) : "–"}</b><em>${known.length ? `${sgnEur(val - invK)} · ${sgnPct(invK ? val / invK - 1 : null, 1)}` : ""}</em></div>
-    <div class="fig"><span>Max. Verlust bis Stops</span><b class="down">${risk ? "−" + eur(risk) : "–"}</b><em>${val ? pct(risk / val, 0) + " vom aktuellen Wert" : ""}</em></div>
+    <div class="fig"><span>${koRisk ? "Risiko ohne Stop-Loss" : "Max. Verlust bis Stops"}</span><b class="down">${koRisk ? "−" + eur(koRisk) : risk ? "−" + eur(risk) : "–"}</b><em>${koRisk ? `bei Knock-out alles weg · mit Stops nur −${eur(risk)}` : val ? pct(risk / val, 0) + " vom aktuellen Wert" : ""}</em></div>
     <div class="fig"><span>Größter Klumpen</span><b class="${big && big.share > .35 ? "down" : ""}">${big ? pct(big.share, 0) : "–"}</b><em>${big ? esc(big.name) : ""}</em></div>
   </div>
   ${urgent.length ? `<div class="tip tone-${urgent.some(g => g.urg >= 85) ? "red" : "orange"}" style="margin:12px 0 0"><b class="t">${urgent.length} ${urgent.length === 1 ? "Position braucht" : "Positionen brauchen"} eine Entscheidung</b>${urgent.map(g => `<a href="#" class="jump" data-grpjump="${esc(g.t)}">${esc(g.name)}: ${esc(g.acts[0][2])}</a>`).join(" · ")}</div>`
@@ -1126,7 +1158,7 @@ function importRows(rows) {
     if (d) { entry.d = d; turbos++; }
     if (!r) noData.push(d ? d.under : p.name);
     const j = list.findIndex(x => (p.isin && x.isin === p.isin) || (!x.isin && !d && r && x.t === r.t));
-    if (j >= 0) list[j] = entry; else list.push(entry);
+    if (j >= 0) { ["mark", "markU", "markDate"].forEach(k => { if (list[j][k] != null && list[j].isin === entry.isin) entry[k] = list[j][k]; }); list[j] = entry; } else list.push(entry);
     added++;
   });
   // Positionen aus früheren Importen, die laut Datei inzwischen verkauft sind, entfernen
@@ -1165,6 +1197,13 @@ document.addEventListener("click", e => {
     const entry = { t: r.t, n: r.n, qty, price, date: $("dfDate").value || "" };
     if (depotEdit >= 0) list[depotEdit] = entry; else list.push(entry);
     depotSave(list); depotEdit = null;
+  } else if (act === "mark") {
+    const p = list[i], a = anaData && anaData.tickers[p.t];
+    const v = prompt(`Aktueller Kurs von ${p.d ? p.d.under + " " + (p.d.dir === "long" ? "Turbo Long" : "Turbo Short") : p.n} (${p.isin || p.t}) in € – z. B. den Geldkurs aus Scalable.\nLeer lassen = wieder schätzen.`, p.mark ? String(p.mark).replace(".", ",") : "");
+    if (v === null) return;
+    const x = parseFloat(String(v).replace(/\./g, "").replace(",", "."));
+    if (x > 0 && a) { p.mark = x; p.markU = a.c; p.markDate = new Date().toISOString().slice(0, 10); } else { delete p.mark; delete p.markU; delete p.markDate; }
+    depotSave(list);
   } else if (act === "claude") {
     const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r), a = anaData && p.t && anaData.tickers[p.t];
       const extra = a ? ` | Kairo-Analyse ${a.score}/100 (${VERDICT(a.score)[1]}); Stop ${fmt(a.stop.p)}; Ziel 1 ${fmt(a.tp[0].p)} (Chance ${pct(a.tp[0].prob, 0)}), Ziel 2 ${fmt(a.tp[1].p)}; `
