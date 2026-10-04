@@ -1,4 +1,4 @@
-# Reversal-Setup-Finder
+# Kairo – Reversal-Setup-Finder
 
 Scannt täglich **alle Aktien ab 2 Mrd. USD Börsenwert in Nordamerika (USA, Kanada), Westeuropa und Asien/Pazifik** auf ein festes
 Long-Reversal-Setup im Tageschart, bewertet jeden Treffer mit einem **Score von 0–100** und zeigt
