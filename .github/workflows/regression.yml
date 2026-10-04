@@ -2,6 +2,15 @@ name: Tests & Regression
 
 on:
   workflow_dispatch:
+    inputs:
+      timeline:
+        description: "Rückblick: Ticker (kommagetrennt), z. B. TUI1.DE,PYPL"
+        required: false
+        default: "TUI1.DE"
+      days:
+        description: "Rückblick: Anzahl Handelstage"
+        required: false
+        default: "20"
   push:
     branches: ["claude/**"]
 
@@ -21,6 +30,8 @@ jobs:
       - run: pip install -r requirements-dev.txt
       - run: python -m pytest -q backend/tests
       - run: python -m backend.regression --out regression.md
+      - name: Rückblick
+        run: python -m backend.regression --timeline "${{ inputs.timeline || 'TUI1.DE' }}" --days "${{ inputs.days || '20' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: regression
