@@ -20,6 +20,16 @@ MONTHS = {m: i for i, m in enumerate(["jan", "feb", "mar", "apr", "may", "jun", 
 
 
 def _get(url: str) -> str:
+    """Seite laden – zuerst mit Browser-Imitation (curl_cffi, kommt mit yfinance), sonst urllib.
+    bls.gov lehnt einfache Abrufe mit 403 ab."""
+    try:
+        from curl_cffi import requests as cr
+
+        r = cr.get(url, impersonate="chrome", timeout=40)
+        r.raise_for_status()
+        return r.text
+    except ImportError:
+        pass
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read().decode("utf-8", "replace")

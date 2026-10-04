@@ -123,7 +123,7 @@ def ticker_calendar(t: str) -> dict:
         ds = [d for d in ds if d.tz_localize(None) >= today] if ds else []
         return str(ds[0].date()) if ds else None
     try:
-        return {"earnings_date": first_future(cal.get("Earnings Date")), "earnings_estimate": True,
+        return {"earnings_date": first_future(cal.get("Earnings Date")),
                 "ex_dividend_date": first_future(cal.get("Ex-Dividend Date")), "dividend_date": first_future(cal.get("Dividend Date"))}
     except Exception:
         return {}
@@ -241,6 +241,13 @@ def main(argv=None) -> int:
         meta[t]["name"] = meta[t].get("name") or name
     tickers = list(meta)
     print(f"Universum: {len(tickers)} Aktien")
+    # Termine der Watchlist zuerst holen: nach dem Massen-Download blockt Yahoo Einzelabfragen oft
+    watch_dates = {}
+    if not args.end:
+        for t in watch:
+            watch_dates[t] = ticker_calendar(t)
+            time.sleep(0.3)
+        print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
     yf = YFinanceProvider()
     prov = CachedProvider(yf) if not args.end else yf
     data = prov.history(tickers, CONFIG.history.period, end=args.end)
@@ -302,6 +309,9 @@ def main(argv=None) -> int:
         for k in ("earnings_date", "earnings_estimate", "ex_dividend_date", "dividend_date", "dividend_rate"):
             if not i.get(k) and m.get(k) not in (None, "", False):
                 i[k] = m[k]
+        for k, v in watch_dates.get(r["ticker"], {}).items():
+            if v and not i.get(k):
+                i[k] = v
         dated[r["ticker"]] = i
     missing = [r["ticker"] for r in rows if r.get("in_watchlist") and not dated[r["ticker"]].get("earnings_date")]
     for t in missing:                            # Watchlist: fehlende Quartalstermine einzeln nachholen
