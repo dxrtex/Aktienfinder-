@@ -239,7 +239,7 @@ def main(argv=None) -> int:
         i = infos.get(t, {})
         m = meta.get(t, {})
         info = {"currency": m.get("currency") or i.get("currency"), "market_cap_usd": m.get("market_cap_usd"),
-                "market_cap": i.get("market_cap"), "earnings_date": i.get("earnings_date")}
+                "market_cap": i.get("market_cap"), "earnings_date": i.get("earnings_date") or m.get("earnings_date")}
         res = evaluate(df, info, ticker=t)            # mit Earnings-Termin neu bewerten
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
@@ -261,7 +261,17 @@ def main(argv=None) -> int:
         json.dump({"generated": out["generated"], "fx_eur": fx,
                    "rows": sorted(search.values(), key=lambda r: r["n"].lower())},
                   f, ensure_ascii=False, separators=(",", ":"))
-    cal = build_calendar(rows, infos)
+    # Termine: Einzelabfrage (.info) zuerst, sonst aus dem Screener (Universum-Liste)
+    dated = {}
+    for r in rows:
+        i, m = dict(infos.get(r["ticker"], {})), meta.get(r["ticker"], {})
+        for k in ("earnings_date", "earnings_estimate", "ex_dividend_date", "dividend_date", "dividend_rate"):
+            if not i.get(k) and m.get(k) not in (None, "", False):
+                i[k] = m[k]
+        dated[r["ticker"]] = i
+    print(f"Termine: {sum(1 for i in infos.values() if i.get('earnings_date'))} Earnings aus .info, "
+          f"{sum(1 for i in dated.values() if i.get('earnings_date'))} insgesamt")
+    cal = build_calendar(rows, dated)
     with open(SITE / "calendar.json", "w", encoding="utf-8") as f:
         json.dump(cal, f, ensure_ascii=False, separators=(",", ":"))
     print(f"Kalender: {len(cal['events'])} Termine, Wechselkurse: {fx}")
