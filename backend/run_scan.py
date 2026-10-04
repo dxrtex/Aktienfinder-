@@ -24,7 +24,11 @@ from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
+from .compare import _override
 from .scanner import evaluate
+
+# Test der neuen Divergenz-Regel: alte Werte, um neu hinzugekommene Treffer zu markieren
+OLD_DIV = _override(CONFIG, ["rsi.t1_min_gap=10", "rsi.pivot_len=3", "rsi.pivot_tolerance=0"])
 from .universe import ASIA, load as load_universe
 
 _ASIA_SUFFIXES = {suf for sufs, _, _ in ASIA.values() for suf in sufs}
@@ -179,12 +183,16 @@ def main(argv=None) -> int:
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
+        old = evaluate(df, info, OLD_DIV, ticker=t)
+        rank = lambda r: 2 if r.passed else 1 if r.fast_hit else 0
+        rows[-1]["div_rule_new"] = rank(res) > rank(old)
         search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
+                 div_rule_new=sum(bool(r.get("div_rule_new")) for r in rows),
                  duration_s=round(time.time() - started))
     out = {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "stats": stats,
            "config": as_dict(CONFIG), "results": rows}
