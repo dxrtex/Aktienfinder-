@@ -78,6 +78,10 @@ class YFinanceProvider(DataProvider):
                     "quote_type": i.get("quoteType"),
                     "sector": i.get("sector"),
                     "earnings_date": _next_earnings(i),
+                    "earnings_estimate": bool(i.get("isEarningsDateEstimate")),
+                    "ex_dividend_date": _future_date(i.get("exDividendDate")),
+                    "dividend_date": _future_date(i.get("dividendDate")),
+                    "dividend_rate": i.get("dividendRate"),
                 }
             except Exception:
                 time.sleep(2 * (attempt + 1))
@@ -91,6 +95,14 @@ class YFinanceProvider(DataProvider):
 def _period_start(end: str, period: str) -> str:
     years = {"1y": 1, "2y": 2, "3y": 3, "5y": 5}.get(period, 2)
     return str((pd.Timestamp(end) - pd.DateOffset(years=years)).date())
+
+
+def _future_date(stamp) -> str | None:
+    """Unix-Zeitstempel → ISO-Datum, nur wenn heute oder später."""
+    if not isinstance(stamp, (int, float)):
+        return None
+    d = pd.Timestamp(stamp, unit="s", tz="UTC")
+    return str(d.date()) if d >= pd.Timestamp.now(tz="UTC").normalize() else None
 
 
 def _next_earnings(info: dict) -> str | None:
