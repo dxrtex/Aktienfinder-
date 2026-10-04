@@ -203,6 +203,20 @@
   .seg { margin: 4px 0 6px; }
   td .ampel { flex-wrap: nowrap; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  /* Kurz-Hinweis (Suche, Karten, Detailseite) */
+  .tip { --c: var(--muted); --cb: var(--surface-2); border-left: 4px solid var(--c); background: var(--cb); border-radius: var(--radius-s);
+         padding: 12px 14px; font-size: 14px; line-height: 1.5; color: var(--text); }
+  .tip b.t { display: block; color: var(--c); font-size: 15px; margin-bottom: 2px; }
+  .tip .days { float: right; margin: 0 0 6px 12px; text-align: center; background: var(--surface); border-radius: 12px; padding: 6px 10px;
+               color: var(--c); font-weight: 700; font-size: 20px; line-height: 1.1; }
+  .tip .days small { display: block; font-size: 11px; font-weight: 600; color: var(--muted); }
+  .tone-green { --c: var(--accent); --cb: var(--accent-bg); } .tone-yellow { --c: var(--gold); --cb: var(--gold-bg); }
+  .tone-orange { --c: #ff9f43; --cb: rgba(255, 159, 67, .12); } .tone-red { --c: var(--red); --cb: var(--red-bg); }
+  .tone-gray { --c: var(--muted); --cb: var(--surface-2); }
+  .sres { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 760px) { .sres { grid-template-columns: 1fr 1fr; } }
+  .sres .card { gap: 12px; padding: 18px; }
+  .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
 </style>
 </head>
@@ -215,7 +229,7 @@
 
   <div class="search">
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-    <input type="search" id="search" placeholder="Name oder Ticker suchen" autocomplete="off">
+    <input type="search" id="search" placeholder="Aktie suchen – Name oder Ticker (alle Aktien)" autocomplete="off">
   </div>
 
   <main id="main"></main>
@@ -370,6 +384,7 @@ function card(r) {
     </div>
     <div class="chart" data-mini="${esc(r.ticker)}"><svg class="candles" viewBox="0 0 600 220" preserveAspectRatio="none"></svg></div>
     <div class="chips">${chips(r)}</div>
+    ${tipHtml(r.hint)}
     <div class="actions">
       <button class="btn" data-open="${esc(r.ticker)}">Details &amp; Chart</button>
       <a class="btn ghost" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
@@ -434,6 +449,38 @@ const COLS = [
     return `<span class="down" title="${esc(r.missing.join(" · "))}">${esc(text || r.missing[0] || "–")}</span>`; } },
 ];
 
+// ---------- Suche in allen Aktien mit Kurz-Hinweis ----------
+let searchIdx = null, searchLoading = null;
+function loadSearch() {
+  if (!searchLoading) searchLoading = fetch("data/search.json", { cache: "no-store" }).then(r => r.json())
+    .then(d => { searchIdx = d.rows || []; render(); }).catch(() => { searchIdx = []; render(); });
+  return searchLoading;
+}
+function tipHtml(h) {
+  if (!h || !h.title) return "";
+  const d = h.days ?? h.d, dl = h.days_label ?? h.dl;
+  return `<div class="tip tone-${esc(h.tone)}">${d != null && dl ? `<span class="days">${d === 0 ? "heute<small>letzter Tag</small>" : `${d}<small>${d === 1 ? "Tag" : "Tage"} ${esc(dl)}</small>`}</span>` : ""}<b class="t">${esc(h.title)}</b>${esc(h.text)}</div>`;
+}
+function searchHtml() {
+  const q = $("search").value.trim().toLowerCase();
+  if (q.length < 2) return "";
+  if (!searchIdx) return `<div class="section-title"><span>Suche in allen Aktien</span><span>lädt …</span></div>`;
+  const qq = q.replace(/\s+/g, " ");
+  const rank = r => r.t.toLowerCase() === qq ? 0 : r.t.toLowerCase().startsWith(qq) ? 1 : r.n.toLowerCase().startsWith(qq) ? 2 : 3;
+  const found = searchIdx.filter(r => r.t.toLowerCase().includes(qq) || r.n.toLowerCase().includes(qq))
+    .sort((a, b) => rank(a) - rank(b) || (b.s === "hit") - (a.s === "hit") || (b.s === "fast") - (a.s === "fast") || a.n.localeCompare(b.n));
+  const shown = found.slice(0, 12);
+  const body = shown.length ? `<div class="sres">${shown.map(r => `<article class="card">
+      <div class="card-title"><h2 title="${esc(r.n)}">${esc(r.n)}</h2>
+        <div class="meta">${esc(r.t)}${r.x ? " · " + esc(r.x) : ""} · ${REGION[r.r] || ""} · Kurs ${fmt(r.c)} ${esc(r.cur || "")} · ${r.m} / 11 Kriterien</div></div>
+      ${tipHtml(r)}
+      <div class="actions">${r.detail ? `<button class="btn" data-open="${esc(r.t)}">Details &amp; Chart</button>` : ""}
+        <a class="btn ghost" href="${tvUrl(r.t)}" target="_blank" rel="noopener">TradingView</a></div>
+    </article>`).join("")}</div>` : `<div class="empty">Keine Aktie gefunden. Gesucht wird in allen ${fmt(searchIdx.length, 0)} geprüften Aktien (ab 2 Mrd. USD).</div>`;
+  return `<div class="section-title"><span>Suche in allen Aktien · mit Kurz-Hinweis</span><span>${found.length > 12 ? "12 von " + found.length : found.length} Treffer</span></div>${body}
+    <div class="note" style="margin:8px 2px 0">Tage sind Handelstage und grobe Schätzungen aus den Regeln (z. B. bis ein Signal sein Zeitfenster verlässt). Stand: letzter Scan.</div>`;
+}
+
 // ---------- Einstellungen ----------
 const CFG_LABELS = { universe: "Universum (2.1)", correction: "Korrektur (2.2)", fib: "Fibonacci – Variante A (2.3)",
   support: "Support – Variante B (2.3)", rsi: "RSI (2.4)", macd: "MACD (2.5)", mbi: "Momentum Bias Index (2.6)",
@@ -468,7 +515,8 @@ function render() {
   const seg = state.tab === "table" ? `<div class="opts seg">${[["hit", "Treffer"], ["fast", "Fast-Treffer"], ["all", "beide"], ["watch", "★ Watchlist"]].map(([v, l]) =>
     `<button class="opt${state.tableKind === v ? " on" : ""}" data-tk="${v}">${l}</button>`).join("")}</div>` : "";
   const toTable = state.tab === "watch" ? `<div class="opts seg"><button class="opt on">Karten</button><button class="opt" data-totable="fast">Tabelle</button></div>` : "";
-  const head = seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  const head = searchHtml() + seg + toTable + `<div class="section-title"><span>${title}</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = searchHtml(); return; }
   if (!list.length) {
     $("main").innerHTML = head + `<div class="empty">${kind === "watch" ? "Keine Watchlist-Aktie gefunden." : kind === "fast" ? "Keine Fast-Treffer mit diesen Filtern."
       : `Heute erfüllt keine Aktie alle Pflichtkriterien${hits ? " mit diesen Filtern" : ""}.<br>Die Fast-Treffer (unten in der Leiste) zeigen, wem nur ein Kriterium fehlt.`}</div>`;
@@ -518,6 +566,7 @@ async function openDetail(t) {
       ${r.earnings_risk ? `<span class="warn">⚠ Earnings-Risiko (${dateDE(r.earnings_date)})</span>` : ""}
       <span class="flag">MBI: ${esc(f.mbi_source || "")}</span></div>
       <button class="close" id="closeDetail" aria-label="Schließen">✕</button></div>
+    <div style="margin-top:14px">${tipHtml(r.hint)}</div>
     <div class="pane"><div class="pane-label"><span><i style="background:#f4b740"></i>EMA 20</span><span><i style="background:#4aa3ff"></i>EMA 50</span><span><i style="background:#b07cff"></i>EMA 100</span><span><i style="background:#ff8a65"></i>EMA 200</span><span>Fib-Level / Zone gestrichelt · Entry/Stop/Ziele durchgezogen</span></div><div class="lw" id="cMain" style="height:420px"></div></div>
     <div class="pane"><div class="pane-label">RSI 14 · SMA 14 · 30/50/70${r.div && r.div.kind ? " · Divergenz " + esc(r.div.kind) : ""}</div><div class="lw" id="cRsi" style="height:150px"></div></div>
     <div class="pane"><div class="pane-label">MACD 12/26/9 · Linie, Signal, Histogramm</div><div class="lw" id="cMacd" style="height:150px"></div></div>
@@ -639,7 +688,7 @@ $("sheet").addEventListener("click", e => { const b = e.target.closest(".opt"); 
 $("done").onclick = () => document.body.classList.remove("filters-open");
 $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
-$("search").addEventListener("input", render);
+$("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
 document.addEventListener("click", e => {
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }

@@ -21,6 +21,13 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
 Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
+## Suche mit Kurz-Hinweis
+Die Suche oben findet **jede geprüfte Aktie** (nicht nur Treffer) und zeigt einen kurzen Hinweis, wo sie im Setup steht,
+z. B. „Fällt noch stark – Konsolidierung frühestens in ca. 3 Tagen“, „In der Zone – MACD-Kreuz in ca. 4 Tagen“ oder
+„Einstiegs-Setup – noch ca. 5 Tage gültig, Ausbruch über EMA 20 beendet das Setup“. Die Tage sind Handelstage und grobe
+Schätzungen aus den Regeln (Zeitfenster von MBI-X, MACD-Kreuz und RSI-Tief; Abflachung bei Seitwärtslauf).
+Logik: `backend/hints.py`, Index: `site/data/search.json`.
+
 ## Parameter
 Alle Schwellen stehen in **`config.yaml`** (Abschnitte wie im Prompt: `correction`, `fib`, `support`, `rsi`, `macd`, `mbi`,
 `risk`, `score`). Ändern: Datei auf GitHub bearbeiten → *Actions → Täglicher Scan → Run workflow*.
@@ -34,6 +41,7 @@ Die Website zeigt die aktiven Werte unter **Einstellungen**.
 | Momentum Bias Index – 1:1-Port des Original-Pine-Scripts | `backend/mbi.py` |
 | Pflichtkriterien, Trade-Plan | `backend/scanner.py` |
 | Score | `backend/scoring.py` |
+| Kurz-Hinweis je Aktie für die Suche | `backend/hints.py` |
 | Universum (Nordamerika, Westeuropa, Asien/Pazifik ab 2 Mrd. USD) | `backend/universe.py` → `data/universe_us.csv`, `data/universe_eu.csv`, `data/universe_asia.csv` |
 | Täglicher Scan → `site/data/` (inkl. Watchlist aus `data/watchlist.json`) | `backend/run_scan.py` |
 | Regressionstest mit den 5 Beispielen | `backend/regression.py` |
