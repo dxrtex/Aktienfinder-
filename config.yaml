@@ -85,7 +85,7 @@ mbi:                         # 2.6 – Original-Port des AlgoAlpha-Pine-Scripts
   max_peak_ratio: 0.70       # seitdem rote Balken ≤ 70 % der Spitze (oder Histogramm grün)
 
 volatility:                  # Zusatzinfo (kein Pflichtkriterium): Filter und Sortierung auf der Website
-  days: 250                  # Std.-Abw. der Tagesrenditen im letzten Jahr; Website zeigt die typische Monatsbewegung (× √21)
+  days: 30                   # historische Volatilität = Std.-Abw. der Tagesrenditen × √252 über 30 Tage
 
 risk:                        # 2.7 / 3.
   earnings_days: 5           # Earnings in den nächsten 5 Handelstagen → Flag, Score −15
