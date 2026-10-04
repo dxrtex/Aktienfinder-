@@ -134,7 +134,7 @@
 
   .verdict { flex: none; min-width: 64px; text-align: center; border-radius: 16px; padding: 8px 10px; background: var(--cb); color: var(--c); }
   .verdict b { display: block; font-size: 24px; line-height: 1.1; } .verdict span { font-size: 12px; font-weight: 700; }
-  .ladder { width: 100%; height: auto; display: block; overflow: visible; }
+  .ladder { width: 100%; max-width: 520px; margin: 0 auto; height: auto; display: block; overflow: visible; }
   .fig small { font-size: 13px; color: var(--muted); font-weight: 600; }
   .fig em.sub { display: block; font-style: normal; font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.35; }
   .card.pos .fig b { font-size: 19px; }
@@ -146,6 +146,24 @@
   .more-box h4 { margin: 12px 0 4px; font-size: 14px; }
   .facts { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; } .facts li { margin: 3px 0; } .facts b { color: var(--text); }
   .facts a { color: var(--text); }
+  .kv { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @container (min-width: 560px) { .kv { grid-template-columns: repeat(4, 1fr); } }
+  .kv > div { background: var(--surface-2); border-radius: var(--radius-s); padding: 10px 12px; min-width: 0; }
+  .kv span { display: block; font-size: 12px; color: var(--muted); } .kv b { display: block; font-size: 19px; white-space: nowrap; }
+  .kv small { font-size: 12px; color: var(--muted); } .kv em { display: block; font-style: normal; font-size: 12px; color: var(--muted); line-height: 1.35; margin-top: 2px; }
+  .plan-h { font-size: 13px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 2px 6px; }
+  table.xplan { width: 100%; min-width: 0; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+  table.xplan th { background: none; cursor: default; }
+  table.xplan th { font-size: 12px; color: var(--muted); font-weight: 600; text-align: left; padding: 4px 6px; }
+  table.xplan td { padding: 8px 6px; border-top: 1px solid var(--line); vertical-align: top; }
+  table.xplan .num { text-align: right; white-space: nowrap; }
+  table.xplan tr.tp td:first-child b { color: var(--up); } table.xplan tr.sl td:first-child b { color: var(--red); }
+  table.xplan td small { display: block; font-size: 12px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  table.xplan td:first-child { white-space: normal; }
+  .card.ov { margin-bottom: 16px; } .card.ov .table-wrap { border: 0; background: none; } table.ovt tr { cursor: pointer; } table.ovt td span.muted { display: block; font-size: 12px; }
+  table.ovt td.adv { color: var(--c) !important; font-weight: 600; }
+  .vdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+  .grid.one { grid-template-columns: 1fr !important; }
   .card.ctx { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 
   /* Tabelle */
@@ -677,7 +695,7 @@ function depotHtml() {
     </article>`;
   }).join("");
   const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere den Transaktions-Export aus Scalable Capital (Web-Version → Transaktionen → Export).</div>`;
-  return head + sum + depotContextHtml(list, items) + actions + form + empty + `<div class="grid">${cards}</div>`
+  return head + sum + depotContextHtml(list, items) + depotOverviewHtml(items) + actions + form + empty + `<div class="grid one">${cards}</div>`
     + `<div class="note" style="margin:16px 2px 0">Dein Depot wird nur auf diesem Gerät gespeichert (nicht im Internet). Kurse vom letzten Scan, Umrechnung in Euro zum Tageskurs${missingFx ? " – für einige Währungen fehlt der Wechselkurs" : ""}. Die Einschätzung ist rein technisch (Trend, EMAs, RSI) und keine Anlageberatung.</div>`;
 }
 // ---------- Positions-Analyse (Depot) ----------
@@ -734,74 +752,121 @@ function ladderSvg(pts, cur) {
   let body = `<line x1="${pad}" x2="${W - pad}" y1="46" y2="46" stroke="var(--surface-3)" stroke-width="6" stroke-linecap="round"/>`;
   if (stopP && tpLast) body += `<line x1="${X(stopP.v)}" x2="${X(a_now(pts))}" y1="46" y2="46" stroke="rgba(255,69,58,.45)" stroke-width="6"/>`
     + `<line x1="${X(a_now(pts))}" x2="${X(tpLast.v)}" y1="46" y2="46" stroke="rgba(48,209,88,.45)" stroke-width="6"/>`;
-  sorted.forEach((x, k) => {
-    const up = k % 2 === 0, cx = X(x.v), big = x.k === "now";
+  const last = { up: -1e9, dn: -1e9 };
+  sorted.forEach(x => {
+    const cx = X(x.v), big = x.k === "now", w = x.l.length * 10.5;   // Beschriftung oben oder unten – wo mehr Platz ist
+    const row = last.up <= last.dn ? "up" : "dn";
+    const tx = Math.min(W - w / 2, Math.max(cx, last[row] + 6 + w / 2, w / 2));   // notfalls etwas zur Seite schieben
+    last[row] = tx + w / 2;
+    const isUp = row === "up";
     body += `<circle cx="${cx}" cy="46" r="${big ? 8 : 5.5}" fill="${col[x.k]}" ${big ? 'stroke="var(--bg)" stroke-width="3"' : ""}/>`
-      + `<text x="${cx}" y="${up ? 24 : 80}" text-anchor="middle" font-size="19" font-weight="${big ? 700 : 500}" fill="${col[x.k]}">${esc(x.l)}</text>`;
+      + `<text x="${tx}" y="${isUp ? 24 : 80}" text-anchor="middle" font-size="19" font-weight="${big ? 700 : 500}" fill="${col[x.k]}">${esc(x.l)}</text>`;
   });
   return `<svg class="ladder" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kursleiter">${body}</svg>`;
 }
 const a_now = pts => pts.find(x => x.k === "now").v;
-function posCard(p, i, r, a) {
-  const d = p.d, short = d && d.dir === "short", cur = a.cur || (r && r.cur) || "";
-  const c = needChart(p.t), ent = entryEval(c, p.date), held = p.date ? Math.max(0, -daysUntil(p.date)) : null;
+// Alles, was eine Position ausmacht – einmal berechnet, von Übersicht und Karte genutzt
+function posModel(p, r, a) {
+  const d = p.d, short = !!(d && d.dir === "short"), cur = a.cur || (r && r.cur) || "";
+  const ent = entryEval(needChart(p.t), p.date), held = p.date ? Math.max(0, -daysUntil(p.date)) : null;
   const tm = d && !short ? turboModel(p, { ...a, cur }, ent) : null;
   const fxC = fxEur[cur] ?? (cur === "EUR" ? 1 : null);
-  // Gewinn/Verlust: Aktie direkt, Turbo über das geschätzte Bezugsverhältnis
-  const nowPos = d ? (tm ? tm.now : null) : (fxC ? a.c * fxC : null);
-  const pl = nowPos != null ? nowPos / p.price - 1 : null;
-  let score = a.score;
+  // Wert eines Basiswert-Kurses x in € je Stück (Turbo über Bezugsverhältnis, Aktie direkt)
+  const valAt = x => d ? (tm ? tm.val(x) : null) : (fxC ? x * fxC : null);
+  const nowPos = valAt(a.c), pl = nowPos != null ? nowPos / p.price - 1 : null;
+  const plAt = x => { const v = valAt(x); return v != null ? v / p.price - 1 : null; };
+  const lev = u => d && Math.abs(u - d.ko) > 0 ? u / Math.abs(u - d.ko) : 1;
   const dist = d ? (short ? (d.ko - a.c) / a.c : (a.c - d.ko) / a.c) : null;
-  const warn = [];
-  if (dist != null && dist < .05) { score = Math.min(score, 30); warn.push(`Nur ${pct(dist)} bis zum Knock-out!`); }
-  let stop = a.stop.p, stopNote = "";
-  if (d && !short && stop <= d.ko) { stopNote = " · liegt unter der K.-o.-Schwelle – der Knock-out käme zuerst"; }
-  const [tone, vlabel] = short ? ["gray", "Short"] : VERDICT(score);
+  let score = a.score;
+  if (dist != null && dist < .05) score = Math.min(score, 30);
+  const [tone, label] = short ? ["gray", "Short"] : VERDICT(score);
+  const underMove = ent ? a.c / ent.u - 1 : null;
+  return { p, r, a, d, short, cur, ent, held, tm, valAt, nowPos, pl, plAt, dist, score, tone, label, underMove,
+           levNow: lev(a.c), levBuy: ent ? lev(ent.u) : null, stopBelowKo: !!(d && !short && a.stop.p <= d.ko) };
+}
+// Lage seit dem Einstieg + konkrete Empfehlung (regelbasiert)
+function posAdvice(m) {
+  const { a, d, ent, pl, label, dist, short } = m;
+  if (short) return { tone: "gray", title: "Short-Position", text: "Die Analyse ist aus Long-Sicht gerechnet – fallende Kurse sind hier gut für dich." };
+  const res = m.underMove ?? pl ?? 0, gain = (pl ?? res) > .03, loss = (pl ?? res) < -.03;
   const facs = a.fac.slice().sort((x, y) => Math.abs(y.s) - Math.abs(x.s));
-  const pos = facs.filter(f => f.s > 0).map(f => f.l), neg = facs.filter(f => f.s < 0).map(f => f.l);
-  const summary = short ? "Analyse aus Long-Sicht – für deine Short-Position umgekehrt lesen."
-    : `${pos.length ? "Stark: " + pos.slice(0, 3).join(", ") : "Kaum Stärken"}${neg.length ? " · Schwach: " + neg.slice(0, 3).join(", ") : ""}.`;
-  const pts = [{ k: "now", v: a.c, l: "Jetzt" }, { k: "stop", v: stop, l: "Stop" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }, { k: "tp", v: a.tp[1].p, l: "Ziel 2" }];
+  const plus = facs.filter(f => f.s > 0).slice(0, 2).map(f => f.l), minus = facs.filter(f => f.s < 0).slice(0, 2).map(f => f.l);
+  const now = `Aktuell ${label === "Gut" ? "gutes" : label === "Neutral" ? "gemischtes" : "schwaches"} Bild`
+    + (plus.length ? ` (stark: ${plus.join(", ")}` : " (") + (minus.length ? `${plus.length ? "; " : ""}schwach: ${minus.join(", ")})` : ")") + ".";
+  const since = ent ? `${ent.label} am ${dateDE(ent.date)}. Seitdem ${m.underMove >= 0 ? "+" : ""}${pct(m.underMove)} beim Basiswert`
+      + (pl != null ? `, deine Position ${pl >= 0 ? "+" : ""}${pct(pl, 0)}.` : ".") : "";
+  const be = ent ? ent.u : null, trail = be && a.c - be > a.atr ? Math.max(a.stop.p, be) : a.stop.p;
+  let tone, title, todo;
+  if (dist != null && dist < .08) { tone = "red"; title = "Knock-out in Reichweite"; todo = `Nur ${pct(dist)} Puffer – Position verkleinern oder absichern, ein normaler Rücksetzer kann reichen.`; }
+  else if (gain && label === "Gut") { tone = "green"; title = "Gewinne laufen lassen"; todo = `Stop nachziehen auf ${fmt(trail)}${be && trail === be ? " (Einstand)" : ""} – so wird aus dem Gewinn kein Verlust.`; }
+  else if (gain && label === "Neutral") { tone = "yellow"; title = "Teilgewinn sichern"; todo = `Etwa die Hälfte bei Ziel 1 (${fmt(a.tp[0].p)}) verkaufen, Rest mit Stop ${fmt(trail)}.`; }
+  else if (gain) { tone = "orange"; title = "Gewinne sichern"; todo = `Das Bild kippt – Großteil verkaufen oder Stop eng auf ${fmt(Math.max(trail, a.c - 1.5 * a.atr))} setzen.`; }
+  else if (loss && label === "Gut") { tone = "green"; title = "Halten, Stop beachten"; todo = `Setup intakt – Stop bei ${fmt(a.stop.p)} konsequent einhalten.`; }
+  else if (loss && label === "Neutral") { tone = "yellow"; title = "Abwarten mit klarem Stop"; todo = `Kein Nachkaufen, bis der Trend dreht. Raus bei ${fmt(a.stop.p)}.`; }
+  else if (loss) { tone = "red"; title = "Verlust begrenzen"; todo = `Ausstieg prüfen – spätestens bei ${fmt(a.stop.p)} verkaufen.`; }
+  else { tone = label === "Gut" ? "green" : label === "Neutral" ? "yellow" : "red"; title = "Etwa auf Einstand";
+         todo = label === "Kritisch" ? `Schwaches Bild – Stop eng bei ${fmt(a.stop.p)}.` : `Stop bei ${fmt(a.stop.p)}, erstes Ziel ${fmt(a.tp[0].p)}.`; }
+  return { tone, title, text: [since, now, todo].filter(Boolean).join(" ") };
+}
+const sgnPct = (v, d = 0) => v == null ? "–" : (v >= 0 ? "+" : "") + pct(v, d);
+function posCard(p, i, r, a) {
+  const m = posModel(p, r, a), { d, short, cur, ent, held, tm, pl } = m, adv = posAdvice(m);
+  const lev = m.levNow, sell1 = lev >= 4 ? "⅔ verkaufen" : "½ verkaufen";
+  const ev = nextEvent(p.t), inRes = data.results.some(x => x.ticker === p.t);
+  const pts = [{ k: "now", v: a.c, l: "Jetzt" }, { k: "stop", v: a.stop.p, l: "Stop" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }, { k: "tp", v: a.tp[1].p, l: "Ziel 2" }];
   if (ent) pts.push({ k: "entry", v: ent.u, l: "Kauf" });
   if (d && Math.abs(d.ko / a.c - 1) < .6) pts.push({ k: "ko", v: d.ko, l: "K.-o." });
-  const certAt = x => tm ? ` · Zertifikat ≈ ${fmt(tm.val(x))} €` : "";
-  const chance = pr => pr >= .6 ? "realistisch" : pr >= .4 ? "möglich" : "ambitioniert";
-  const tpFig = (t, k) => `<div class="fig"><span>Ziel ${k}${short ? "" : ` · Chance ${pct(t.prob, 0)}`}</span><b class="up">${fmt(t.p)} <small>+${pct(t.pct, 0)}</small></b>
-      <em class="sub">${short ? "" : `${chance(t.prob)}, ~${t.days} Handelstage · `}${esc(t.src)}${certAt(t.p)}</em></div>`;
-  const ev = nextEvent(p.t);
-  const inRes = data.results.some(x => x.ticker === p.t);
-  return `<article class="card pos">
+  const row = (lab, x, extra, cls, prob = "") => { const v = m.valAt(x), g = m.plAt(x);
+    return `<tr class="${cls}"><td><b>${lab}</b><small>${extra}</small></td><td class="num">${fmt(x)}</td><td class="num">${v != null ? fmt(v) + " €" : "–"}</td>
+      <td class="num ${g == null ? "" : g >= 0 ? "up" : "down"}">${sgnPct(g)}</td><td class="num">${prob}</td></tr>`; };
+  const facs = a.fac.slice().sort((x, y) => Math.abs(y.s) - Math.abs(x.s));
+  return `<article class="card pos" id="pos-${i}">
     <div class="card-top"><div class="card-title"><h2>${esc(d ? d.under : (p.n || (r && r.n) || p.t))}</h2>
-      <div class="meta">${d ? `<span class="pill" style="margin:0 4px 0 0">${short ? "Turbo Short" : "Turbo Long"}</span>` : ""}${esc(p.t)}${p.isin ? " · " + esc(p.isin) : ""} · ${fmt(p.qty, p.qty % 1 ? 4 : 0)} Stück${p.date ? ` · seit ${dateDE(p.date)} (${held} T.)` : ""}</div></div>
-      <div class="verdict tone-${tone}"><b>${short ? "–" : score}</b><span>${vlabel}</span></div></div>
-    <div class="tip tone-${tone}" style="margin:0"><b class="t">${warn.length ? esc(warn.join(" ")) : vlabel === "Gut" ? "Steht gut da" : vlabel === "Neutral" ? "Gemischtes Bild" : vlabel === "Kritisch" ? "Steht schlecht da" : "Short-Position"}</b>${esc(summary)}</div>
-    ${ladderSvg(pts)}
-    <div class="figures">
-      <div class="fig"><span>${d ? "Position (Schätzung)" : "Position"}</span><b class="${(pl ?? 0) >= 0 ? "up" : "down"}">${pl != null ? (pl >= 0 ? "+" : "") + pct(pl) : "–"}</b>
-        <em class="sub">${nowPos != null ? `≈ ${fmt(nowPos * p.qty)} € · Einstand ${fmt(p.price * p.qty)} €` : `Einstand ${fmt(p.price * p.qty)} €`}</em></div>
-      <div class="fig"><span>Kurs ${esc(d ? d.under : "")}</span><b>${fmt(a.c)} <small>${esc(cur)}</small></b>
-        <em class="sub">${ent ? `Kauf bei ≈ ${fmt(ent.u)} → ${(a.c / ent.u - 1) >= 0 ? "+" : ""}${pct(a.c / ent.u - 1)}` : `1 Mon. ${a.chg1m != null ? (a.chg1m >= 0 ? "+" : "") + pct(a.chg1m) : "–"}`}</em></div>
-      <div class="fig"><span>Stop-Loss</span><b class="down">${fmt(stop)} <small>${pct(a.stop.pct, 1)}</small></b>
-        <em class="sub">knapp unter ${esc(a.stop.src)}${certAt(stop)}${stopNote}</em></div>
-      ${d ? `<div class="fig"><span>Abstand Knock-out</span><b class="${dist == null ? "" : dist < .12 ? "down" : "up"}">${dist != null ? pct(dist) : "–"}</b>
-        <em class="sub">K.-o. ${fmt(d.ko)} ${esc(d.cur || "")} · Hebel ca. ${dist ? fmt(1 / Math.abs(dist), 1) + "×" : "–"}${r && r.atr ? ` · ${fmt(Math.abs(a.c - d.ko) / r.atr, 1)} Tagesspannen` : ""}</em></div>` : ""}
-      ${tpFig(a.tp[0], 1)}${tpFig(a.tp[1], 2)}
+      <div class="meta">${d ? `<span class="pill" style="margin:0 4px 0 0">${short ? "Turbo Short" : "Turbo Long"}</span>` : ""}${esc(p.t)}${p.isin ? " · " + esc(p.isin) : ""}</div></div>
+      <div class="verdict tone-${m.tone}"><b>${short ? "–" : m.score}</b><span>${m.label}</span></div></div>
+    <div class="kv">
+      <div><span>Gekauft</span><b>${p.date ? dateDE(p.date) : "–"}</b><em>${held != null ? `vor ${held} Tagen · ` : ""}${fmt(p.qty, p.qty % 1 ? 4 : 0)} Stück à ${fmt(p.price)} €</em></div>
+      <div><span>${d ? "Hebel" : "Produkt"}</span><b>${d ? fmt(lev, 1) + "×" : "Aktie"}</b><em>${d ? `${m.levBuy ? "beim Kauf " + fmt(m.levBuy, 1) + "× · " : ""}K.-o. ${fmt(d.ko)} ${esc(d.cur || "")} (${pct(m.dist)} entfernt)` : "ohne Hebel"}</em></div>
+      <div><span>Basiswert</span><b>${fmt(a.c)} <small>${esc(cur)}</small></b><em>${ent ? `Kauf bei ≈ ${fmt(ent.u)} → ${sgnPct(m.underMove, 1)}` : "Kaufkurs unbekannt"}</em></div>
+      <div><span>Position${d ? " (geschätzt)" : ""}</span><b class="${(pl ?? 0) >= 0 ? "up" : "down"}">${sgnPct(pl, 1)}</b><em>${m.nowPos != null ? `≈ ${fmt(m.nowPos * p.qty)} € von ${fmt(p.price * p.qty)} €` : `Einstand ${fmt(p.price * p.qty)} €`}</em></div>
     </div>
-    ${ent ? `<div class="entry tone-${ent.tone}"><b>${ent.label}</b> am ${dateDE(ent.date)}: ${esc(ent.text)}.</div>` : p.date ? `<div class="note" style="margin:0">Einstieg wird bewertet, sobald die Kursdaten geladen sind …</div>` : ""}
-    <div class="chips">${facs.map(f => `<span class="chip fac ${f.s > 0 ? "pos" : f.s < 0 ? "neg" : ""}">${f.s > 0 ? "▲" : f.s < 0 ? "▼" : "●"} ${esc(f.l)}</span>`).join("")}</div>
-    <details class="more-box"><summary>Details: alle Faktoren${a.news ? ", Nachrichten" : ""}, Marken</summary>
-      <ul class="facts">${facs.map(f => `<li><b class="${f.s > 0 ? "up" : f.s < 0 ? "down" : ""}">${esc(f.l)}:</b> ${esc(f.t)}</li>`).join("")}</ul>
+    <div class="tip tone-${adv.tone}" style="margin:0"><b class="t">${esc(adv.title)}</b>${esc(adv.text)}</div>
+    ${ladderSvg(pts)}
+    ${short ? "" : `<div class="plan-wrap"><div class="plan-h">Ausstiegsplan für ${d ? `deinen ${fmt(lev, 1)}×-Hebel` : "deine Aktie"}</div>
+    <table class="xplan"><thead><tr><th></th><th class="num">${esc(d ? d.under : "Kurs")}</th><th class="num">${d ? "Zertifikat" : "Kurs €"}</th><th class="num">Position</th><th class="num">Chance</th></tr></thead><tbody>
+      ${row("Ziel 2", a.tp[1].p, "Rest verkaufen", "tp", pct(a.tp[1].prob, 0))}
+      ${row("Ziel 1", a.tp[0].p, `${sell1}, Stop auf Einstand`, "tp", pct(a.tp[0].prob, 0))}
+      ${row("Stop", a.stop.p, m.stopBelowKo ? "unter dem K.-o. – Knock-out käme zuerst" : "alles verkaufen", "sl")}
+    </tbody></table>
+    <div class="note" style="margin:6px 2px 0">Chance = Wahrscheinlichkeit, das Ziel vor dem Stop zu erreichen (Faustregel aus Abstand, Schwankung und Trend). Ziele an Widerständen: ${esc(a.tp[0].src)} · ${esc(a.tp[1].src)}. Stop knapp unter ${esc(a.stop.src)}.${d ? " Zertifikatskurse geschätzt." : ""}</div></div>`}
+    <details class="more-box"><summary>Begründung${a.news ? ", Nachrichten" : ""} &amp; Marken</summary>
+      <div class="chips" style="margin:10px 0 4px">${facs.map(f => `<span class="chip fac ${f.s > 0 ? "pos" : f.s < 0 ? "neg" : ""}">${f.s > 0 ? "▲" : f.s < 0 ? "▼" : "●"} ${esc(f.l)}</span>`).join("")}</div>
+      <ul class="facts">${facs.map(f => `<li><b class="${f.s > 0 ? "up" : f.s < 0 ? "down" : ""}">${esc(f.l)}:</b> ${esc(f.t)}</li>`).join("")}
+        ${ent ? `<li><b>Einstieg:</b> ${esc(ent.label)} – ${esc(ent.text)}</li>` : ""}</ul>
       ${a.news ? `<h4>Nachrichten</h4><ul class="facts">${a.news.map(n => `<li><span class="${n.tone > 0 ? "up" : n.tone < 0 ? "down" : "muted"}">${n.tone > 0 ? "▲" : n.tone < 0 ? "▼" : "●"}</span> ${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title)} <span class="muted">· ${esc(n.pub || "")} ${n.date ? dateDE(n.date) : ""}</span></li>`).join("")}</ul>` : ""}
       <h4>Marken</h4><ul class="facts">
         ${a.res.map(x => `<li><b class="up">Widerstand ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
         ${a.sup.map(x => `<li><b class="down">Unterstützung ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
         <li>Tagesschwankung ≈ ${fmt(a.sigma)} ${esc(cur)} (${pct(a.sigma / a.c)})${a.vola ? ` · Volatilität ${pct(a.vola, 0)} p. a.` : ""}</li></ul>
-      <div class="note" style="margin:6px 0 0">Chance „Ziel vor Stop“: Kurs als Zufallspfad mit leichter Trend-Drift – eine Faustregel, keine Prognose. Nachrichten-Ton: grobe Stichwortauswertung englischer Schlagzeilen.${d ? " Zertifikatswerte geschätzt aus Kaufkurs, Kurs des Basiswerts am Kauftag und K.-o.-Schwelle (ohne Spread/Finanzierungskosten)." : ""}</div>
+      <div class="note" style="margin:6px 0 0">Nachrichten-Ton: grobe Stichwortauswertung englischer Schlagzeilen.${d ? " Zertifikatswerte geschätzt aus Kaufkurs, Kurs des Basiswerts am Kauftag und K.-o.-Schwelle (ohne Spread/Finanzierungskosten)." : ""} Keine Anlageberatung.</div>
     </details>
     ${ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(ev.date)}</b> – ${(CAL_KIND[ev.kind] || [])[2] || ""}${ev.estimate ? " (geschätzt)" : ""}${d ? " · mit Hebel besonders riskant" : ""}</div>` : ""}
     <div class="row-actions">${inRes ? `<button class="mini-btn" data-open="${esc(p.t)}">Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>
       ${d ? "" : `<button class="mini-btn" data-dep="edit" data-i="${i}">Bearbeiten</button>`}<button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
   </article>`;
+}
+// Gesamtübersicht: eine Zeile je Position, Tippen springt zur Karte
+function depotOverviewHtml(items) {
+  const rows = items.map(({ p, i, r }) => {
+    const a = anaData && p.t && anaData.tickers[p.t]; if (!a) return "";
+    const m = posModel(p, r, { ...a, cur: (r && r.cur) || "" }), adv = posAdvice(m);
+    return `<tr data-jump="pos-${i}"><td><b>${esc(m.d ? m.d.under : (p.n || p.t))}</b><span class="muted">${p.date ? dateDE(p.date) : ""}</span></td>
+      <td class="num">${m.d ? fmt(m.levNow, 1) + "×" : "1×"}</td><td class="num ${(m.pl ?? 0) >= 0 ? "up" : "down"}">${sgnPct(m.pl)}</td>
+      <td><span class="vdot tone-${m.tone}"></span>${m.short ? "Short" : m.score}</td><td class="adv tone-${adv.tone}">${esc(adv.title)}</td></tr>`;
+  }).join("");
+  if (!rows) return "";
+  return `<div class="card ov"><div class="plan-h">Alle Positionen auf einen Blick</div><div class="table-wrap"><table class="xplan ovt">
+    <thead><tr><th>Position · Kauf</th><th class="num">Hebel</th><th class="num">G/V</th><th>Urteil</th><th>Empfehlung</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 // Kopfzeile Depot: Marktlage + Termine der nächsten 14 Tage
 function depotContextHtml(list, items) {
@@ -970,6 +1035,8 @@ function importRows(rows) {
     + (noData.length ? ` Ohne Kursdaten im Scan: ${noData.map(esc).join(", ")}.` : "");
 }
 document.addEventListener("click", e => {
+  const j = e.target.closest("[data-jump]");
+  if (j) { const el = document.getElementById(j.dataset.jump); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   const b = e.target.closest("[data-cal]");
   if (b) { state[b.dataset.cal] = b.dataset.v; save(); render(); return; }
   const d = e.target.closest("[data-dep]"); if (!d) return;
