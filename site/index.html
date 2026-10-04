@@ -613,8 +613,11 @@ function depotHtml() {
   const list = depotLoad();
   if (!searchIdx) { loadSearch(); return `<div class="section-title"><span>Depot</span><span>lädt Kurse …</span></div>`; }
   let wert = 0, einstand = 0, missingFx = false, valued = 0;
+  let invested = 0;
   const items = list.map((p, i) => {
-    const r = rowOf(p.t), cur = r ? r.cur : null;
+    const r = p.t ? rowOf(p.t) : null, cur = r ? r.cur : null;
+    invested += p.price * p.qty;
+    if (p.d) return { p, i, r, cur, nowEur: null, val: null, cost: p.price * p.qty };
     const nowEur = r ? toEur(r.c, cur) : null;
     if (nowEur == null || isNaN(nowEur)) missingFx = missingFx || !!r;
     const val = nowEur != null && !isNaN(nowEur) ? nowEur * p.qty : null, cost = p.price * p.qty;
@@ -624,17 +627,19 @@ function depotHtml() {
   const gv = wert - einstand;
   const head = `<div class="section-title"><span>Mein Depot</span><span>${list.length} Positionen</span></div>`;
   const sum = list.length && valued ? `<div class="dep-sum">
-      <div class="fig"><span>Depotwert</span><b>${fmt(wert)} €</b></div>
+      <div class="fig"><span>Depotwert${valued < list.length ? " (ohne Zertifikate)" : ""}</span><b>${fmt(wert)} €</b></div>
       <div class="fig"><span>Einstand</span><b>${fmt(einstand)} €</b></div>
       <div class="fig"><span>Gewinn / Verlust</span><b class="${gv >= 0 ? "up" : "down"}">${gv >= 0 ? "+" : ""}${fmt(gv)} €</b></div>
-      <div class="fig"><span>in %</span><b class="${gv >= 0 ? "up" : "down"}">${einstand ? (gv >= 0 ? "+" : "") + pct(gv / einstand) : "–"}</b></div></div>` : "";
+      <div class="fig"><span>in %</span><b class="${gv >= 0 ? "up" : "down"}">${einstand ? (gv >= 0 ? "+" : "") + pct(gv / einstand) : "–"}</b></div></div>`
+    : list.length ? `<div class="dep-sum"><div class="fig"><span>Eingesetzt gesamt</span><b>${fmt(invested)} €</b></div><div class="fig"><span>Positionen</span><b>${list.length}</b></div></div>` : "";
   const form = depotEdit != null ? depotFormHtml(depotEdit >= 0 ? list[depotEdit] : null) : "";
   const actions = `<div class="row-actions" style="margin:16px 0">
       <button class="btn" data-dep="add">+ Position</button>
-      <label class="btn ghost" style="cursor:pointer">CSV importieren<input type="file" accept=".csv,text/csv" id="depCsv" hidden></label>
+      <label class="btn ghost" style="cursor:pointer">Scalable-Export importieren<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="depCsv" hidden></label>
       <button class="btn ghost" data-dep="claude">Für Claude kopieren</button></div>
     ${depotMsg ? `<div class="tip tone-gray" style="margin-bottom:14px">${depotMsg}</div>` : ""}`;
   const cards = items.map(({ p, i, r, cur, nowEur, val, cost }) => {
+    if (p.d) return turboCard(p, i, r);
     const sig = holdSignal(r), held = p.date ? Math.max(0, -daysUntil(p.date)) : null, ev = nextEvent(p.t);
     const g = val != null ? val - cost : null;
     const inRes = data.results.some(x => x.ticker === p.t);
@@ -652,9 +657,41 @@ function depotHtml() {
         <button class="mini-btn" data-dep="edit" data-i="${i}">Bearbeiten</button><button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
     </article>`;
   }).join("");
-  const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere die CSV-Datei deiner Transaktionen aus Scalable Capital.</div>`;
+  const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere den Transaktions-Export aus Scalable Capital (Web-Version → Transaktionen → Export).</div>`;
   return head + sum + actions + form + empty + `<div class="grid">${cards}</div>`
     + `<div class="note" style="margin:16px 2px 0">Dein Depot wird nur auf diesem Gerät gespeichert (nicht im Internet). Kurse vom letzten Scan, Umrechnung in Euro zum Tageskurs${missingFx ? " – für einige Währungen fehlt der Wechselkurs" : ""}. Die Einschätzung ist rein technisch (Trend, EMAs, RSI) und keine Anlageberatung.</div>`;
+}
+// Turbo-/Knock-out-Zertifikat: Wert kennt Kairo nicht (keine Zertifikatskurse), aber den Basiswert
+function turboCard(p, i, r) {
+  const d = p.d, held = p.date ? Math.max(0, -daysUntil(p.date)) : null, ev = p.t ? nextEvent(p.t) : null;
+  const same = r && (!d.cur || d.cur === r.cur);
+  const dist = same ? (d.dir === "long" ? (r.c - d.ko) / r.c : (d.ko - r.c) / r.c) : null;
+  const lev = same && Math.abs(r.c - d.ko) > 0 ? r.c / Math.abs(r.c - d.ko) : null;
+  const koTone = dist == null ? "gray" : dist <= 0 ? "red" : dist < 0.05 ? "red" : dist < 0.12 ? "orange" : "green";
+  const koText = dist == null ? (r ? `Schwelle in ${esc(d.cur || "?")}, Basiswert notiert in ${esc(r.cur)} – Abstand nicht berechenbar.` : "Basiswert nicht im Scan – Abstand nicht berechenbar.")
+    : dist <= 0 ? "Der Basiswert steht jenseits der Schwelle – das Zertifikat ist vermutlich ausgeknockt. Bitte in Scalable prüfen."
+    : `Noch ${pct(dist)} bis zum Knock-out${dist < 0.05 ? " – sehr knapp, schon ein normaler Tagesausschlag kann reichen" : dist < 0.12 ? " – wenig Puffer" : ""}.`
+      + (r && r.atr ? ` Das sind etwa ${fmt((d.dir === "long" ? r.c - d.ko : d.ko - r.c) / r.atr, 1)} typische Tagesspannen (ATR).` : "");
+  const sig = holdSignal(r);
+  const sigTitle = d.dir === "long" ? sig.title : ({ red: "Abwärtstrend – passt zur Short-Position", orange: "Schwächephase – passt zur Short-Position" }[sig.tone] || "Basiswert steigt – gegen die Short-Position");
+  const sigTone = d.dir === "long" ? sig.tone : ({ red: "green", orange: "yellow" }[sig.tone] || "red");
+  return `<article class="card">
+    <div class="card-top"><div class="card-title"><h2>${esc(d.under)} <span class="pill">${d.dir === "long" ? "Turbo Long" : "Turbo Short"}</span></h2>
+      <div class="meta">${esc(p.isin || "")} · ${fmt(p.qty, p.qty % 1 ? 4 : 0)} Stück${p.date ? ` · gekauft am ${dateDE(p.date)} (vor ${held} Tagen)` : ""}</div></div></div>
+    <div class="figures">
+      <div class="fig"><span>Einstand je Zertifikat</span><b>${fmt(p.price)} €</b></div>
+      <div class="fig"><span>Eingesetzt</span><b>${fmt(p.price * p.qty)} €</b></div>
+      <div class="fig"><span>Basiswert aktuell</span><b>${r ? fmt(r.c) + " " + esc(r.cur) : "–"}</b></div>
+      <div class="fig"><span>Knock-out-Schwelle</span><b>${fmt(d.ko)} ${esc(d.cur || "")}</b></div>
+      <div class="fig"><span>Abstand zum K.-o.</span><b class="${koTone === "green" ? "up" : koTone === "gray" ? "" : "down"}">${dist != null ? pct(dist) : "–"}</b></div>
+      <div class="fig"><span>Hebel ca.</span><b>${lev ? fmt(lev, 1) + "×" : "–"}</b></div></div>
+    ${tipHtml({ tone: koTone, title: "Knock-out-Risiko", text: koText })}
+    ${r ? tipHtml({ tone: sigTone, title: "Basiswert technisch: " + sigTitle, text: sig.text }) : ""}
+    ${ev ? `<div class="note" style="margin-top:0">Nächster Termin ${esc(d.under)}: <b>${dateDE(ev.date)}</b> – ${(CAL_KIND[ev.kind] || [])[2] || ""}${ev.estimate ? " (geschätzt)" : ""}. Bei Quartalszahlen sind große Kurssprünge möglich – mit Hebel besonders riskant.</div>` : ""}
+    <div class="row-actions">${r && data.results.some(x => x.ticker === p.t) ? `<button class="mini-btn" data-open="${esc(p.t)}">Chart</button>` : ""}${p.t ? `<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>` : ""}
+      <button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
+    <div class="note" style="margin:0">Schwelle laut letzter Transaktion; bei Open-End-Turbos verschiebt sie sich täglich leicht (Finanzierungskosten). Aktueller Zertifikatskurs: in Scalable.</div>
+  </article>`;
 }
 function depotFormHtml(p) {
   const opts = (searchIdx || []).map(r => `<option value="${esc(r.n)} (${esc(r.t)})"></option>`).join("");
@@ -678,41 +715,101 @@ function matchName(name) {
   const k = normName(name); if (k.length < 3) return null;
   return searchIdx.find(r => normName(r.n) === k) || searchIdx.find(r => normName(r.n).startsWith(k) || k.startsWith(normName(r.n)) && normName(r.n).length >= 4) || null;
 }
-// CSV aus Scalable Capital (Transaktionen) oder ähnlich: Spalten werden am Namen erkannt
-function importCsv(text) {
+// ---------- Import: Scalable-Export (Excel, auch wenn er „.csv“ heißt) oder echte CSV ----------
+async function unzip(buf) {
+  const v = new DataView(buf), u8 = new Uint8Array(buf), files = {};
+  let eocd = -1; for (let i = buf.byteLength - 22; i >= 0; i--) if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
+  if (eocd < 0) throw new Error("kein ZIP");
+  let o = v.getUint32(eocd + 16, true);
+  for (let n = v.getUint16(eocd + 10, true); n > 0; n--) {
+    const meth = v.getUint16(o + 10, true), size = v.getUint32(o + 20, true), nl = v.getUint16(o + 28, true);
+    const name = new TextDecoder().decode(u8.subarray(o + 46, o + 46 + nl)), lo = v.getUint32(o + 42, true);
+    const start = lo + 30 + v.getUint16(lo + 26, true) + v.getUint16(lo + 28, true), raw = u8.slice(start, start + size);
+    files[name] = async () => new TextDecoder().decode(meth === 0 ? raw
+      : await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).arrayBuffer());
+    o += 46 + nl + v.getUint16(o + 30, true) + v.getUint16(o + 32, true);
+  }
+  return files;
+}
+async function xlsxRows(buf) {
+  const f = await unzip(buf), xml = async n => new DOMParser().parseFromString(await f[n](), "application/xml");
+  const ss = f["xl/sharedStrings.xml"] ? [...(await xml("xl/sharedStrings.xml")).getElementsByTagName("si")].map(x => x.textContent) : [];
+  const sheet = Object.keys(f).filter(n => /^xl\/worksheets\/sheet\d+\.xml$/.test(n)).sort()[0];
+  const colIdx = ref => [...ref.replace(/\d+/g, "")].reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+  return [...(await xml(sheet)).getElementsByTagName("row")].map(row => {
+    const out = [];
+    for (const c of row.getElementsByTagName("c")) {
+      const t = c.getAttribute("t"), vEl = c.getElementsByTagName("v")[0];
+      out[colIdx(c.getAttribute("r"))] = t === "s" ? ss[+vEl.textContent] : t === "inlineStr" ? c.textContent : vEl ? vEl.textContent : "";
+    }
+    return Array.from(out, x => x ?? "");
+  });
+}
+function csvRows(text) {
   const lines = text.replace(/^﻿/, "").split(/\r?\n/).filter(l => l.trim());
-  if (lines.length < 2) return "Die Datei enthält keine Zeilen.";
+  if (!lines.length) return [];
   const sep = (lines[0].match(/;/g) || []).length >= (lines[0].match(/,/g) || []).length ? ";" : ",";
-  const split = l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); };
-  const head = split(lines[0]).map(h => h.toLowerCase());
+  return lines.map(l => { const out = []; let cur = "", q = false; for (const ch of l) { if (ch === '"') q = !q; else if (ch === sep && !q) { out.push(cur); cur = ""; } else cur += ch; } out.push(cur); return out.map(x => x.trim()); });
+}
+// „Uber Technologies Long 54,76 $ Turbo Open End HSBC“ → Basiswert, Richtung, Knock-out
+const CUR_SIGN = { "$": "USD", "€": "EUR", "£": "GBP", "CHF": "CHF" };
+function parseDerivative(desc) {
+  const m = String(desc).match(/^(.+?)\s+(Long|Short|Call|Put)\s+([\d.,]+)\s*(\$|€|£|CHF)?\s*(Turbo|Mini|Knock|Optionsschein|Open End|Faktor)/i);
+  if (!m) return null;
+  const ko = parseFloat(m[3].replace(/\./g, "").replace(",", "."));
+  return { under: m[1].trim(), dir: /long|call/i.test(m[2]) ? "long" : "short", ko, cur: CUR_SIGN[m[4]] || null };
+}
+function matchUnderlying(name, cur) {
+  const k = normName(name); if (k.length < 3) return null;
+  const hits = searchIdx.filter(r => { const n = normName(r.n); return n === k || n.startsWith(k) || (k.startsWith(n) && n.length >= 4); });
+  hits.sort((a, b) => (normName(b.n) === k) - (normName(a.n) === k) || (b.cur === cur) - (a.cur === cur));
+  return hits[0] || null;
+}
+function importRows(rows) {
+  if (rows.length < 2) return "Die Datei enthält keine Zeilen.";
+  const head = rows[0].map(h => String(h).toLowerCase().trim());
   const col = (...names) => { const ex = head.findIndex(h => names.includes(h)); return ex >= 0 ? ex : head.findIndex(h => names.some(n => h.includes(n))); };
-  const iDate = col("date", "datum"), iName = col("description", "name", "wertpapier", "bezeichnung", "titel"), iIsin = col("isin");
+  const iDate = col("date", "datum"), iTime = col("time", "zeit", "uhrzeit"), iName = col("description", "name", "wertpapier", "bezeichnung", "titel"), iIsin = col("isin");
   const iQty = col("shares", "stück", "stueck", "anzahl", "quantity", "menge"), iPrice = col("price", "kurs", "preis"), iType = col("type", "typ", "transaktion", "art");
+  const iStatus = col("status"), iAsset = col("assettype");
   if (iQty < 0 || iPrice < 0 || (iName < 0 && iIsin < 0)) return "Spalten nicht erkannt. Erwartet werden u. a. Name/Beschreibung, Stück und Kurs.";
   const num = v => { v = String(v || "").replace(/[^\d,.\-]/g, ""); if (v.includes(",") && v.includes(".")) v = v.lastIndexOf(",") > v.lastIndexOf(".") ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, ""); else v = v.replace(",", "."); return parseFloat(v); };
-  const toIso = v => { v = String(v || ""); let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+  const toIso = v => { v = String(v || "").trim(); if (/^\d{5}(\.\d+)?$/.test(v)) return new Date(Date.UTC(1899, 11, 30) + Math.floor(+v) * 864e5).toISOString().slice(0, 10);
+    let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+  const key = c => toIso(c[iDate]) + String(iTime >= 0 ? c[iTime] : "").padStart(20, "0");
+  const fix = s => String(s || "").replace(/â‚¬/g, "€").replace(/Ã¤/g, "ä").replace(/Ã¶/g, "ö").replace(/Ã¼/g, "ü").replace(/ÃŸ/g, "ß").trim();
   const pos = {};
-  lines.slice(1).map(split).sort((a, b) => toIso(a[iDate]).localeCompare(toIso(b[iDate]))).forEach(c => {
-    const type = iType >= 0 ? c[iType].toLowerCase() : "kauf";
+  rows.slice(1).filter(c => c.some(x => String(x).trim())).sort((a, b) => key(a).localeCompare(key(b))).forEach(c => {
+    if (iStatus >= 0 && /cancel|reject|storn|abgelehnt|pending|offen/i.test(c[iStatus])) return;
+    if (iAsset >= 0 && c[iAsset] && !/security|wertpapier/i.test(c[iAsset])) return;
+    const type = iType >= 0 ? String(c[iType]).toLowerCase() : "kauf";
     const sell = /sell|verkauf/.test(type), buy = /buy|kauf|savings|spar|einbuch|transfer/.test(type) && !sell;
     if (!sell && !buy) return;
     const qty = Math.abs(num(c[iQty])), price = Math.abs(num(c[iPrice])); if (!qty) return;
-    const key = (iIsin >= 0 && c[iIsin]) || c[iName];
-    const p = pos[key] = pos[key] || { name: iName >= 0 ? c[iName] : key, qty: 0, cost: 0, date: "" };
+    const name = fix(iName >= 0 ? c[iName] : ""), k = (iIsin >= 0 && c[iIsin]) || name;
+    const p = pos[k] = pos[k] || { isin: iIsin >= 0 ? c[iIsin] : "", name, qty: 0, cost: 0, date: "" };
+    p.name = name || p.name;   // bei Open-End-Turbos steht die aktuelle K.-o.-Schwelle in der neuesten Zeile
     if (buy) { if (!p.qty) p.date = toIso(c[iDate]); p.cost += qty * (price || 0); p.qty += qty; }
     else { const avg = p.qty ? p.cost / p.qty : 0; p.qty = Math.max(0, p.qty - qty); p.cost = avg * p.qty; }
   });
-  const list = depotLoad(), unmatched = [];
-  let added = 0;
+  const list = depotLoad(), noData = [];
+  let added = 0, turbos = 0;
   Object.values(pos).filter(p => p.qty > 1e-9).forEach(p => {
-    const r = matchName(p.name);
-    if (!r) { unmatched.push(p.name); return; }
-    const entry = { t: r.t, n: r.n, qty: +p.qty.toFixed(6), price: +(p.cost / p.qty).toFixed(4), date: p.date };
-    const j = list.findIndex(x => x.t === r.t); if (j >= 0) list[j] = entry; else list.push(entry);
+    const d = parseDerivative(p.name), r = d ? matchUnderlying(d.under, d.cur) : matchName(p.name);
+    const entry = { t: r ? r.t : "", n: d ? p.name : r ? r.n : p.name, isin: p.isin, qty: +p.qty.toFixed(6), price: +(p.cost / p.qty).toFixed(4), date: p.date };
+    if (d) { entry.d = d; turbos++; }
+    if (!r) noData.push(d ? d.under : p.name);
+    const j = list.findIndex(x => (p.isin && x.isin === p.isin) || (!x.isin && !d && r && x.t === r.t));
+    if (j >= 0) list[j] = entry; else list.push(entry);
     added++;
   });
-  depotSave(list);
-  return `${added} Positionen importiert.` + (unmatched.length ? ` Nicht zugeordnet (bitte mit „+ Position“ von Hand anlegen): ${unmatched.map(esc).join(", ")}.` : "");
+  // Positionen aus früheren Importen, die laut Datei inzwischen verkauft sind, entfernen
+  const closed = new Set(Object.values(pos).filter(p => p.qty <= 1e-9 && p.isin).map(p => p.isin));
+  const kept = list.filter(x => !(x.isin && closed.has(x.isin)));
+  depotSave(kept);
+  return `${added} offene Positionen importiert${turbos ? `, davon ${turbos} Turbo-Zertifikate (bewertet über den Basiswert)` : ""}.`
+    + (list.length - kept.length ? ` ${list.length - kept.length} inzwischen verkaufte entfernt.` : "")
+    + (noData.length ? ` Ohne Kursdaten im Scan: ${noData.map(esc).join(", ")}.` : "");
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-cal]");
@@ -732,7 +829,9 @@ document.addEventListener("click", e => {
     if (depotEdit >= 0) list[depotEdit] = entry; else list.push(entry);
     depotSave(list); depotEdit = null;
   } else if (act === "claude") {
-    const lines = list.map(p => { const r = rowOf(p.t), s = holdSignal(r); return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; });
+    const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r);
+      if (p.d) return `${p.n} (ISIN ${p.isin}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €; Basiswert ${p.d.under} aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}, K.-o. ${fmt(p.d.ko)} ${p.d.cur || ""}; Kairo Basiswert: ${s.title}`;
+      return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; });
     const txt = "Mein Depot (Kairo, Stand " + new Date().toLocaleDateString("de-DE") + "):\n" + lines.join("\n");
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { depotMsg = "Kopiert – einfach im Chat mit Claude einfügen."; render(); },
       () => { depotMsg = "Kopieren nicht möglich. Text:<br><pre style='white-space:pre-wrap'>" + esc(txt) + "</pre>"; render(); });
@@ -743,7 +842,10 @@ document.addEventListener("click", e => {
 document.addEventListener("change", async e => {
   if (e.target.id !== "depCsv" || !e.target.files[0]) return;
   if (!searchIdx) await loadSearch();
-  depotMsg = importCsv(await e.target.files[0].text()); render();
+  const buf = await e.target.files[0].arrayBuffer(), u = new Uint8Array(buf);
+  try { depotMsg = importRows(u[0] === 0x50 && u[1] === 0x4b ? await xlsxRows(buf) : csvRows(new TextDecoder().decode(buf))); }
+  catch (err) { depotMsg = "Datei konnte nicht gelesen werden (" + esc(err.message || err) + ")."; }
+  e.target.value = ""; render();
 });
 
 // ---------- Einstellungen ----------
