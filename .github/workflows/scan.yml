@@ -62,6 +62,7 @@ jobs:
           name: scan-ergebnis
           path: |
             site/data/results.json
+            site/data/search.json
             data/universe_us.csv
             data/universe_eu.csv
             data/universe_asia.csv
