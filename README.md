@@ -12,7 +12,7 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 1. **Korrektur:** Rückgang ≥ 12 % vom Swing-High (höchstes Pivot-High der letzten 20–180 Tage), kein Crash
    (kein Tagesverlust > 25 % in 10 Tagen), Kurs unter EMA 20 und EMA 50, EMA 20 fällt, Abflachung der letzten 10 Kerzen.
 2. **Unterstützungszone:** Fibonacci 0,618–0,79 (Variante A) **oder** horizontaler Mehrfachboden mit ≥ 2 Touches ± 3 % (Variante B).
-3. **RSI(14):** bullische Divergenz (klassisch oder versteckt; Tiefs mind. 3 Kerzen auseinander, auch enge Doppelböden), RSI aktuell 28–48.
+3. **RSI(14):** bullische Divergenz (klassisch oder versteckt; Tiefs mind. 2 Kerzen auseinander, gleich tiefe Doppelböden zählen), RSI aktuell 28–48.
 4. **MACD(12/26/9):** Linie und Signal unter 0 und bullisches Kreuz ≤ 7 Kerzen **oder** Histogramm seit ≥ 4 Kerzen steigend
    und ≤ 25 % seines 30-Tage-Tiefs.
 5. **Momentum Bias Index [AlgoAlpha]:** grünes X auf einer roten Spitze (über der Referenzlinie) in den letzten 15 Kerzen,

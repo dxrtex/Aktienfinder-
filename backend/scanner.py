@@ -79,7 +79,7 @@ def find_rsi_divergence(low: pd.Series, r: np.ndarray, rc: SimpleNamespace):
     """
     l = low.to_numpy(dtype=float)
     n = len(l)
-    rp = [i for i in pivot_lows(low, rc.pivot_len) if n - 1 - i <= rc.lookback]
+    rp = [i for i in pivot_lows(low, rc.pivot_len, getattr(rc, "pivot_ties", False)) if n - 1 - i <= rc.lookback]
     recent = [i for i in rp if n - 1 - i <= rc.t2_max_age]
     div = None
     if recent:
