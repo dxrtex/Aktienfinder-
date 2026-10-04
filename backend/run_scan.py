@@ -25,6 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
+from .analysis import MARKET, SECTOR_ETF, add_context, add_news, analyze, fetch_news, finalize, market_context
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
@@ -248,7 +249,13 @@ def main(argv=None) -> int:
             watch_dates[t] = ticker_calendar(t)
             time.sleep(0.3)
         print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
+    news = fetch_news(list(watch)) if not args.end else {}
+    print(f"Nachrichten: {len(news)} von {len(watch)} Watchlist-Aktien")
     yf = YFinanceProvider()
+    ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)
+    market = market_context(ctx_hist)
+    lage = ", ".join(v["name"] + " " + v["label"] for k, v in market.items() if k != "regime")
+    print(f"Markt: {lage}; Lage: {market.get('regime', {}).get('label', '?')}")
     prov = CachedProvider(yf) if not args.end else yf
     data = prov.history(tickers, CONFIG.history.period, end=args.end)
     print(f"Kurse geladen: {len(data)}")
@@ -272,7 +279,7 @@ def main(argv=None) -> int:
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
     infos = yf.infos([t for t, _, _ in results])
-    rows = []
+    rows, final = [], {}
     (SITE / "charts").mkdir(parents=True, exist_ok=True)
     for old in (SITE / "charts").glob("*.json"):
         old.unlink()
@@ -285,6 +292,7 @@ def main(argv=None) -> int:
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
+        final[t] = (df, res, m)
         search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
@@ -321,6 +329,21 @@ def main(argv=None) -> int:
     print(f"Watchlist ohne Quartalstermin: {len(missing)} → nachgeholt {len(missing) - len(still)}, offen: {', '.join(still) or '–'}")
     print(f"Termine: {sum(1 for i in infos.values() if i.get('earnings_date'))} Earnings aus .info, "
           f"{sum(1 for i in dated.values() if i.get('earnings_date'))} insgesamt")
+    # Positions-Analyse (Depot): alle Aktien mit Detailseite
+    today = pd.Timestamp.now().date()
+    ana = {}
+    for t, (df, res, m) in final.items():
+        try:
+            a = analyze(df, res)
+            add_context(a, market, m.get("sector"), ctx_hist, dated.get(t, {}).get("earnings_date"), today)
+            add_news(a, news.get(t))
+            finalize(a)
+            ana[t] = _clean(a)
+        except Exception as exc:
+            print(f"{t}: Analyse-Fehler {exc!r}")
+    with open(SITE / "analysis.json", "w", encoding="utf-8") as f:
+        json.dump(_clean({"generated": out["generated"], "market": market, "tickers": ana}), f, ensure_ascii=False, separators=(",", ":"))
+    print(f"Analyse: {len(ana)} Aktien")
     cal = build_calendar(rows, dated)
     with open(SITE / "calendar.json", "w", encoding="utf-8") as f:
         json.dump(cal, f, ensure_ascii=False, separators=(",", ":"))
