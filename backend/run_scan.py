@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from .analysis import MARKET, SECTOR_ETF, add_context, add_news, analyze, fetch_news, finalize, market_context
+from .analysis import MARKET, SECTOR_ETF, add_context, analyze, finalize, market_context
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
@@ -249,8 +249,6 @@ def main(argv=None) -> int:
             watch_dates[t] = ticker_calendar(t)
             time.sleep(0.3)
         print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
-    news = fetch_news(watch) if not args.end else {}
-    print(f"Nachrichten: {len(news)} von {len(watch)} Watchlist-Aktien")
     yf = YFinanceProvider()
     ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)
     market = market_context(ctx_hist)
@@ -336,7 +334,6 @@ def main(argv=None) -> int:
         try:
             a = analyze(df, res)
             add_context(a, market, m.get("sector"), ctx_hist, dated.get(t, {}).get("earnings_date"), today)
-            add_news(a, news.get(t))
             finalize(a)
             ana[t] = _clean(a)
         except Exception as exc:

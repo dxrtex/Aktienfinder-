@@ -1,4 +1,4 @@
-"""Positions-Analyse für das Depot: Trend, Momentum, Marken für Stop/Ziele, Chance, Markt, Nachrichten.
+"""Positions-Analyse für das Depot: Trend, Momentum, Marken für Stop/Ziele, Chance, Markt.
 
 Läuft im Scan für alle Aktien mit Detailseite (Watchlist, Treffer, Fast-Treffer). Das Depot selbst
 kennt der Scan nicht – die App verknüpft die Analyse auf dem Gerät mit Einstieg und Stückzahl.
@@ -13,8 +13,6 @@ EMA 50 (gedämpft, begrenzt) – Trends halten oft, aber nicht immer.
 from __future__ import annotations
 
 import math
-import re
-import time
 
 import numpy as np
 import pandas as pd
@@ -30,8 +28,6 @@ SECTOR_DE = {"Technology": "Technologie", "Financial Services": "Finanzen", "Hea
              "Industrials": "Industrie", "Basic Materials": "Rohstoffe", "Utilities": "Versorger",
              "Real Estate": "Immobilien", "Communication Services": "Kommunikation"}
 EUROPE = (".PA", ".AS", ".MI", ".MC", ".CO", ".ST", ".SW", ".L", ".HE", ".OL", ".BR", ".VI", ".LS", ".IR")
-POS_WORDS = r"beat|beats|tops|raise[sd]?|upgrade|record|surge|soar|jump|rall(y|ies)|strong|win[s]?|contract|approval|partnership|buyback|outperform|bullish|growth|profit"
-NEG_WORDS = r"miss(es)?|cut[s]?|downgrade|lawsuit|probe|investigation|plunge|slump|tumble|fall[s]?|drop[s]?|weak|warn(s|ing)?|offering|dilution|recall|delay|loss(es)?|bearish|sell-off|layoff|short seller|fraud"
 
 
 def _p(x: float) -> str:
@@ -240,64 +236,7 @@ def add_context(a: dict, market: dict, sector: str | None, sector_hist: dict, ea
 def finalize(a: dict) -> None:
     """Gesamturteil 0–100 aus den gewichteten Faktoren (+1 / 0 / −1, Trend −2 … +2)."""
     weights = {"trend": 2.0, "macd": 1.0, "rsi": 0.75, "mbi": 1.0, "div": 0.75, "fib": 0.75, "rs": 1.0,
-               "sector": 0.5, "market": 1.0, "earn": 0.5, "news": 0.5}
+               "sector": 0.5, "market": 1.0, "earn": 0.5}
     tot = sum(weights.get(x["k"], 0.5) * x["s"] for x in a["fac"])
     mx = sum(weights.get(x["k"], 0.5) * (2 if x["k"] == "trend" else 1) for x in a["fac"])
     a["score"] = round(50 + 50 * tot / mx) if mx else 50
-
-
-def news_tone(title: str) -> int:
-    t = title.lower()
-    return (1 if re.search(rf"\b({POS_WORDS})\b", t) else 0) - (1 if re.search(rf"\b({NEG_WORDS})\b", t) else 0)
-
-
-def fetch_news(names: dict[str, str], per: int = 4) -> dict[str, list[dict]]:
-    """Jüngste Schlagzeilen je Aktie {Ticker: Name} (Yahoo Finance). Nur Schlagzeilen, die die Firma nennen.
-    Stimmung nur grob per Stichwort."""
-    import yfinance as yf
-
-    out, errors = {}, []
-    for t, name in names.items():
-        key = next((w for w in re.split(r"[\s,]+", name or "") if len(w) >= 3), t.split(".")[0]).lower()
-        base = t.split(".")[0].lower()
-        items = []
-        for q in (t, name):                # 1. Ticker-News, 2. Suche nach dem Namen
-            try:
-                got = (yf.Ticker(t).get_news(count=10) if q == t else yf.Search(q, max_results=1, news_count=10).news) or []
-            except Exception as exc:
-                errors.append(f"{t}: {exc!r}"[:160])
-                got = []
-                time.sleep(1)
-            items += got
-        def title_of(it):
-            return ((it.get("content") or it).get("title") or "")
-        items = [it for it in items if re.search(rf"\b({re.escape(key)}|{re.escape(base)})\b", title_of(it).lower())]
-        rows = []
-        for it in items:
-            cnt = it.get("content") or it
-            title = cnt.get("title")
-            if not title:
-                continue
-            date = cnt.get("pubDate") or cnt.get("displayTime") or it.get("providerPublishTime")
-            if isinstance(date, (int, float)):
-                date = pd.Timestamp(date, unit="s").isoformat()
-            url = (cnt.get("canonicalUrl") or {}).get("url") or (cnt.get("clickThroughUrl") or {}).get("url") or it.get("link")
-            pub = (cnt.get("provider") or {}).get("displayName") or it.get("publisher") or ""
-            rows.append({"title": title, "date": str(date or "")[:10], "url": url, "pub": pub, "tone": news_tone(title)})
-        rows = list({x["title"]: x for x in rows}.values())
-        rows.sort(key=lambda x: x["date"], reverse=True)
-        if rows:
-            out[t] = rows[:per]
-        time.sleep(0.3)
-    if errors:
-        print(f"Nachrichten: {len(errors)} Fehler, z. B. {errors[:3]}")
-    return out
-
-
-def add_news(a: dict, news: list[dict] | None) -> None:
-    if not news:
-        return
-    a["news"] = news
-    s = sum(x["tone"] for x in news)
-    a["fac"].append({"k": "news", "l": "Nachrichten", "s": 1 if s >= 2 else -1 if s <= -2 else 0,
-                     "t": f"{len(news)} Schlagzeilen, Ton " + ("eher positiv" if s >= 2 else "eher negativ" if s <= -2 else "gemischt/neutral")})
