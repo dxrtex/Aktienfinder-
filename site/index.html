@@ -163,6 +163,19 @@
   .card.ov { margin-bottom: 16px; } .card.ov .table-wrap { border: 0; background: none; } table.ovt tr { cursor: pointer; } table.ovt td span.muted { display: block; font-size: 12px; }
   table.ovt td.adv { color: var(--c) !important; font-weight: 600; }
   .vdot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+  .chartbox { background: var(--surface-2); border-radius: var(--radius-s); padding: 10px 10px 6px; }
+  .poschart { width: 100%; height: auto; display: block; }
+  .chartbox .legend { flex-wrap: wrap; gap: 6px 14px; font-size: 12px; margin-top: 4px; }
+  .two-eval { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @container (min-width: 560px) { .two-eval { grid-template-columns: 1fr 1fr; } }
+  .evalbox { background: var(--cb); border-radius: var(--radius-s); padding: 12px 14px; }
+  .evalbox .eh { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+  .evalbox .et { display: block; color: var(--c); font-size: 17px; margin: 2px 0 6px; }
+  .checks { list-style: none; margin: 0; padding: 0; font-size: 14px; } .checks li { margin: 4px 0; padding-left: 20px; position: relative; line-height: 1.35; }
+  .checks i { position: absolute; left: 0; font-style: normal; font-weight: 700; } .checks b { font-weight: 600; }
+  .evalbox .todo { margin-top: 8px; font-size: 14px; font-weight: 600; color: var(--text); border-top: 1px solid var(--line); padding-top: 8px; }
+  table.xplan td small { display: block; }
+  table.xplan.ind td { white-space: normal; font-size: 14px; }
   .grid.one { grid-template-columns: 1fr !important; }
   .card.ctx { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -712,7 +725,7 @@ function needChart(t) {
   loadChart(t).then(c => { chartReady[t] = c; if (state.sec === "depot") render(); }).catch(() => { chartReady[t] = false; });
   return null;
 }
-// Einstieg bewerten: wo stand der Basiswert am Kauftag in seiner 20-Tage-Spanne, wie heiß war der RSI?
+// Einstieg bewerten: Lage in der 20-Tage-Spanne, RSI, MACD, MBI und Abstand zur EMA 20 am Kauftag
 function entryEval(c, date) {
   if (!c || !date) return null;
   let i = c.t.findIndex(d => d >= date); if (i < 0) i = c.t.length - 1;
@@ -721,13 +734,17 @@ function entryEval(c, date) {
   const pos = hi > lo ? (u - lo) / (hi - lo) : .5, r = c.rsi[i], e20 = c.e20[i], e50 = c.e50[i];
   const atr = c.h.slice(i - 13, i + 1).reduce((s, h, k) => s + h - c.l[i - 13 + k], 0) / 14;
   const ext = atr ? (u - e20) / atr : 0;
-  let tone, label;
-  if ((pos <= .35 && r <= 52) || (u > e50 && ext <= .3 && r <= 55)) { tone = "green"; label = "Guter Einstieg"; }
-  else if (pos >= .8 && (r >= 65 || ext >= 2)) { tone = "red"; label = "Später Einstieg"; }
-  else { tone = "yellow"; label = "Durchschnittlicher Einstieg"; }
-  const why = [`${pos <= .35 ? "nahe am" : pos >= .8 ? "nahe am" : "in der Mitte zwischen"} ${pos <= .35 ? "20-Tage-Tief" : pos >= .8 ? "20-Tage-Hoch" : "20-Tage-Tief und -Hoch"}`,
-               `RSI ${fmt(r, 0)}`, `${fmt(Math.abs(ext), 1)} ATR ${ext >= 0 ? "über" : "unter"} der EMA 20`];
-  return { tone, label, text: why.join(", "), u, date: c.t[i] };
+  const histUp = c.hist[i] > c.hist[i - 1], mbiBuy = c.mbi_up[i] > c.mbi_lo[i];
+  const gxAge = (() => { for (let k = 0; k <= 10; k++) if (c.gx[i - k]) return k; return null; })();
+  const checks = [
+    { s: pos <= .35 ? 1 : pos >= .8 ? -1 : 0, l: "Lage", t: pos <= .35 ? "nahe am 20-Tage-Tief gekauft" : pos >= .8 ? "nahe am 20-Tage-Hoch gekauft" : "Mitte der 20-Tage-Spanne" },
+    { s: r <= 45 ? 1 : r >= 65 ? -1 : 0, l: "RSI", t: `${fmt(r, 0)} – ${r <= 35 ? "überverkauft, günstig" : r <= 45 ? "eher günstig" : r >= 70 ? "überkauft" : r >= 65 ? "heiß" : "neutral"}` },
+    { s: histUp ? 1 : -1, l: "MACD", t: histUp ? `Histogramm ${c.hist[i] < 0 ? "rot, aber steigend – Wende" : "grün und steigend"}` : `Histogramm ${c.hist[i] < 0 ? "rot und fallend – zu früh" : "grün, aber fallend"}` },
+    { s: mbiBuy || gxAge != null ? 1 : -1, l: "MBI", t: gxAge != null ? `grünes X ${gxAge ? `${gxAge} T.` : "am Tag"} vor dem Kauf` : mbiBuy ? "Kaufdruck überwog" : "Verkaufsdruck überwog" },
+    { s: ext >= 2 ? -1 : u > e50 && ext <= .5 ? 1 : 0, l: "EMA", t: ext >= 2 ? `${fmt(ext, 1)} ATR über der EMA 20 – überdehnt` : u > e50 ? `über EMA 50, ${fmt(Math.abs(ext), 1)} ATR ${ext >= 0 ? "über" : "unter"} EMA 20` : "unter der EMA 50 (Rücksetzer gekauft)" }];
+  const sc = checks.reduce((s, x) => s + x.s, 0);
+  const [tone, label] = sc >= 2 ? ["green", "Guter Einstieg"] : sc <= -1 ? ["red", "Ungünstiger Einstieg"] : ["yellow", "Durchschnittlicher Einstieg"];
+  return { tone, label, checks, sc, u, i, date: c.t[i], text: checks.map(x => x.t).join(", ") };
 }
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
 function turboModel(p, a, ent) {
@@ -742,29 +759,6 @@ function turboModel(p, a, ent) {
   return { ratio, val, now: val(a.c) };
 }
 const VERDICT = s => s >= 65 ? ["green", "Gut"] : s >= 45 ? ["yellow", "Neutral"] : ["red", "Kritisch"];
-function ladderSvg(pts, cur) {
-  const vals = pts.map(x => x.v).filter(v => v != null && isFinite(v));
-  const lo = Math.min(...vals), hi = Math.max(...vals), W = 600, H = 92, pad = 34;
-  const X = v => pad + (W - 2 * pad) * (hi > lo ? (v - lo) / (hi - lo) : .5);
-  const col = { ko: "var(--red)", stop: "#ff9f43", entry: "var(--muted)", now: "var(--text)", tp: "var(--up)" };
-  const sorted = pts.filter(x => x.v != null && isFinite(x.v)).sort((a, b) => a.v - b.v);
-  const stopP = pts.find(x => x.k === "stop"), tpLast = pts.filter(x => x.k === "tp").pop();
-  let body = `<line x1="${pad}" x2="${W - pad}" y1="46" y2="46" stroke="var(--surface-3)" stroke-width="6" stroke-linecap="round"/>`;
-  if (stopP && tpLast) body += `<line x1="${X(stopP.v)}" x2="${X(a_now(pts))}" y1="46" y2="46" stroke="rgba(255,69,58,.45)" stroke-width="6"/>`
-    + `<line x1="${X(a_now(pts))}" x2="${X(tpLast.v)}" y1="46" y2="46" stroke="rgba(48,209,88,.45)" stroke-width="6"/>`;
-  const last = { up: -1e9, dn: -1e9 };
-  sorted.forEach(x => {
-    const cx = X(x.v), big = x.k === "now", w = x.l.length * 10.5;   // Beschriftung oben oder unten – wo mehr Platz ist
-    const row = last.up <= last.dn ? "up" : "dn";
-    const tx = Math.min(W - w / 2, Math.max(cx, last[row] + 6 + w / 2, w / 2));   // notfalls etwas zur Seite schieben
-    last[row] = tx + w / 2;
-    const isUp = row === "up";
-    body += `<circle cx="${cx}" cy="46" r="${big ? 8 : 5.5}" fill="${col[x.k]}" ${big ? 'stroke="var(--bg)" stroke-width="3"' : ""}/>`
-      + `<text x="${tx}" y="${isUp ? 24 : 80}" text-anchor="middle" font-size="19" font-weight="${big ? 700 : 500}" fill="${col[x.k]}">${esc(x.l)}</text>`;
-  });
-  return `<svg class="ladder" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kursleiter">${body}</svg>`;
-}
-const a_now = pts => pts.find(x => x.k === "now").v;
 // Alles, was eine Position ausmacht – einmal berechnet, von Übersicht und Karte genutzt
 function posModel(p, r, a) {
   const d = p.d, short = !!(d && d.dir === "short"), cur = a.cur || (r && r.cur) || "";
@@ -787,7 +781,7 @@ function posModel(p, r, a) {
 // Lage seit dem Einstieg + konkrete Empfehlung (regelbasiert)
 function posAdvice(m) {
   const { a, d, ent, pl, label, dist, short } = m;
-  if (short) return { tone: "gray", title: "Short-Position", text: "Die Analyse ist aus Long-Sicht gerechnet – fallende Kurse sind hier gut für dich." };
+  if (short) return { tone: "gray", title: "Short-Position", todo: "Die Analyse ist aus Long-Sicht gerechnet – fallende Kurse sind hier gut für dich.", text: "" };
   const res = m.underMove ?? pl ?? 0, gain = (pl ?? res) > .03, loss = (pl ?? res) < -.03;
   const facs = a.fac.slice().sort((x, y) => Math.abs(y.s) - Math.abs(x.s));
   const plus = facs.filter(f => f.s > 0).slice(0, 2).map(f => f.l), minus = facs.filter(f => f.s < 0).slice(0, 2).map(f => f.l);
@@ -806,20 +800,81 @@ function posAdvice(m) {
   else if (loss) { tone = "red"; title = "Verlust begrenzen"; todo = `Ausstieg prüfen – spätestens bei ${fmt(a.stop.p)} verkaufen.`; }
   else { tone = label === "Gut" ? "green" : label === "Neutral" ? "yellow" : "red"; title = "Etwa auf Einstand";
          todo = label === "Kritisch" ? `Schwaches Bild – Stop eng bei ${fmt(a.stop.p)}.` : `Stop bei ${fmt(a.stop.p)}, erstes Ziel ${fmt(a.tp[0].p)}.`; }
-  return { tone, title, text: [since, now, todo].filter(Boolean).join(" ") };
+  return { tone, title, todo, text: [since, now, todo].filter(Boolean).join(" ") };
 }
 const sgnPct = (v, d = 0) => v == null ? "–" : (v >= 0 ? "+" : "") + pct(v, d);
+// Kurschart je Position: Kerzen, EMA 20/50, Kauf, Ziele, Stop, Knock-out
+function posChartSvg(c, m) {
+  const { a, d, ent } = m, n = c.t.length;
+  const from = Math.max(0, Math.min(n - 70, ent ? ent.i - 25 : n - 90));
+  const W = 680, H = 290, L = 6, R = W - 118, T = 12, B = H - 24, idx = [];
+  for (let k = from; k < n; k++) idx.push(k);
+  const lv = [{ k: "tp", v: a.tp[1].p, l: "Ziel 2" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }, { k: "stop", v: a.stop.p, l: "Stop" }];
+  if (ent) lv.push({ k: "entry", v: ent.u, l: "Kauf" });
+  if (d && Math.abs(d.ko / a.c - 1) < .7) lv.push({ k: "ko", v: d.ko, l: "K.-o." });
+  const vals = idx.flatMap(k => [c.h[k], c.l[k]]).concat(lv.map(x => x.v));
+  let lo = Math.min(...vals), hi = Math.max(...vals); const padv = (hi - lo) * .04; lo -= padv; hi += padv;
+  const X = k => L + (R - L) * (k - from + .5) / idx.length, Y = v => T + (B - T) * (hi - v) / (hi - lo);
+  const bw = Math.max(1.5, (R - L) / idx.length * .62);
+  const col = { tp: "#30d158", stop: "#ff9f43", entry: "#e5e5ea", ko: "#ff453a", now: "#ffffff" };
+  let s = "";
+  // Zonen: Ziel-Bereich grün, Verlust-Bereich (Stop bis K.-o. bzw. unten) rot
+  s += `<rect x="${L}" y="${Y(a.tp[1].p)}" width="${R - L}" height="${Math.max(0, Y(a.tp[0].p) - Y(a.tp[1].p))}" fill="rgba(48,209,88,.10)"/>`;
+  const lossLo = d && Math.abs(d.ko / a.c - 1) < .7 ? d.ko : lo;
+  s += `<rect x="${L}" y="${Y(a.stop.p)}" width="${R - L}" height="${Math.max(0, Y(lossLo) - Y(a.stop.p))}" fill="rgba(255,69,58,.08)"/>`;
+  idx.forEach(k => {
+    const up = c.c[k] >= c.o[k], cl = up ? "#30d158" : "#ff453a", x = X(k);
+    s += `<line x1="${x}" x2="${x}" y1="${Y(c.h[k])}" y2="${Y(c.l[k])}" stroke="${cl}" stroke-width="1" opacity=".75"/>`
+      + `<rect x="${x - bw / 2}" y="${Y(Math.max(c.o[k], c.c[k]))}" width="${bw}" height="${Math.max(1, Math.abs(Y(c.o[k]) - Y(c.c[k])))}" fill="${cl}" opacity=".85"/>`;
+  });
+  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="1.6" opacity=".8" points="${idx.filter(k => c[key][k] != null).map(k => `${X(k).toFixed(1)},${Y(c[key][k]).toFixed(1)}`).join(" ")}"/>`;
+  s += line("e20", "#0a84ff") + line("e50", "#ffd60a");
+  if (ent && ent.i >= from) s += `<line x1="${X(ent.i)}" x2="${X(ent.i)}" y1="${T}" y2="${B}" stroke="#e5e5ea" stroke-dasharray="2 4" opacity=".5"/>`
+    + `<circle cx="${X(ent.i)}" cy="${Y(ent.u)}" r="5" fill="#e5e5ea" stroke="#0b0b0c" stroke-width="2"/>`;
+  // Linien + Beschriftung rechts (überlappungsfrei)
+  const labs = lv.map(x => ({ ...x, y: Y(x.v) })).concat([{ k: "now", v: a.c, l: "Jetzt", y: Y(a.c) }]).sort((p, q) => p.y - q.y);
+  for (let k = 1; k < labs.length; k++) if (labs[k].y - labs[k - 1].y < 17) labs[k].y = labs[k - 1].y + 17;
+  const over = labs.length ? labs[labs.length - 1].y - (H - 6) : 0;
+  if (over > 0) labs.forEach(x => x.y -= over);
+  labs.forEach(x => {
+    if (x.k !== "now") s += `<line x1="${L}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="${col[x.k]}" stroke-width="${x.k === "entry" ? 1.4 : 1.2}" stroke-dasharray="${x.k === "entry" ? "" : "6 4"}" opacity=".9"/>`;
+    else s += `<line x1="${X(n - 1)}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="#fff" stroke-width="1" opacity=".6"/>`;
+    s += `<line x1="${R}" x2="${R + 6}" y1="${Y(x.v)}" y2="${x.y}" stroke="${col[x.k]}" opacity=".6"/>`
+      + `<text x="${R + 9}" y="${x.y + 5}" font-size="14" font-weight="${x.k === "now" ? 700 : 600}" fill="${col[x.k]}">${esc(x.l)} ${fmt(x.v)}</text>`;
+  });
+  const dl = k => { const [y, mo, dd] = c.t[k].split("-"); return `${+dd}.${+mo}.`; };
+  [from, Math.floor((from + n - 1) / 2), n - 1].forEach((k, j) => s += `<text x="${X(k)}" y="${H - 6}" font-size="12" fill="#8e8e93" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}">${dl(k)}</text>`);
+  return `<svg class="poschart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kurschart mit Kauf, Zielen und Stop">${s}</svg>
+    <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:rgba(48,209,88,.35)"></i>Zielbereich</span><span><i style="background:rgba(255,69,58,.3)"></i>unter dem Stop</span></div>`;
+}
+// Indikatoren beim Kauf und heute (aus den Chartdaten)
+function indicatorRows(c, m) {
+  const n = c.t.length - 1, i = m.ent ? m.ent.i : null, a = m.a;
+  const mbi = k => c.mbi_up[k] > c.mbi_lo[k] ? "Kaufdruck" : "Verkaufsdruck";
+  const macdTxt = k => `${c.hist[k] >= 0 ? "grün" : "rot"}, ${c.hist[k] > c.hist[k - 1] ? "steigt" : "fällt"}`;
+  const emaTxt = k => c.c[k] > c.e20[k] && c.c[k] > c.e50[k] ? "über EMA 20 + 50" : c.c[k] > c.e50[k] ? "über EMA 50, unter 20" : c.c[k] > c.e20[k] ? "über EMA 20, unter 50" : "unter EMA 20 + 50";
+  const rsiNow = c.rsi[n], rsiTone = rsiNow >= 75 ? -1 : rsiNow >= 45 ? 1 : rsiNow < 35 ? -1 : 0;
+  const rows = [
+    ["RSI", i != null ? fmt(c.rsi[i], 0) : "–", fmt(rsiNow, 0), rsiTone, rsiNow >= 75 ? "überkauft – Rücksetzer möglich" : rsiNow >= 45 ? "gesundes Momentum" : rsiNow < 35 ? "schwach / überverkauft" : "neutral"],
+    ["MACD", i != null ? macdTxt(i) : "–", macdTxt(n), c.hist[n] > c.hist[n - 1] ? 1 : -1, c.hist[n] > c.hist[n - 1] ? "Momentum nimmt zu" : "Momentum lässt nach"],
+    ["MBI", i != null ? mbi(i) : "–", mbi(n), c.mbi_up[n] > c.mbi_lo[n] ? 1 : -1, c.gx.slice(-10).some(Boolean) ? "grünes X in den letzten 10 T." : c.mbi_up[n] > c.mbi_lo[n] ? "Käufer dominieren" : "Verkäufer dominieren"],
+    ["Trend", i != null ? emaTxt(i) : "–", emaTxt(n), c.c[n] > c.e50[n] ? 1 : -1, `Kurs ${c.c[n] > c.e50[n] ? "über" : "unter"} EMA 50, die EMA 50 ${c.e50[n] > c.e50[Math.max(0, n - 20)] ? "steigt" : "fällt"}`]];
+  const fib = a.fac.find(f => f.k === "fib"), div = a.fac.find(f => f.k === "div"), rs = a.fac.find(f => f.k === "rs");
+  if (fib) rows.push(["Fibonacci", "", fib.t, fib.s, ""]);
+  if (div) rows.push(["RSI-Divergenz", "", div.t, div.s, ""]);
+  if (rs) rows.push(["Rel. Stärke", "", rs.t, rs.s, ""]);
+  return rows;
+}
 function posCard(p, i, r, a) {
-  const m = posModel(p, r, a), { d, short, cur, ent, held, tm, pl } = m, adv = posAdvice(m);
-  const lev = m.levNow, sell1 = lev >= 4 ? "⅔ verkaufen" : "½ verkaufen";
-  const ev = nextEvent(p.t), inRes = data.results.some(x => x.ticker === p.t);
-  const pts = [{ k: "now", v: a.c, l: "Jetzt" }, { k: "stop", v: a.stop.p, l: "Stop" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }, { k: "tp", v: a.tp[1].p, l: "Ziel 2" }];
-  if (ent) pts.push({ k: "entry", v: ent.u, l: "Kauf" });
-  if (d && Math.abs(d.ko / a.c - 1) < .6) pts.push({ k: "ko", v: d.ko, l: "K.-o." });
+  const m = posModel(p, r, a), { d, short, cur, ent, held, pl } = m, adv = posAdvice(m);
+  const c = needChart(p.t), lev = m.levNow, sell1 = lev >= 4 ? "⅔ verkaufen" : "½ verkaufen";
+  const ev = nextEvent(p.t);
   const row = (lab, x, extra, cls, prob = "") => { const v = m.valAt(x), g = m.plAt(x);
-    return `<tr class="${cls}"><td><b>${lab}</b><small>${extra}</small></td><td class="num">${fmt(x)}</td><td class="num">${v != null ? fmt(v) + " €" : "–"}</td>
+    return `<tr class="${cls}"><td><b>${lab}</b><small>${extra}</small></td><td class="num">${fmt(x)}<small>${sgnPct(x / a.c - 1, 1)}</small></td><td class="num">${v != null ? fmt(v) + " €" : "–"}</td>
       <td class="num ${g == null ? "" : g >= 0 ? "up" : "down"}">${sgnPct(g)}</td><td class="num">${prob}</td></tr>`; };
-  const facs = a.fac.slice().sort((x, y) => Math.abs(y.s) - Math.abs(x.s));
+  const ind = c ? indicatorRows(c, m) : null;
+  const pos = ind ? ind.filter(x => x[3] > 0).length : 0;
+  const tp = a.tp[0], chance = pr => pr >= .6 ? "realistisch" : pr >= .4 ? "möglich" : "ambitioniert";
   return `<article class="card pos" id="pos-${i}">
     <div class="card-top"><div class="card-title"><h2>${esc(d ? d.under : (p.n || (r && r.n) || p.t))}</h2>
       <div class="meta">${d ? `<span class="pill" style="margin:0 4px 0 0">${short ? "Turbo Short" : "Turbo Long"}</span>` : ""}${esc(p.t)}${p.isin ? " · " + esc(p.isin) : ""}</div></div>
@@ -830,28 +885,29 @@ function posCard(p, i, r, a) {
       <div><span>Basiswert</span><b>${fmt(a.c)} <small>${esc(cur)}</small></b><em>${ent ? `Kauf bei ≈ ${fmt(ent.u)} → ${sgnPct(m.underMove, 1)}` : "Kaufkurs unbekannt"}</em></div>
       <div><span>Position${d ? " (geschätzt)" : ""}</span><b class="${(pl ?? 0) >= 0 ? "up" : "down"}">${sgnPct(pl, 1)}</b><em>${m.nowPos != null ? `≈ ${fmt(m.nowPos * p.qty)} € von ${fmt(p.price * p.qty)} €` : `Einstand ${fmt(p.price * p.qty)} €`}</em></div>
     </div>
-    <div class="tip tone-${adv.tone}" style="margin:0"><b class="t">${esc(adv.title)}</b>${esc(adv.text)}</div>
-    ${ladderSvg(pts)}
-    ${short ? "" : `<div class="plan-wrap"><div class="plan-h">Ausstiegsplan für ${d ? `deinen ${fmt(lev, 1)}×-Hebel` : "deine Aktie"}</div>
+    <div class="chartbox">${c ? posChartSvg(c, m) : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
+    <div class="two-eval">
+      <div class="evalbox tone-${ent ? ent.tone : "gray"}"><div class="eh">Dein Einstieg${ent ? ` · ${dateDE(ent.date)}` : ""}</div>
+        ${ent ? `<b class="et">${ent.label}</b><ul class="checks">${ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul>`
+          : `<div class="note" style="margin:0">${p.date ? "Wird bewertet, sobald der Chart geladen ist …" : "Kein Kaufdatum hinterlegt."}</div>`}</div>
+      <div class="evalbox tone-${adv.tone}"><div class="eh">Lage jetzt</div><b class="et">${esc(adv.title)}</b>
+        <ul class="checks">
+          ${ent ? `<li><i class="${m.underMove >= 0 ? "up" : "down"}">${m.underMove >= 0 ? "▲" : "▼"}</i>Seit Kauf ${sgnPct(m.underMove, 1)} beim Basiswert${pl != null ? `, Position ${sgnPct(pl, 0)}` : ""}</li>` : ""}
+          ${short ? "" : `<li><i class="up">◎</i>Ziel 1 bei ${fmt(tp.p)} (${sgnPct(tp.pct, 0)}): Chance ${pct(tp.prob, 0)} – ${chance(tp.prob)}, ~${tp.days} Handelstage</li>`}
+          ${ind ? `<li><i class="${pos >= 3 ? "up" : pos <= 1 ? "down" : "muted"}">${pos >= 3 ? "▲" : pos <= 1 ? "▼" : "●"}</i>Technik: ${pos} von ${ind.length} Signalen positiv</li>` : ""}
+          ${ev ? `<li><i class="down">!</i>${(CAL_KIND[ev.kind] || [])[2] || "Termin"} am ${dateDE(ev.date)}${d ? " – mit Hebel riskant" : ""}</li>` : ""}
+        </ul><div class="todo">${esc(adv.todo)}</div></div>
+    </div>
+    ${ind ? `<div><div class="plan-h">Indikatoren: beim Kauf → heute</div><table class="xplan ind"><thead><tr><th></th><th>beim Kauf</th><th>heute</th><th>Einschätzung</th></tr></thead><tbody>
+      ${ind.map(x => `<tr><td><b>${x[0]}</b></td><td class="muted">${esc(x[1])}</td><td>${esc(x[2])}</td><td class="${x[3] > 0 ? "up" : x[3] < 0 ? "down" : "muted"}">${x[3] > 0 ? "▲" : x[3] < 0 ? "▼" : "●"} ${esc(x[4])}</td></tr>`).join("")}</tbody></table></div>` : ""}
+    ${short ? "" : `<div><div class="plan-h">Ausstiegsplan für ${d ? `deinen ${fmt(lev, 1)}×-Hebel` : "deine Aktie"}</div>
     <table class="xplan"><thead><tr><th></th><th class="num">${esc(d ? d.under : "Kurs")}</th><th class="num">${d ? "Zertifikat" : "Kurs €"}</th><th class="num">Position</th><th class="num">Chance</th></tr></thead><tbody>
-      ${row("Ziel 2", a.tp[1].p, "Rest verkaufen", "tp", pct(a.tp[1].prob, 0))}
-      ${row("Ziel 1", a.tp[0].p, `${sell1}, Stop auf Einstand`, "tp", pct(a.tp[0].prob, 0))}
-      ${row("Stop", a.stop.p, m.stopBelowKo ? "unter dem K.-o. – Knock-out käme zuerst" : "alles verkaufen", "sl")}
+      ${row("Ziel 2", a.tp[1].p, `Rest verkaufen · ${esc(a.tp[1].src)}`, "tp", pct(a.tp[1].prob, 0))}
+      ${row("Ziel 1", a.tp[0].p, `${sell1}, Stop auf Einstand · ${esc(a.tp[0].src)}`, "tp", pct(a.tp[0].prob, 0))}
+      ${row("Stop", a.stop.p, m.stopBelowKo ? "unter dem K.-o. – Knock-out käme zuerst" : `alles verkaufen · knapp unter ${esc(a.stop.src)}`, "sl")}
     </tbody></table>
-    <div class="note" style="margin:6px 2px 0">Chance = Wahrscheinlichkeit, das Ziel vor dem Stop zu erreichen (Faustregel aus Abstand, Schwankung und Trend). Ziele an Widerständen: ${esc(a.tp[0].src)} · ${esc(a.tp[1].src)}. Stop knapp unter ${esc(a.stop.src)}.${d ? " Zertifikatskurse geschätzt." : ""}</div></div>`}
-    <details class="more-box"><summary>Begründung${a.news ? ", Nachrichten" : ""} &amp; Marken</summary>
-      <div class="chips" style="margin:10px 0 4px">${facs.map(f => `<span class="chip fac ${f.s > 0 ? "pos" : f.s < 0 ? "neg" : ""}">${f.s > 0 ? "▲" : f.s < 0 ? "▼" : "●"} ${esc(f.l)}</span>`).join("")}</div>
-      <ul class="facts">${facs.map(f => `<li><b class="${f.s > 0 ? "up" : f.s < 0 ? "down" : ""}">${esc(f.l)}:</b> ${esc(f.t)}</li>`).join("")}
-        ${ent ? `<li><b>Einstieg:</b> ${esc(ent.label)} – ${esc(ent.text)}</li>` : ""}</ul>
-      ${a.news ? `<h4>Nachrichten</h4><ul class="facts">${a.news.map(n => `<li><span class="${n.tone > 0 ? "up" : n.tone < 0 ? "down" : "muted"}">${n.tone > 0 ? "▲" : n.tone < 0 ? "▼" : "●"}</span> ${n.url ? `<a href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>` : esc(n.title)} <span class="muted">· ${esc(n.pub || "")} ${n.date ? dateDE(n.date) : ""}</span></li>`).join("")}</ul>` : ""}
-      <h4>Marken</h4><ul class="facts">
-        ${a.res.map(x => `<li><b class="up">Widerstand ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
-        ${a.sup.map(x => `<li><b class="down">Unterstützung ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}
-        <li>Tagesschwankung ≈ ${fmt(a.sigma)} ${esc(cur)} (${pct(a.sigma / a.c)})${a.vola ? ` · Volatilität ${pct(a.vola, 0)} p. a.` : ""}</li></ul>
-      <div class="note" style="margin:6px 0 0">Nachrichten-Ton: grobe Stichwortauswertung englischer Schlagzeilen.${d ? " Zertifikatswerte geschätzt aus Kaufkurs, Kurs des Basiswerts am Kauftag und K.-o.-Schwelle (ohne Spread/Finanzierungskosten)." : ""} Keine Anlageberatung.</div>
-    </details>
-    ${ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(ev.date)}</b> – ${(CAL_KIND[ev.kind] || [])[2] || ""}${ev.estimate ? " (geschätzt)" : ""}${d ? " · mit Hebel besonders riskant" : ""}</div>` : ""}
-    <div class="row-actions">${inRes ? `<button class="mini-btn" data-open="${esc(p.t)}">Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>
+    <div class="note" style="margin:6px 2px 0">Chance = Wahrscheinlichkeit, das Ziel vor dem Stop zu erreichen – Faustregel aus Abstand, Schwankung und Trend, keine Prognose.${d ? " Zertifikatskurse geschätzt aus Kaufkurs und Kurs des Basiswerts am Kauftag (ohne Spread/Finanzierungskosten)." : ""}</div></div>`}
+    <div class="row-actions">${data.results.some(x => x.ticker === p.t) ? `<button class="mini-btn" data-open="${esc(p.t)}">Großer Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(p.t)}" target="_blank" rel="noopener">TradingView</a>
       ${d ? "" : `<button class="mini-btn" data-dep="edit" data-i="${i}">Bearbeiten</button>`}<button class="mini-btn del" data-dep="del" data-i="${i}">Löschen</button></div>
   </article>`;
 }
