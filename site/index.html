@@ -5,24 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Kairo – Reversal-Setup-Finder</title>
 <meta name="description" content="Täglicher Scan aller Aktien ab 2 Mrd. USD (Nordamerika, Europa, Asien/Pazifik) auf das Long-Reversal-Setup">
-<link rel="manifest" href="manifest.webmanifest?v=4">
-<link rel="apple-touch-icon" href="icon-180.png?v=4">
-<link rel="icon" href="icon.svg?v=4" type="image/svg+xml">
+<link rel="manifest" href="manifest.webmanifest?v=5">
+<link rel="apple-touch-icon" href="icon-180.png?v=5">
+<link rel="icon" href="icon.svg?v=5" type="image/svg+xml">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kairo">
 <meta name="theme-color" content="#0b0b0c">
 <style>
-  /* Graphit mono + Kairo-Orange: Orange = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
+  /* Graphit mono + Kairo-Blau: Blau = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
   :root {
     --bg: #0b0b0c; --surface: #151516; --surface-2: #1d1d1f; --surface-3: #2a2a2d; --line: #2a2a2d;
     --glass: rgba(255, 255, 255, .055); --glass-line: rgba(255, 255, 255, .11);
     --text: #f2f2f2; --muted: #9a9a9f; --faint: #66666b;
-    --accent: #FF5A1F; --accent-ink: #ffffff; --accent-bg: rgba(255, 90, 31, .14);
+    --accent: #0a84ff; --accent-ink: #ffffff; --accent-bg: rgba(10, 132, 255, .15);
     --up: #30d158; --up-bg: rgba(48, 209, 88, .13);
     --red: #ff453a; --red-bg: rgba(255, 69, 58, .13);
-    --gold: #ffd60a; --gold-bg: rgba(255, 214, 10, .13); --zone: rgba(255, 90, 31, .16);
+    --gold: #ffd60a; --gold-bg: rgba(255, 214, 10, .13); --zone: rgba(10, 132, 255, .15);
     --candle-up: #30d158; --candle-down: #ff453a;
     --radius: 24px; --radius-s: 16px; --nav-h: 68px;
     color-scheme: dark;
@@ -64,7 +64,7 @@
   @media (min-width: 760px) { .grid { grid-template-columns: 1fr 1fr; } }
   .card { min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px;
           display: flex; flex-direction: column; gap: 18px; }
-  .card.hero { border-color: rgba(255, 90, 31, .4); }
+  .card.hero { border-color: rgba(10, 132, 255, .45); }
   .hero-label { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); font-weight: 700; font-size: 13px;
                 text-transform: uppercase; letter-spacing: .08em; }
   @media (min-width: 900px) {
@@ -235,7 +235,7 @@
 <body>
 <div class="wrap">
   <header class="hello">
-    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#FF3B30"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#FF3B30"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b></div>
+    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b></div>
     <h1 id="greet">Hallo 👋</h1>
     <p id="sub">Lade den heutigen Scan …</p>
   </header>
