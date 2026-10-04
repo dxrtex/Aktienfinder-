@@ -35,7 +35,7 @@ Leiste unten: **Scanner** (Unterpunkte Treffer, Tabelle, Fast-Treffer, Filter), 
   `site/data/analysis.json` (`backend/analysis.py`): Urteil 0–100 aus Trend, MACD, RSI, MBI, Divergenz, Fibonacci,
   relativer Stärke, Branche (Sektor-ETF), Gesamtmarkt (S&P 500, VIX), und Quartalszahlen; Stop-Loss unter
   der nächsten Unterstützung (≥ 1 ATR entfernt), zwei Ziele an Widerständen bzw. Fib-Extensionen mit „Chance vor Stop“
-  (Zufallspfad mit leichter Trend-Drift) und typischer Dauer; Kurschart je Position mit Kauf, Zielen, Stop und K.-o.; Indikatoren beim Kauf vs. heute;
+  (Zufallspfad mit leichter Trend-Drift) und typischer Dauer; Depot-Cockpit (Einsatz, geschätzter Wert, max. Verlust bis zu den Stops, größter Klumpen, Warnleiste); Positionen je Basiswert gruppiert und nach Dringlichkeit sortiert, aufklappbar mit Kurschart (alle Käufe, Ø-Kauf, Ziele, Stop, K.-o.), „Gilt der Kaufgrund noch?“, Chance/Risiko ab heute in €, Positionstabelle;
   Bewertung des Einstiegs (Lage in der 20-Tage-Spanne, RSI, Abstand zur EMA 20). Bei Turbos schätzt die App das
   Bezugsverhältnis aus dem Kaufkurs und rechnet Stop/Ziele in Zertifikatskurse um. Eine direkte Verbindung zu Scalable
   Capital gibt es nicht (keine offizielle Schnittstelle).
