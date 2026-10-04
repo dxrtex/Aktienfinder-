@@ -56,10 +56,37 @@ def report(ticker: str, res, info: dict) -> str:
     return "\n".join(out) + "\n"
 
 
+def timeline(tickers: list[str], days: int) -> str:
+    """Rückblick: Wie hätte der Scanner an jedem der letzten `days` Handelstage geurteilt?"""
+    from .hints import hint
+    prov = YFinanceProvider()
+    data = prov.history(tickers, CONFIG.history.period)
+    out = []
+    for t in tickers:
+        df = data.get(t)
+        if df is None:
+            out.append(f"## Rückblick {t}\nKEINE DATEN\n")
+            continue
+        out += [f"## Rückblick {t} – letzte {days} Handelstage", "",
+                "| Datum | Schluss | Ergebnis | fehlt | Hinweis |", "|---|---|---|---|---|"]
+        for i in range(len(df) - days, len(df)):
+            res = evaluate(df.iloc[: i + 1], {"currency": "EUR" if t.endswith(".DE") else "USD"}, ticker=t)
+            status = f"TREFFER (Score {res.score})" if res.passed else "Fast-Treffer" if res.fast_hit else f"{len(res.missing)} fehlen"
+            miss = "; ".join(f"{c.label.split(' (')[0]} [{c.value}]" for c in res.missing)
+            out.append(f"| {res.date} | {de(res.close)} | {status} | {miss or '–'} | {hint(res)['title']} |")
+        out.append("")
+    return "\n".join(out)
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--out")
+    ap.add_argument("--timeline", help="Rückblick für diese Ticker (kommagetrennt)")
+    ap.add_argument("--days", type=int, default=20)
     args = ap.parse_args(argv)
+    if args.timeline:
+        print(timeline([t.strip() for t in args.timeline.split(",") if t.strip()], args.days))
+        return 0
     rc = CONFIG.regression
     end_excl = str((pd.Timestamp(rc.end_date) + pd.Timedelta(days=1)).date())
     prov = YFinanceProvider()
