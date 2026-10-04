@@ -277,8 +277,6 @@
     <div class="opts" data-key="zone"><button class="opt" data-v="">egal</button><button class="opt" data-v="Fib">Fibonacci</button><button class="opt" data-v="Support">Support</button></div></div>
   <div class="group"><div class="group-label">Divergenz</div>
     <div class="opts" data-key="div"><button class="opt" data-v="">egal</button><button class="opt" data-v="klassisch">klassisch</button><button class="opt" data-v="versteckt">versteckt</button></div></div>
-  <div class="group"><div class="group-label">Neue Divergenz-Regel (Test)</div>
-    <div class="opts" data-key="newRule"><button class="opt" data-v="">alle</button><button class="opt" data-v="1">nur durch neue Regel dazugekommen</button></div></div>
   <div class="group"><div class="group-label">Sektor</div>
     <div class="opts" data-key="sector" id="sectorOpts"><button class="opt" data-v="">alle</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
@@ -324,7 +322,7 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", region: "", zone: "", div: "", newRule: "", sector: "", sort: "score" };
+const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", region: "", zone: "", div: "", sector: "", sort: "score" };
 const state = { tab: "cards", tableKind: "hit", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
@@ -351,7 +349,6 @@ function rows(kind) {
     && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone))
     && (!state.div || r.divergence === state.div)
-    && (!state.newRule || r.div_rule_new)
     && (!state.sector || r.sector === state.sector)).sort(SORTS[state.sort]);
 }
 
@@ -373,7 +370,7 @@ function card(r) {
       <div class="card-title">
         <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)}</h2>
         <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
-        ${statusBadge(r)}${r.div_rule_new ? `<span class="top" title="Erst durch die neue Divergenz-Regel (Doppelboden) in dieser Liste">NEU · Doppelboden-Regel</span>` : ""}
+        ${statusBadge(r)}
         <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}</span>
         ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
@@ -430,7 +427,7 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 
 // ---------- Tabelle ----------
 const COLS = [
-  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}${r.div_rule_new ? ' <span class="up" title="neu durch Doppelboden-Regel">NEU</span>' : ""}` },
+  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
   { k: "name", l: "Name", g: r => r.name, h: r => esc((r.name || "").slice(0, 28)) },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -546,8 +543,7 @@ function renderHead() {
   const h = new Date().getHours();
   $("greet").textContent = (h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + " 👋";
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b> und <b>${s.fast_hits ?? 0} Fast-Treffer</b> · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`
-    + (s.div_rule_new ? ` · <a href="#" id="showNew" style="color:var(--gold)">${s.div_rule_new} neu durch Doppelboden-Regel anzeigen</a>` : "");
+  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b> und <b>${s.fast_hits ?? 0} Fast-Treffer</b> · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
   $("sectorOpts").innerHTML = `<button class="opt" data-v="">alle</button>` + sectors.map(x => `<button class="opt" data-v="${esc(x)}">${esc(x)}</button>`).join("");
 }
@@ -694,7 +690,6 @@ $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
 document.addEventListener("click", e => {
-  if (e.target.id === "showNew") { e.preventDefault(); state.newRule = state.newRule ? "" : "1"; state.tab = "table"; state.tableKind = "all"; syncOpts(); save(); render(); return; }
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
   const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openDetail(o.dataset.open); return; }
