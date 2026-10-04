@@ -987,9 +987,13 @@ document.addEventListener("click", e => {
     if (depotEdit >= 0) list[depotEdit] = entry; else list.push(entry);
     depotSave(list); depotEdit = null;
   } else if (act === "claude") {
-    const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r);
+    const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r), a = anaData && p.t && anaData.tickers[p.t];
+      const extra = a ? ` | Kairo-Analyse ${a.score}/100 (${VERDICT(a.score)[1]}); Stop ${fmt(a.stop.p)}; Ziel 1 ${fmt(a.tp[0].p)} (Chance ${pct(a.tp[0].prob, 0)}), Ziel 2 ${fmt(a.tp[1].p)}; `
+        + a.fac.map(f => `${f.l}: ${f.t}`).join("; ") : "";
+      return base(p, r, s) + extra; });
+    function base(p, r, s) {
       if (p.d) return `${p.n} (ISIN ${p.isin}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €; Basiswert ${p.d.under} aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}, K.-o. ${fmt(p.d.ko)} ${p.d.cur || ""}; Kairo Basiswert: ${s.title}`;
-      return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; });
+      return `${p.n} (${p.t}): ${p.qty} Stück, Kauf ${p.date || "?"} zu ${fmt(p.price)} €, aktuell ${r ? fmt(r.c) + " " + r.cur : "?"}; Kairo: ${s.title}`; }
     const txt = "Mein Depot (Kairo, Stand " + new Date().toLocaleDateString("de-DE") + "):\n" + lines.join("\n");
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { depotMsg = "Kopiert – einfach im Chat mit Claude einfügen."; render(); },
       () => { depotMsg = "Kopieren nicht möglich. Text:<br><pre style='white-space:pre-wrap'>" + esc(txt) + "</pre>"; render(); });
