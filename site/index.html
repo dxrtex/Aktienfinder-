@@ -206,6 +206,9 @@
   table.ord td small { display: block; font-size: 11.5px; color: var(--muted); }
   table.ord td, table.ord th { white-space: nowrap; } table.ord tr.sl td b { color: var(--red); } table.ord tr.tp td b { color: var(--up); }
   table.ord td[rowspan] b { color: var(--text) !important; }
+  .lwc { width: 100%; height: 320px; } .lwc.tall { height: 540px; }
+  .lwc-tools { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 6px 10px; margin: 2px 2px 12px; font-size: 12px; }
+  .lwc-tools .mini-btn { padding: 5px 11px; margin-left: 4px; }
   .grid.one { grid-template-columns: 1fr !important; }
   .card.ctx { margin-bottom: 16px; display: flex; flex-direction: column; gap: 12px; }
 
@@ -717,6 +720,7 @@ function depotHtml() {
     ${depotMsg ? `<div class="tip tone-gray" style="margin-bottom:14px">${depotMsg}</div>` : ""}`;
   if (!anaData) loadAnalysis();
   const groups = anaData ? groupPositions(items) : [];
+  depGroups = groups;
   const inGroup = new Set(groups.flatMap(g => g.ms.map(m => m.i)));
   const cards = items.filter(x => !inGroup.has(x.i)).map(({ p, i, r, cur, nowEur, val, cost }) => {
     if (p.d) return turboCard(p, i, r);
@@ -850,54 +854,6 @@ function groupPositions(items) {
     return g;
   }).sort((x, y) => y.invested - x.invested);
 }
-// Chart: Kerzen, EMA 20/50, alle Käufe, Ø-Kauf, Take-Profit-Zonen, nächster K.-o.
-function groupChartSvg(c, g) {
-  const a = g.a, n = c.t.length, ents = g.ms.filter(m => m.ent).map(m => m.ent);
-  const first = ents.length ? Math.min(...ents.map(e => e.i)) : n - 90;
-  const from = Math.max(0, Math.min(n - 70, first - 25));
-  const W = 680, H = 300, L = 6, R = W - 150, T = 14, B = H - 24, idx = [];
-  for (let k = from; k < n; k++) idx.push(k);
-  const hiC = Math.max(...idx.map(k => c.h[k])), loC = Math.min(...idx.map(k => c.l[k]));
-  const inView = v => v <= hiC * 1.35 && v >= loC * .65;   // sehr ferne Marken nur als Pfeil
-  const lv = [];
-  g.tps.forEach((tp, j) => lv.push({ k: "tp", v: tp.p, l: tp.l === "Swing-High" ? "Swing-High" : tp.l.replace("Allzeithoch", "ATH"), far: !inView(tp.p) }));
-  if (g.avgEntry) lv.push({ k: "entry", v: g.avgEntry, l: ents.length > 1 ? "Ø Kauf" : "Kauf" });
-  if (g.ko != null) lv.push({ k: "ko", v: g.ko, l: "K.-o.", far: !inView(g.ko) });
-  const vals = idx.flatMap(k => [c.h[k], c.l[k]]).concat(lv.filter(x => !x.far).map(x => x.v));
-  let lo = Math.min(...vals), hi = Math.max(...vals); const pv = (hi - lo) * .05; lo -= pv; hi += pv;
-  const X = k => L + (R - L) * (k - from + .5) / idx.length, Y = v => T + (B - T) * (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
-  const bw = Math.max(1.5, (R - L) / idx.length * .62);
-  const col = { tp: "#30d158", entry: "#e5e5ea", ko: "#ff453a", now: "#ffffff" };
-  let s = "";
-  // Take-Profit-Zone: Band von ± ½ Tagesschwankung um jedes sichtbare Ziel
-  g.tps.filter(t => inView(t.p)).forEach(t => { const w = .5 * (a.atr || t.p * .01);
-    s += `<rect x="${L}" y="${Y(t.p + w)}" width="${R - L}" height="${Math.max(3, Y(t.p - w) - Y(t.p + w))}" fill="rgba(48,209,88,.16)"/>`; });
-  if (g.ko != null && inView(g.ko)) s += `<rect x="${L}" y="${Y(g.ko)}" width="${R - L}" height="${Math.max(0, B - Y(g.ko))}" fill="rgba(255,69,58,.10)"/>`;
-  idx.forEach(k => {
-    const up = c.c[k] >= c.o[k], cl = up ? "#30d158" : "#ff453a", x = X(k);
-    s += `<line x1="${x}" x2="${x}" y1="${Y(c.h[k])}" y2="${Y(c.l[k])}" stroke="${cl}" stroke-width="1" opacity=".75"/>`
-      + `<rect x="${x - bw / 2}" y="${Y(Math.max(c.o[k], c.c[k]))}" width="${bw}" height="${Math.max(1, Math.abs(Y(c.o[k]) - Y(c.c[k])))}" fill="${cl}" opacity=".85"/>`;
-  });
-  const line = (key, color) => `<polyline fill="none" stroke="${color}" stroke-width="1.6" opacity=".8" points="${idx.filter(k => c[key][k] != null).map(k => `${X(k).toFixed(1)},${Y(c[key][k]).toFixed(1)}`).join(" ")}"/>`;
-  s += line("e20", "#0a84ff") + line("e50", "#ffd60a");
-  ents.forEach((e, j) => { if (e.i < from) return;
-    s += `<line x1="${X(e.i)}" x2="${X(e.i)}" y1="${T}" y2="${B}" stroke="#e5e5ea" stroke-dasharray="2 4" opacity=".35"/>`
-      + `<circle cx="${X(e.i)}" cy="${Y(e.u)}" r="6" fill="#e5e5ea" stroke="#0b0b0c" stroke-width="2"/>`
-      + (ents.length > 1 ? `<text x="${X(e.i)}" y="${Y(e.u) - 10}" font-size="12" font-weight="700" fill="#e5e5ea" text-anchor="middle">${j + 1}</text>` : ""); });
-  const labs = lv.map(x => ({ ...x, y: Y(x.v) })).concat([{ k: "now", v: a.c, l: "Jetzt", y: Y(a.c) }]).sort((p, q) => p.y - q.y);
-  for (let k = 1; k < labs.length; k++) if (labs[k].y - labs[k - 1].y < 17) labs[k].y = labs[k - 1].y + 17;
-  const over = labs.length ? labs[labs.length - 1].y - (H - 6) : 0; if (over > 0) labs.forEach(x => x.y -= over);
-  if (labs.length && labs[0].y < 12) { const d = 12 - labs[0].y; labs.forEach(x => x.y += d); }
-  labs.forEach(x => {
-    if (x.k === "now") s += `<line x1="${X(n - 1)}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="#fff" opacity=".6"/>`;
-    else if (!x.far) s += `<line x1="${L}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="${col[x.k]}" stroke-width="1.3" stroke-dasharray="${x.k === "entry" ? "" : "6 4"}" opacity=".9"/>`;
-    s += `<line x1="${R}" x2="${R + 6}" y1="${Y(x.v)}" y2="${x.y}" stroke="${col[x.k]}" opacity=".6"/><text x="${R + 9}" y="${x.y + 5}" font-size="14" font-weight="${x.k === "now" ? 700 : 600}" fill="${col[x.k]}">${esc(x.l)} ${fmt(x.v)}${x.far ? (x.v > a.c ? " ↑" : " ↓") : ""}</text>`;
-  });
-  const dl = k => { const [, mo, dd] = c.t[k].split("-"); return `${+dd}.${+mo}.`; };
-  [from, Math.floor((from + n - 1) / 2), n - 1].forEach((k, j) => s += `<text x="${X(k)}" y="${H - 6}" font-size="12" fill="#8e8e93" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}">${dl(k)}</text>`);
-  return `<svg class="poschart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kurschart mit Käufen und Take-Profit-Zonen">${s}</svg>
-    <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;border-radius:50%;width:9px;height:9px"></i>Kauf${ents.length > 1 ? " (Nr. wie Tabelle)" : ""}</span><span><i style="background:rgba(48,209,88,.35)"></i>Take-Profit-Zone</span>${g.ko != null ? `<span><i style="background:rgba(255,69,58,.35)"></i>unter dem K.-o.</span>` : ""}</div>`;
-}
 const chanceTone = p => p >= .6 ? "up" : p >= .3 ? "gold" : "down";
 function groupHtml(g) {
   const a = g.a, c = needChart(g.t), open = depOpen.has(g.t), nx = g.tps[0];
@@ -908,7 +864,11 @@ function groupHtml(g) {
       <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
-    <div class="chartbox">${c ? groupChartSvg(c, g) : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
+    <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zoomen: zwei Finger oder ＋/− · Verschieben: wischen · Skalen ziehen</span>
+        <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
+      <div class="lwc${depTall.has(g.t) ? " tall" : ""}" data-lwc="${esc(g.t)}"></div>
+      <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;height:2px"></i>${g.ms.filter(m => m.ent).length > 1 ? "Ø Kauf · ▲ Käufe (Nr. wie Tabelle)" : "Kauf"}</span><span><i style="background:#30d158;height:2px"></i>Take Profit</span>${g.ko != null ? `<span><i style="background:#ff453a;height:2px"></i>Knock-out</span>` : ""}</div>`
+      : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
     ${g.tps.length ? `<div><div class="plan-h">Take-Profit-Zonen</div><div class="table-wrap plain"><table class="xplan tp-t"><thead><tr><th></th><th class="num">Kurs</th><th class="num">Abstand</th><th class="num">Chance 3 Mon.</th><th class="num">6 Mon.</th><th class="num">Deine Position dort</th></tr></thead><tbody>
       ${g.tps.map(tp => { const v = g.known ? g.atX(tp.p) : null;
         return `<tr><td><b class="up">${esc(tp.l)}</b><small>${tp.l === "Swing-High" ? esc(tp.src) : `vom ${dateDE(tp.date)}`}</small></td><td class="num">${fmt(tp.p)}<small>${esc(g.cur)}</small></td>
@@ -935,6 +895,49 @@ function groupHtml(g) {
   </div>`;
   return `<details class="card grp" data-grp="${esc(g.t)}" ${open ? "open" : ""}>${head}${body}</details>`;
 }
+// Interaktive Charts (Lightweight Charts) für aufgeklappte Positionen
+const depTall = new Set(), depCharts = new Map();
+let depGroups = [];
+function depRange(c, g) {
+  const n = c.t.length, ents = g.ms.filter(m => m.ent).map(m => m.ent.i);
+  return { from: Math.max(0, Math.min(n - 70, (ents.length ? Math.min(...ents) : n - 90) - 25)), to: n + 3 };
+}
+const depRanges = new Map();   // gewählter Ausschnitt je Chart (bleibt beim Neuzeichnen erhalten)
+function mountDepotCharts() {
+  depCharts.forEach((ch, t) => { depRanges.set(t, ch.timeScale().getVisibleLogicalRange()); ch.remove(); }); depCharts.clear();
+  if (!window.LightweightCharts) return;
+  const LW = window.LightweightCharts;
+  document.querySelectorAll("[data-lwc]").forEach(el => {
+    const t = el.dataset.lwc, g = depGroups.find(x => x.t === t), c = chartReady[t];
+    if (!g || !c) return;
+    const ch = LW.createChart(el, { width: el.clientWidth, height: el.clientHeight,
+      layout: { background: { color: "transparent" }, textColor: "#9a9a9f", fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
+      grid: { vertLines: { color: "#1d1d1f" }, horzLines: { color: "#1d1d1f" } },
+      rightPriceScale: { borderColor: "#2a2a2d", scaleMargins: { top: .08, bottom: .06 } }, timeScale: { borderColor: "#2a2a2d", rightOffset: 3 },
+      crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },   // senkrecht wischen scrollt die Seite
+      handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: true, mouseWheel: true, pinch: true } });
+    const T = c.t, pts = k => T.map((d, i) => c[k][i] == null ? null : { time: d, value: c[k][i] }).filter(Boolean);
+    // K.-o. und nahe Take-Profit-Marken in die automatische Skalierung einbeziehen (sehr ferne nicht)
+    const extra = [g.ko, ...g.tps.map(tp => tp.p)].filter(v => v != null && v > g.a.c * .5 && v < g.a.c * 1.6);
+    const cs = ch.addCandlestickSeries({ upColor: "#30d158", downColor: "#ff453a", borderVisible: false, wickUpColor: "#30d158", wickDownColor: "#ff453a", priceLineColor: "#ffffff",
+      autoscaleInfoProvider: orig => { const r = orig(); if (!r || !extra.length) return r;
+        return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...extra), maxValue: Math.max(r.priceRange.maxValue, ...extra) } }; } });
+    cs.setData(T.map((d, i) => ({ time: d, open: c.o[i], high: c.h[i], low: c.l[i], close: c.c[i] })));
+    ch.addLineSeries({ color: "#0a84ff", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e20"));
+    ch.addLineSeries({ color: "#ffd60a", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e50"));
+    const pl = (price, title, color, style = 2, width = 1) => price != null && cs.createPriceLine({ price, title, color, lineWidth: width, lineStyle: style, axisLabelVisible: true });
+    g.tps.forEach(tp => pl(tp.p, tp.l === "Swing-High" ? "Swing-High" : tp.l.replace("Allzeithoch", "ATH"), "#30d158", 2, 2));
+    const ents = g.ms.filter(m => m.ent);
+    if (g.avgEntry) pl(g.avgEntry, ents.length > 1 ? "Ø Kauf" : "Kauf", "#e5e5ea", 0, 1);
+    if (g.ko != null) pl(g.ko, "K.-o.", "#ff453a", 2, 2);
+    cs.setMarkers(g.ms.map((m, j) => m.ent ? { time: m.ent.date, position: "belowBar", color: "#e5e5ea", shape: "arrowUp", text: ents.length > 1 ? `Kauf ${j + 1}` : "Kauf" } : null)
+      .filter(Boolean).sort((a, b) => a.time < b.time ? -1 : 1));
+    ch.timeScale().setVisibleLogicalRange(depRanges.get(t) || depRange(c, g));
+    depCharts.set(t, ch);
+  });
+}
+window.addEventListener("resize", () => depCharts.forEach((ch, t) => { const el = document.querySelector(`[data-lwc="${CSS.escape(t)}"]`); if (el) ch.applyOptions({ width: el.clientWidth }); }));
 function cockpitHtml(groups, items) {
   const inv = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
   const known = groups.filter(g => g.known), val = known.reduce((s, g) => s + g.value, 0), invK = known.reduce((s, g) => s + g.invested, 0);
@@ -1104,6 +1107,19 @@ document.addEventListener("toggle", e => {
   g.open ? depOpen.add(t) : depOpen.delete(t); render();
 }, true);
 document.addEventListener("click", e => {
+  const zb = e.target.closest("[data-lwc-zoom],[data-lwc-reset],[data-lwc-tall]");
+  if (zb) {
+    e.preventDefault();
+    const t = zb.dataset.lwcZoom || zb.dataset.lwcReset || zb.dataset.lwcTall, ch = depCharts.get(t), g = depGroups.find(x => x.t === t);
+    if (zb.dataset.lwcTall) { depTall.has(t) ? depTall.delete(t) : depTall.add(t); render(); return; }
+    if (!ch) return;
+    const ts = ch.timeScale();
+    if (zb.dataset.lwcReset) { depRanges.delete(t); ts.setVisibleLogicalRange(depRange(chartReady[t], g)); ch.priceScale("right").applyOptions({ autoScale: true }); return; }
+    const r = ts.getVisibleLogicalRange(); if (!r) return;
+    const mid = (r.from + r.to) / 2, half = (r.to - r.from) / 2 * (zb.dataset.z === "in" ? .7 : 1.4);
+    ts.setVisibleLogicalRange({ from: mid - Math.max(5, half), to: mid + Math.max(5, half) });
+    return;
+  }
   const gj = e.target.closest("[data-grpjump]");
   if (gj) { e.preventDefault(); depOpen.add(gj.dataset.grpjump); render();
     const el = document.querySelector(`details.grp[data-grp="${CSS.escape(gj.dataset.grpjump)}"]`); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
@@ -1185,7 +1201,8 @@ function render() {
   document.querySelector(".search").hidden = state.sec !== "scanner";
   if (state.sec === "settings") { $("main").innerHTML = settingsHtml(); return; }
   if (state.sec === "calendar") { $("main").innerHTML = calendarHtml(); return; }
-  if (state.sec === "depot") { $("main").innerHTML = depotHtml(); return; }
+  if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
+  if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
   const kind = state.tab === "watch" ? "fast" : state.tab === "table" ? state.tableKind : "hit";
   const list = rows(kind);
   const title = { fast: "Fast-Treffer · genau 1 Pflichtkriterium fehlt", hit: "Treffer · alle Pflichtkriterien erfüllt",
