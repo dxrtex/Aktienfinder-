@@ -365,8 +365,10 @@
   .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
 </style>
+<link rel="stylesheet" href="splash.css">
 </head>
 <body>
+<script src="splash.js" data-autoplay></script>
 <div class="wrap">
   <header class="hello">
     <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b></div>
@@ -1541,9 +1543,10 @@ document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDetai
 
 fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   data = d; renderHead(); syncOpts(); render(); loadCalendar();
+  requestAnimationFrame(() => window.KairoSplash && KairoSplash.ready());   // App steht → Start-Animation darf übergeben
   if (state.sec === "depot") loadSearch();
   if (location.hash) openDetail(decodeURIComponent(location.hash.slice(1)));
-}).catch(() => { $("sub").textContent = "Noch keine Scan-Ergebnisse vorhanden."; });
+}).catch(() => { $("sub").textContent = "Noch keine Scan-Ergebnisse vorhanden."; window.KairoSplash && KairoSplash.ready(); });
 </script>
 </body>
 </html>

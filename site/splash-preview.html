@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>Kairo – Splash-Vorschau</title>
+<link rel="stylesheet" href="splash.css">
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; min-height: 100vh; background: #0b0b0c; color: #f5f5f7;
+         font: 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 28px 16px 60px; }
+  h1 { margin: 0 0 4px; font-size: 28px; } p { color: #8e8e93; margin: 0 0 20px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
+  button, a.btn { border: 0; border-radius: 999px; padding: 13px 18px; font: 650 16px/1 inherit; cursor: pointer; text-decoration: none;
+                  background: #1d1d1f; color: #f5f5f7; }
+  button.main { background: #0a84ff; }
+  .fake { display: grid; gap: 12px; }
+  .fake div { height: 92px; border-radius: 20px; background: linear-gradient(135deg, #1a1a1c, #141416); border: 1px solid #232326; }
+  .fake div:first-child { height: 150px; background: linear-gradient(135deg, #0a2a4a, #141416); }
+  #log { font-size: 13px; color: #8e8e93; min-height: 20px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Splash-Vorschau</h1>
+  <p>So erscheint Kairo beim Öffnen. Die Kacheln unten stehen für die App, die durch die wachsende Logo-Form sichtbar wird.</p>
+  <div class="row">
+    <button class="main" id="play">▶ Abspielen</button>
+    <button id="slow">Langsames Laden (3,5 s)</button>
+    <button id="never">App lädt nie (Timeout 6 s)</button>
+    <a class="btn" href="./">Zur App</a>
+  </div>
+  <div id="log"></div>
+  <div class="fake"><div></div><div></div><div></div><div></div></div>
+</div>
+<script src="splash.js"></script>
+<script>
+  const log = t => document.getElementById("log").textContent = t;
+  const run = (readyAfter, label) => {
+    const t0 = performance.now(); log(label + " …");
+    KairoSplash.play({ readyAfter, onDone: () => log(`${label}: fertig nach ${((performance.now() - t0) / 1000).toFixed(2)} s`) });
+  };
+  document.getElementById("play").onclick = () => run(0, "Normal (App sofort bereit)");
+  document.getElementById("slow").onclick = () => run(3500, "App braucht 3,5 s – Glow pulsiert so lange");
+  document.getElementById("never").onclick = () => run(null, "App meldet sich nie – Sicherheits-Timeout");
+  run(0, "Normal (App sofort bereit)");
+</script>
+</body>
+</html>
