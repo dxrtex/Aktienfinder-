@@ -2104,7 +2104,7 @@ function bilanzHtml() {
       ${outcomeBar(h)}</div>
     ${bilanzInsights(S)}
     <div class="hcard">${hHead("Kursverlauf nach dem Signal (Ø)")}${retPathSvg([{ l: "Treffer", s: h, c: "var(--up)" }, { l: "Fast", s: S.fast, c: "var(--gold)" }, { l: "alle Tage", s: S.base, c: "var(--muted)" }])}
-      <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Der Abstand zeigt den Vorteil des Setups.</div></div>
+      <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Liegen die Linien nah beieinander, wählt das Setup nicht die stärkeren Aktien aus – sein Vorteil liegt dann im Einstiegs-Timing mit klar definiertem Stop (siehe „Ziel 1 zuerst“ und „Halten bis Swing-High“).</div></div>
     <div class="hcard">${hHead("Nach Score, CRV und Zone")}<div class="table-wrap"><table class="jt bt">${head}<tbody>
       ${row("<b>Alle Treffer</b>", h)}${Object.entries(S.score).map(([k, s]) => row("Score " + k, s)).join("")}
       ${Object.entries(S.crv).map(([k, s]) => row("CRV " + k, s)).join("")}${Object.entries(S.zone).map(([k, s]) => row(k + "-Zone", s)).join("")}
