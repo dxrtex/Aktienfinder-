@@ -823,8 +823,21 @@ const depOpen = new Set();   // aufgeklappte Gruppen (bleiben beim Neuzeichnen o
 const sgnPct = (v, d = 0) => v == null ? "–" : (v >= 0 ? "+" : "") + pct(v, d);
 const eur = v => v == null ? "–" : `${fmt(v, 0)} €`;
 const sgnEur = v => v == null ? "–" : `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 0)} €`;
+// Gleiche Firma an anderer Börse? → Notierung nehmen, für die es eine Analyse gibt (z. B. IFX.DE statt IFNNY)
+function analyzedListing(p, r) {
+  if (!anaData || !searchIdx || !p.t || anaData.tickers[p.t]) return null;
+  const k = normName((r && r.n) || (p.d && p.d.under) || p.n), cur = (p.d && p.d.cur) || (r && r.cur);
+  const hits = searchIdx.filter(x => anaData.tickers[x.t] && normName(x.n) === k);
+  if (!hits.length && p.d) { const m = matchUnderlying(p.d.under, cur); return m && anaData.tickers[m.t] ? m : null; }
+  hits.sort((a, b) => (b.cur === cur) - (a.cur === cur));
+  return hits[0] || null;
+}
 function groupPositions(items) {
   const by = new Map();
+  items.forEach(x => {
+    const alt = analyzedListing(x.p, x.r);
+    if (alt) { x.p = { ...x.p, t: alt.t }; x.r = alt; }
+  });
   items.forEach(({ p, i, r }) => {
     const a = anaData && p.t && anaData.tickers[p.t]; if (!a) return;
     const m = posModel(p, r, { ...a, cur: (r && r.cur) || "" }); m.i = i;
@@ -867,8 +880,8 @@ function groupHtml(g) {
       <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
-    <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zoomen: zwei Finger oder ＋/− · Verschieben: wischen · Skalen ziehen</span>
-        <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
+    <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zeit: ＋/− oder zwei Finger, wischen · Kurs: ↕＋/↕− strecken, ▲▼ verschieben</span>
+        <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="in" aria-label="Kursachse strecken">↕＋</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="out" aria-label="Kursachse stauchen">↕−</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="up" aria-label="Kursachse nach oben">▲</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="down" aria-label="Kursachse nach unten">▼</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
       <div class="lwc${depTall.has(g.t) ? " tall" : ""}" data-lwc="${esc(g.t)}"></div>
       <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;height:2px"></i>${g.ms.filter(m => m.ent).length > 1 ? "Ø Kauf · ▲ Käufe (Nr. wie Tabelle)" : "Kauf"}</span><span><i style="background:#30d158;height:2px"></i>Take Profit</span>${g.ko != null ? `<span><i style="background:#ff453a;height:2px"></i>Knock-out</span>` : ""}</div>`
       : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
@@ -899,7 +912,7 @@ function groupHtml(g) {
   return `<details class="card grp" data-grp="${esc(g.t)}" ${open ? "open" : ""}>${head}${body}</details>`;
 }
 // Interaktive Charts (Lightweight Charts) für aufgeklappte Positionen
-const depTall = new Set(), depCharts = new Map();
+const depTall = new Set(), depCharts = new Map(), depYZoom = new Map(), depYShift = new Map();
 let depGroups = [];
 function depRange(c, g) {
   const n = c.t.length, ents = g.ms.filter(m => m.ent).map(m => m.ent.i);
@@ -924,8 +937,10 @@ function mountDepotCharts() {
     // K.-o. und nahe Take-Profit-Marken in die automatische Skalierung einbeziehen (sehr ferne nicht)
     const extra = [g.ko, ...g.tps.map(tp => tp.p)].filter(v => v != null && v > g.a.c * .5 && v < g.a.c * 1.6);
     const cs = ch.addCandlestickSeries({ upColor: "#30d158", downColor: "#ff453a", borderVisible: false, wickUpColor: "#30d158", wickDownColor: "#ff453a", priceLineColor: "#ffffff",
-      autoscaleInfoProvider: orig => { const r = orig(); if (!r || !extra.length) return r;
-        return { ...r, priceRange: { minValue: Math.min(r.priceRange.minValue, ...extra), maxValue: Math.max(r.priceRange.maxValue, ...extra) } }; } });
+      autoscaleInfoProvider: orig => { const r = orig(); if (!r) return r;
+        let lo = Math.min(r.priceRange.minValue, ...extra), hi = Math.max(r.priceRange.maxValue, ...extra);
+        const f = depYZoom.get(t) || 1, mid = (lo + hi) / 2 + (depYShift.get(t) || 0) * (hi - lo), half = (hi - lo) / 2 * f;   // Y-Achse strecken/stauchen/verschieben
+        return { ...r, priceRange: { minValue: mid - half, maxValue: mid + half } }; } });
     cs.setData(T.map((d, i) => ({ time: d, open: c.o[i], high: c.h[i], low: c.l[i], close: c.c[i] })));
     ch.addLineSeries({ color: "#0a84ff", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e20"));
     ch.addLineSeries({ color: "#ffd60a", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e50"));
@@ -1054,7 +1069,8 @@ function parseDerivative(desc) {
 function matchUnderlying(name, cur) {
   const k = normName(name); if (k.length < 3) return null;
   const hits = searchIdx.filter(r => { const n = normName(r.n); return n === k || n.startsWith(k) || (k.startsWith(n) && n.length >= 4); });
-  hits.sort((a, b) => (normName(b.n) === k) - (normName(a.n) === k) || (b.cur === cur) - (a.cur === cur));
+  const ana = t => anaData && anaData.tickers[t] ? 1 : 0;
+  hits.sort((a, b) => ana(b.t) - ana(a.t) || (normName(b.n) === k) - (normName(a.n) === k) || (b.cur === cur) - (a.cur === cur));
   return hits[0] || null;
 }
 function importRows(rows) {
@@ -1110,6 +1126,14 @@ document.addEventListener("toggle", e => {
   g.open ? depOpen.add(t) : depOpen.delete(t); render();
 }, true);
 document.addEventListener("click", e => {
+  const yb = e.target.closest("[data-lwc-y]");
+  if (yb) {
+    e.preventDefault();
+    const t = yb.dataset.lwcY, f = depYZoom.get(t) || 1, sh = depYShift.get(t) || 0, d = yb.dataset.y;
+    if (d === "in") depYZoom.set(t, Math.max(.15, f * .75)); else if (d === "out") depYZoom.set(t, Math.min(6, f * 1.33));
+    else depYShift.set(t, sh + (d === "up" ? .12 : -.12) * f);
+    render(); return;
+  }
   const zb = e.target.closest("[data-lwc-zoom],[data-lwc-reset],[data-lwc-tall]");
   if (zb) {
     e.preventDefault();
@@ -1117,7 +1141,7 @@ document.addEventListener("click", e => {
     if (zb.dataset.lwcTall) { depTall.has(t) ? depTall.delete(t) : depTall.add(t); render(); return; }
     if (!ch) return;
     const ts = ch.timeScale();
-    if (zb.dataset.lwcReset) { depRanges.delete(t); ts.setVisibleLogicalRange(depRange(chartReady[t], g)); ch.priceScale("right").applyOptions({ autoScale: true }); return; }
+    if (zb.dataset.lwcReset) { depRanges.delete(t); depYZoom.delete(t); depYShift.delete(t); render(); return; }
     const r = ts.getVisibleLogicalRange(); if (!r) return;
     const mid = (r.from + r.to) / 2, half = (r.to - r.from) / 2 * (zb.dataset.z === "in" ? .7 : 1.4);
     ts.setVisibleLogicalRange({ from: mid - Math.max(5, half), to: mid + Math.max(5, half) });
@@ -1169,6 +1193,7 @@ document.addEventListener("click", e => {
 document.addEventListener("change", async e => {
   if (e.target.id !== "depCsv" || !e.target.files[0]) return;
   if (!searchIdx) await loadSearch();
+  await loadAnalysis();
   const buf = await e.target.files[0].arrayBuffer(), u = new Uint8Array(buf);
   try { depotMsg = importRows(u[0] === 0x50 && u[1] === 0x4b ? await xlsxRows(buf) : csvRows(new TextDecoder().decode(buf))); }
   catch (err) { depotMsg = "Datei konnte nicht gelesen werden (" + esc(err.message || err) + ")."; }
