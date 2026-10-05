@@ -7,7 +7,7 @@ import json
 import pandas as pd
 
 from . import state
-from .bilanz import GAP, outcome, stats
+from .bilanz import GAP, _agg, outcome, stats
 from .config import ROOT
 
 
@@ -33,7 +33,7 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
             continue
         s = {"t": r["ticker"], "n": (r.get("name") or r["ticker"])[:40], "k": k, "d": d, "score": r.get("score", 0),
              "entry": p["entry"], "stop": p["stop"], "t1": p.get("target1"), "t2": p.get("target2"), "crv": p.get("crv"),
-             "region": r.get("region"), "res": "running"}
+             "region": r.get("region"), "grade": (r.get("grade") or {}).get("g"), "res": "running"}
         sig.append(s)
         new.append(s)
     # Ergebnisse nachführen
@@ -62,6 +62,7 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
         bt = None
     done = [s for s in sig if s.get("res") not in (None, "running")]
     out = {"generated": today, "live": {"since": min((s["d"] for s in sig), default=today), "n": len(sig),
-                                        "stats": stats(done) if done else None},
+                                        "stats": stats(done) if done else None,
+                                        "grade": {g: _agg([x for x in done if x["k"] == "hit" and x.get("grade") == g]) for g in "ABC"}},
            "signals": sorted(sig, key=lambda s: s["d"], reverse=True)[:80], "new": [s["t"] for s in new], "backtest": bt}
     return out

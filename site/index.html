@@ -340,6 +340,10 @@
   a.nw i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); margin-top: 5px; }
   a.nw i.pos { background: var(--up); } a.nw i.neg { background: var(--red); }
   a.nw small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .grd { display: inline-grid; place-items: center; min-width: 22px; height: 22px; border-radius: 7px; font-size: 13px; font-weight: 800; margin-left: 6px; vertical-align: 1px; }
+  .grd.big { min-width: 26px; height: 26px; font-size: 14px; border-radius: 8px; }
+  .grd.g-A { background: var(--up); color: #04210d; } .grd.g-B { background: var(--gold-bg); color: var(--gold); } .grd.g-C { background: var(--surface-3); color: var(--muted); }
+  td .grd { margin-left: 0; }
   .fav { border: 0; background: none; padding: 0 2px; margin: 0 2px 0 -2px; cursor: pointer; color: var(--faint); font-size: 18px; line-height: 1; vertical-align: -1px; }
   .fav.on { color: var(--gold); }
   h2 .fav { font-size: 22px; }
@@ -620,6 +624,8 @@
   <h3>Filter &amp; Export</h3>
   <div class="group"><div class="group-label">Mindest-Score</div>
     <div class="opts" data-key="minScore"><button class="opt" data-v="0">alle</button><button class="opt" data-v="40">ab 40</button><button class="opt" data-v="60">ab 60</button><button class="opt" data-v="80">ab 80</button></div></div>
+  <div class="group"><div class="group-label">Qualitätsstufe der Treffer (Fast-Treffer bleiben sichtbar)</div>
+    <div class="opts" data-key="grade"><button class="opt" data-v="">alle</button><button class="opt" data-v="A">nur A</button><button class="opt" data-v="B">A und B</button></div></div>
   <div class="group"><div class="group-label">Marktkapitalisierung ab</div>
     <div class="opts" data-key="minCap"><button class="opt" data-v="0">2 Mrd. $ (alle)</button><button class="opt" data-v="5">5 Mrd. $</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Marktkapitalisierung bis</div>
@@ -663,7 +669,8 @@ const dateDE = s => s ? new Date(s + "T12:00:00").toLocaleDateString("de-DE") : 
 const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter EMAs", flattening: "Abflachung",
   zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
   mbi: "MBI grünes X", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
-const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>`
+const gradeBadge = (r, big) => r.grade ? `<span class="grd g-${r.grade.g}${big ? " big" : ""}" title="Qualitätsstufe ${r.grade.g} – aus dem Backtest, siehe Score antippen">${r.grade.g}</span>` : "";
+const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>${gradeBadge(r, true)}`
   : r.fast_hit ? `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`
   : `<span class="status st-kein_setup">Kein Setup · ${r.missing.length} Kriterien fehlen</span>`;
 const SETUP_KEYS = ["drawdown", "no_crash", "structure", "flattening", "zone", "rsi_div", "rsi_range", "macd_below0", "macd_turn", "mbi", "crv"];
@@ -681,7 +688,7 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", vola: "", region: "", zone: "", div: "", sector: "", sort: "score" };
+const DEFAULTS = { grade: "", minScore: "0", minCap: "0", maxCap: "0", vola: "", region: "", zone: "", div: "", sector: "", sort: "score" };
 const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
 const volaIn = r => { const b = VOLA[state.vola]; return !b || (r.volatility != null && r.volatility >= b[0] && r.volatility < b[1]); };
 const volaCls = v => v == null ? "muted" : v < .3 ? "up" : v < .5 ? "" : "down";
@@ -725,7 +732,8 @@ function selRows() {
   const q = $("search").value.trim().toLowerCase();
   const light = r => (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9) && volaIn(r);
-  const full = r => light(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
+  const gOk = r => !r.passed || !state.grade || (r.grade && (state.grade === "A" ? r.grade.g === "A" : r.grade.g !== "C"));
+  const full = r => light(r) && gOk(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector);
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
   const fv = favs();
@@ -783,11 +791,15 @@ function forecastBoxHtml(r) {
 function scoreBoxHtml(r) {
   const t = r.trend, past = t && t.peak != null && t.peak > (r.met ?? 0) ? `<div class="note" style="margin:6px 0 0">Höchststand der letzten 10 Tage: ${t.peak}/${r.total ?? 11} Kriterien.</div>` : "";
   const trend = forecastBoxHtml(r);
+  const gs = r.grade && data.stats && data.stats.grade && data.stats.grade.test[r.grade.g];
+  const gradeBox = r.grade ? `<div class="sb-trend"><div class="sb-h" style="margin:0 0 6px">Qualitätsstufe ${gradeBadge(r)}</div>
+    ${r.grade.why.length ? `<ul class="fcw">${r.grade.why.map(([sg, x]) => `<li class="${sg > 0 ? "up" : "down"}">${sg > 0 ? "▲" : "▼"} <span>${esc(x)}</span></li>`).join("")}</ul>` : `<div class="note" style="margin:0">Keine der historisch auffälligen Eigenschaften – Durchschnitt.</div>`}
+    ${gs ? `<div class="note" style="margin:6px 0 0">Stufe ${r.grade.g} im Test (ungesehene Daten ab ${dateDE(data.stats.grade.split)}): Ziel 1 vor Stop in ${pct(gs.t1, 0)}, Ø ${gs.avg_r >= 0 ? "+" : ""}${fmt(gs.avg_r, 2)} R je Trade, ${fmt(gs.n, 0)} Signale. Die 11 Kriterien sind unverändert – die Stufe sortiert nur.</div>` : ""}</div>` : "";
   if (r.passed) {
     const sum = (r.bonuses || []).reduce((s, b) => s + b.points, 0);
     return `<div class="sb-h">So setzt sich der Score ${r.score} zusammen</div>
       <table class="check"><tbody>${(r.bonuses || []).map(b => `<tr><td class="${b.points >= 0 ? "ok" : "no"}">${b.points > 0 ? "+" : ""}${b.points}</td><td>${esc(b.label)}</td></tr>`).join("")}
-      <tr><td><b>${sum}</b></td><td><b>Summe${sum > 100 ? " (gedeckelt auf 100)" : ""}</b></td></tr></tbody></table>${trend}${past}`;
+      <tr><td><b>${sum}</b></td><td><b>Summe${sum > 100 ? " (gedeckelt auf 100)" : ""}</b></td></tr></tbody></table>${gradeBox}${trend}${past}`;
   }
   const miss = r.criteria.filter(c => !c.ok && !["cap", "liquidity", "price", "history"].includes(c.key));
   return `<div class="sb-h">${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – Score gibt es erst, wenn alle erfüllt sind</div>
@@ -924,6 +936,7 @@ const COLS = [
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "trend", l: "Prognose", g: r => r.trend ? (r.trend.fc ? r.trend.fc.d : r.trend.slope + (r.trend.d5 ?? 0) / 10) : 0, h: r => trendHtml(r) || "–" },
   { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
+  { k: "grade", l: "Stufe", g: r => r.grade ? { A: 3, B: 2, C: 1 }[r.grade.g] : 0, h: r => gradeBadge(r) || `<span class="muted">–</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
   { k: "close", l: "Kurs", n: 1, g: r => r.close, h: r => fmt(r.close) },
@@ -1952,7 +1965,7 @@ function getJson(name) {
 }
 const byTicker = t => data.results.find(r => r.ticker === t);
 const myTickers = () => new Set([...favs(), ...depotTickers(), ...data.results.filter(r => r.in_watchlist).map(r => r.ticker)]);
-const statusPill = r => r.passed ? `<span class="st hit">Treffer ${r.score}</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">${r.met ?? "–"}/${r.total ?? 11}</span>`;
+const statusPill = r => r.passed ? `${gradeBadge(r)}<span class="st hit">Treffer ${r.score}</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">${r.met ?? "–"}/${r.total ?? 11}</span>`;
 const hHead = (t, link, lbl) => `<div class="hh"><b>${t}</b>${link ? `<button class="hlink" ${link}>${lbl || "Alle"} ›</button>` : ""}</div>`;
 const SEC_LINK = sec => `data-gosec="${sec}"`;
 
@@ -1987,7 +2000,8 @@ function myStocksHtml() {
     ${list.length > 9 ? `<div class="note" style="margin:6px 0 0">+ ${list.length - 9} weitere</div>` : ""}</div>`;
 }
 function topHitsHtml() {
-  const list = data.results.filter(r => r.passed).sort((a, b) => b.score - a.score).slice(0, 5);
+  const gv = r => r.grade ? { A: 3, B: 2, C: 1 }[r.grade.g] : 0;
+  const list = data.results.filter(r => r.passed).sort((a, b) => gv(b) - gv(a) || b.score - a.score).slice(0, 5);
   if (!list.length) return "";
   return `<div class="hcard">${hHead("Beste Treffer heute", `data-gokinds="hit"`)}
     ${list.map(r => `<button class="hrow" data-card="${esc(r.ticker)}"><span class="hn">${esc((r.name || r.ticker).slice(0, 28))}<small>${esc(r.ticker)} · CRV ${fmt(r.crv, 1)}${r.earnings_risk ? " · ⚠ Earnings" : ""}</small></span>${statusPill(r)}${trendHtml(r)}</button>`).join("")}</div>`;
@@ -2100,7 +2114,8 @@ function bilanzHtml() {
   const L = b.live, ls = L && L.stats && L.stats.hit;
   const sig = (b.signals || []).slice(0, 40);
   const liveHtml = `<div class="hcard">${hHead(`Live-Bilanz <small>seit ${dateDE(L && L.since)}</small>`)}
-    ${ls && ls.n ? `${outcomeBar(ls)}<div class="note">${fmt(ls.n, 0)} abgeschlossene Treffer-Signale · Ø ${ls.avg_r >= 0 ? "+" : ""}${fmt(ls.avg_r, 2)} R</div>` : `<div class="note" style="margin:0 0 8px">Jeder neue Treffer und Fast-Treffer wird ab jetzt am Signaltag gespeichert und täglich nachverfolgt – hier entsteht Kairos echte Erfolgsbilanz.</div>`}
+    ${ls && ls.n ? `${outcomeBar(ls)}<div class="note">${fmt(ls.n, 0)} abgeschlossene Treffer-Signale · Ø ${ls.avg_r >= 0 ? "+" : ""}${fmt(ls.avg_r, 2)} R</div>
+      ${L.grade && "ABC".split("").some(g => L.grade[g] && L.grade[g].n) ? `<div class="mtiles" style="margin:10px 0">${"ABC".split("").map(g => { const x = L.grade[g]; return `<div class="mt"><span>Stufe <span class="grd g-${g}">${g}</span></span><b class="${x && x.n && x.avg_r >= 0 ? "up" : "down"}">${x && x.n ? (x.avg_r >= 0 ? "+" : "") + fmt(x.avg_r, 2) + " R" : "–"}</b><em>${x && x.n ? `${x.n} Signale · Ziel 1 ${pct(x.t1, 0)}` : "noch keine"}</em></div>`; }).join("")}</div>` : ""}` : `<div class="note" style="margin:0 0 8px">Jeder neue Treffer und Fast-Treffer wird ab jetzt am Signaltag gespeichert und täglich nachverfolgt – hier entsteht Kairos echte Erfolgsbilanz.</div>`}
     ${sig.length ? `<div class="table-wrap"><table class="jtrades"><thead><tr><th>Signal</th><th>Aktie</th><th class="num">Entry</th><th class="num">Stop / Ziel 1</th><th class="num">Stand</th><th>Ergebnis</th></tr></thead><tbody>
       ${sig.map(s => { const [rt, rc] = RES_TXT[s.res] || RES_TXT.running; return `<tr><td>${dateDE(s.d)}<small>${s.k === "hit" ? "Treffer " + s.score : "Fast-Treffer"}</small></td>
         <td><a href="#" data-card="${esc(s.t)}"><b>${esc(s.n || s.t)}</b></a><small>${esc(s.t)}</small></td><td class="num">${fmt(s.entry)}</td><td class="num">${fmt(s.stop)}<small>${fmt(s.t1)}</small></td>
@@ -2179,7 +2194,7 @@ function render() {
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
   const list = selRows(), k = new Set(state.kinds || []);
-  const nFilt = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
+  const nFilt = ["grade", "minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
       ${(state.presets || []).map((p, i) => `<button class="kchip pre${presetActive(p) ? " on" : ""}" data-preset="${i}">${esc(p.name)}</button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
@@ -2193,14 +2208,14 @@ function render() {
   const col = COLS.find(c => c.k === state.tableSort) || COLS.find(c => c.k === "score");
   if (state.tableSort !== "score" || state.tableAsc) list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
   const onlyHits = k.size === 1 && k.has("hit");
-  const lead = ["ticker", "name", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
+  const lead = ["ticker", "name", "grade", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
   const hid = new Set(state.hiddenCols || []);
-  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
+  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "grade", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
 }
 
-const FILTER_KEYS = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"];
+const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
   $("presetList").innerHTML = (state.presets || []).map((p, i) => `<button class="opt" data-delpreset="${i}">${esc(p.name)} ✕</button>`).join("") || `<span class="note" style="margin:0">Noch keine Vorlagen.</span>`;
