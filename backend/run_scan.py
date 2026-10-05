@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import company, sentiment
+from . import company, forecast, sentiment
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -247,7 +247,18 @@ def score_trend(df: pd.DataFrame, info: dict, ticker: str, res) -> dict:
     d5 = None if met[-6] is None else met[-1] - met[-6]
     direction = "up" if slope >= 0.25 or (d5 or 0) >= 2 else "down" if slope <= -0.25 or (d5 or 0) <= -2 else "flat"
     peak = max((m for m in met if m is not None), default=met[-1])
-    return {"met": met, "score": score, "d5": d5, "slope": round(slope, 2), "dir": direction, "peak": peak}
+    out = {"met": met, "score": score, "d5": d5, "slope": round(slope, 2), "dir": direction, "peak": peak}
+    if FC_MODEL:                                   # Prognose für die nächsten 5 Handelstage
+        try:
+            r14 = rsi(df["Close"], CONFIG.rsi.length)
+            x = forecast.features(res, float(r14.iloc[-4]) if len(r14) > 4 else None, met)
+            out["fc"] = forecast.predict(x, FC_MODEL)
+        except Exception as exc:
+            print(f"{ticker}: Prognose-Fehler {exc!r}")
+    return out
+
+
+FC_MODEL = forecast.load_model()
 
 
 def main(argv=None) -> int:
@@ -370,6 +381,8 @@ def main(argv=None) -> int:
         company.save(about)
         senti["_want"] = [r["ticker"] for r in rows]
         sentiment.save(senti)
+    if FC_MODEL:
+        stats["forecast"] = {"horizon": FC_MODEL["horizon"], "fitted": FC_MODEL["fitted"], **FC_MODEL["test"]}
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))

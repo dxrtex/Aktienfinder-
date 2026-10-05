@@ -305,7 +305,8 @@
   .aboutbox, .scorebox { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; font-size: 14px; }
   .aboutbox p { margin: 6px 0; line-height: 1.45; } .aboutbox a { color: var(--accent); font-size: 13px; }
   .ab-h, .sb-h { font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
-  .sb-trend { margin-top: 10px; }
+  .sb-trend { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+  ul.fcw { list-style: none; margin: 6px 0 0; padding: 0; font-size: 13px; } ul.fcw li { display: flex; gap: 6px; padding: 2px 0; } ul.fcw li span { color: var(--text); }
   .kbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
   .kchip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 650; font-size: 14px; padding: 9px 14px; border-radius: 999px; cursor: pointer; }
   .kchip small { font-weight: 600; opacity: .75; margin-left: 2px; }
@@ -672,14 +673,24 @@ function closeCard() { document.body.classList.remove("card-open"); }
 
 // Tendenz: Wie viele Kriterien waren an den letzten 10 Handelstagen erfüllt – steigt oder fällt das?
 const TREND_TXT = { up: ["▲", "up", "steigend"], down: ["▼", "down", "fallend"], flat: ["►", "muted", "seitwärts"] };
+// Prognose: erfüllte Kriterien in den nächsten 5 Handelstagen (Modell aus dem Backtest); ohne Modell: Verlauf der letzten Tage
+const fcDir = r => r.trend ? (r.trend.fc ? r.trend.fc.dir : r.trend.dir) : null;
 function trendHtml(r, big = false) {
-  const t = r.trend; if (!t || !t.dir) return "";
-  const [arrow, cls, word] = TREND_TXT[t.dir] || TREND_TXT.flat;
-  return `<span class="trend ${cls}${big ? "" : " solo"}" title="Tendenz der erfüllten Kriterien (letzte Handelstage): ${word}">${arrow}${big ? " Tendenz " + word : ""}</span>`;
+  const t = r.trend, dir = fcDir(r); if (!dir) return "";
+  const [arrow, cls, word] = TREND_TXT[dir] || TREND_TXT.flat, fc = !!(t.fc);
+  return `<span class="trend ${cls}${big ? "" : " solo"}" title="${fc ? "Prognose für die nächsten 5 Handelstage" : "Verlauf der letzten Handelstage"}: ${word}">${arrow}${big ? (fc ? " Prognose: " : " Tendenz: ") + word : ""}</span>`;
+}
+function forecastBoxHtml(r) {
+  const t = r.trend; if (!t) return "";
+  const m = t.met || [], old = m.length >= 6 ? m[m.length - 6] : null, now = m[m.length - 1];
+  const st = data.stats && data.stats.forecast;
+  const why = t.fc && t.fc.why && t.fc.why.length ? `<ul class="fcw">${t.fc.why.map(([sg, x]) => `<li class="${sg > 0 ? "up" : "down"}">${sg > 0 ? "▲" : "▼"} <span>${esc(x)}</span></li>`).join("")}</ul>` : "";
+  return `<div class="sb-trend"><div class="sb-h" style="margin:0 0 4px">Prognose · nächste 5 Handelstage</div>${trendHtml(r, true)}${why}
+    <div class="note" style="margin:6px 0 0">${old != null ? `Bisher: ${old} → ${now} von ${r.total ?? 11} Kriterien in den letzten 5 Tagen. ` : ""}${st ? `Modell aus ${fmt(st.n_test * 2, 0)} historischen Fällen; im Test lag die Richtung in ${pct(st.right_way, 0)} der Pfeil-Fälle richtig (▲/▼). Keine Garantie.` : ""}</div></div>`;
 }
 function scoreBoxHtml(r) {
   const t = r.trend, past = t && t.peak != null && t.peak > (r.met ?? 0) ? `<div class="note" style="margin:6px 0 0">Höchststand der letzten 10 Tage: ${t.peak}/${r.total ?? 11} Kriterien.</div>` : "";
-  const trend = t ? `<div class="sb-trend">${trendHtml(r, true)}</div>` : "";
+  const trend = forecastBoxHtml(r);
   if (r.passed) {
     const sum = (r.bonuses || []).reduce((s, b) => s + b.points, 0);
     return `<div class="sb-h">So setzt sich der Score ${r.score} zusammen</div>
@@ -800,7 +811,7 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 const COLS = [
   { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<span class="tk">${favBtn(r.ticker)}<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${wlTag(r)}</span>` },
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
-  { k: "trend", l: "Tendenz", g: r => r.trend ? r.trend.slope + (r.trend.d5 ?? 0) / 10 : 0, h: r => trendHtml(r) || "–" },
+  { k: "trend", l: "Prognose", g: r => r.trend ? (r.trend.fc ? r.trend.fc.d : r.trend.slope + (r.trend.d5 ?? 0) / 10) : 0, h: r => trendHtml(r) || "–" },
   { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
