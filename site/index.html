@@ -289,6 +289,7 @@
   .plan .fig b { font-size: 18px; }
   .note { color: var(--muted); font-size: 13px; margin-top: 10px; line-height: 1.45; }
   .cfg { font-size: 14px; }
+  details.cfgd summary { cursor: pointer; color: var(--accent); font-weight: 650; margin-top: 12px; }
   .cfg h4 { margin: 18px 0 6px; color: var(--accent); font-size: 14px; text-transform: uppercase; letter-spacing: .06em; }
   .cfg table { min-width: 0; font-size: 14px; }
   .cfg td { padding: 7px 10px; }
@@ -319,6 +320,13 @@
   table.tpt td { padding: 8px 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
   table.tpt .num { text-align: right; } table.tpt td small { display: block; font-size: 11.5px; color: var(--muted); }
   .tp-sum { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 10px; } .tp-sum b { color: var(--text); }
+  .fund { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; }
+  .fgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px 14px; }
+  .fc { position: relative; padding-left: 14px; min-width: 0; }
+  .fc i { position: absolute; left: 0; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+  .fc i.d-green { background: var(--up); } .fc i.d-red { background: var(--red); } .fc i.d-yellow { background: var(--gold); }
+  .fc span { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; } .fc b { display: block; font-size: 15px; }
+  .fc em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); line-height: 1.3; }
   .senti { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; }
   .se-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
   .se-h b { font-size: 14px; } .vv { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-3); }
@@ -345,13 +353,93 @@
   .cm-back { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
   .cm-box { position: relative; width: min(560px, 100%); }
   .cm-box .card { margin: 0; }
+  @media (min-width: 1100px) {   /* iPad quer / Desktop: Übersicht als Seitenpanel, Tabelle bleibt sichtbar */
+    .cmodal { justify-content: flex-end; padding: 0; overflow: hidden; }
+    .cm-back { background: rgba(0,0,0,.25); backdrop-filter: none; -webkit-backdrop-filter: none; }
+    .cm-box { width: 560px; height: 100vh; overflow-y: auto; padding: calc(env(safe-area-inset-top) + 18px) 16px calc(env(safe-area-inset-bottom) + 90px); background: rgba(14,14,16,.92);
+              border-left: 1px solid var(--glass-line); -webkit-backdrop-filter: blur(30px); backdrop-filter: blur(30px); animation: slidein .22s ease-out; }
+    .cm-x { position: fixed; top: calc(env(safe-area-inset-top) + 12px); right: 16px; }
+    @keyframes slidein { from { transform: translateX(40px); opacity: 0; } }
+  }
   .cm-x { position: absolute; top: -12px; right: -6px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--surface-3); color: var(--text); font-size: 16px; cursor: pointer; }
   .subnav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px;
             background: var(--glass); border: 1px solid var(--glass-line); margin: 0 0 18px; }
   .subnav button { border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 14px; padding: 10px 4px; border-radius: 12px; cursor: pointer; }
   .subnav button.on { background: var(--accent); color: var(--accent-ink); }
   /* Kalender */
+  /* Heute */
+  .brand .gear { margin-left: auto; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--glass-line); background: var(--glass); color: var(--muted); display: grid; place-items: center; cursor: pointer; }
+  .brand .gear svg { width: 21px; height: 21px; box-shadow: none; border-radius: 0; }
+  .hgrid { display: grid; gap: 14px; margin-top: 22px; }
+  .backbtn { margin-top: 18px !important; } @media (min-width: 900px) { .hgrid { grid-template-columns: 1.1fr 1fr; align-items: start; } }
+  .hcol { display: grid; gap: 14px; }
+  .hcard { display: block; width: 100%; text-align: left; color: var(--text); font: inherit; background: var(--glass); border: 1px solid var(--glass-line); border-radius: var(--radius); padding: 16px 16px 14px;
+           -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); }
+  button.hcard { cursor: pointer; } button.hcard:active { transform: scale(.99); }
+  .hh { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .hh b { font-size: 17px; letter-spacing: -.01em; } .hh small { color: var(--muted); font-weight: 500; font-size: 13px; margin-left: 4px; }
+  .hlink { border: 0; background: none; color: var(--accent); font-weight: 650; font-size: 14px; cursor: pointer; padding: 0; }
+  .hcard > .hlink { display: inline-block; margin-top: 10px; }
+  .hrow { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: var(--text); font: inherit; text-align: left; padding: 9px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .hrow:first-of-type { border-top: 0; }
+  .hrow .hn { flex: 1; min-width: 0; font-weight: 600; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hrow .hn small { display: block; font-weight: 500; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+  .hrow .trend { min-width: 16px; text-align: center; }
+  .hsub { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin: 12px 0 2px; }
+  .chg { display: flex; flex-wrap: wrap; gap: 8px; } .chg span { background: var(--surface-2); border-radius: 12px; padding: 8px 12px; font-size: 13px; color: var(--muted); }
+  .chg span b { font-size: 17px; margin-right: 3px; color: var(--text); } .chg .up b { color: var(--up); } .chg .gold b { color: var(--gold); }
+  .mv { font-size: 13px; font-weight: 700; white-space: nowrap; }
+  .gold { color: var(--gold); }
+  .mtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; }
+  .mt { background: var(--surface-2); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+  .mt span { display: block; font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mt b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; } .mt em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); }
+  .mt em.up { color: var(--up); } .mt em.down { color: var(--red); }
+  .regime { display: flex; gap: 12px; align-items: flex-start; background: var(--surface-2); border-radius: 14px; padding: 12px; margin-bottom: 10px; }
+  .regime i { flex: none; width: 12px; height: 12px; border-radius: 50%; margin-top: 4px; background: var(--c, var(--muted)); box-shadow: 0 0 12px var(--c, transparent); }
+  .regime.tone-green { --c: var(--up); } .regime.tone-red { --c: var(--red); } .regime.tone-yellow { --c: var(--gold); }
+  .regime b { display: block; } .regime span { font-size: 13px; color: var(--muted); }
+  .hev { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); } .hev:first-of-type { border-top: 0; }
+  .hev .k { flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; font-size: 11px; font-weight: 800; }
+  .hev .hn { flex: 1; min-width: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .hev em { font-style: normal; font-size: 13px; color: var(--muted); }
+  .bil { background: linear-gradient(135deg, rgba(48,209,88,.14), rgba(255,255,255,.03) 60%) !important; }
+  .bilrow { display: flex; gap: 14px; align-items: center; } .bilrow b { display: block; font-size: 15px; } .bilrow span { font-size: 13px; color: var(--muted); }
+  .ring-s { position: relative; width: 70px; height: 70px; flex: none; } .ring-s .ring { width: 70px; height: 70px; }
+  .ring-s > b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 17px; }
+  .tg { background: linear-gradient(135deg, rgba(10,132,255,.18), rgba(255,255,255,.03) 60%) !important; } .tg b { display: block; font-size: 16px; margin-bottom: 4px; } .tg span { font-size: 13.5px; color: var(--muted); display: block; }
+  .tg .hlink { color: var(--accent); margin-top: 8px; }
+  .skel { height: 64px; border-radius: 12px; background: linear-gradient(90deg, var(--surface-2), var(--surface-3), var(--surface-2)); background-size: 200% 100%; animation: skel 1.2s linear infinite; }
+  @keyframes skel { to { background-position: -200% 0; } }
+  /* Bilanz */
+  .backbtn { border: 0; background: none; color: var(--accent); font-weight: 650; font-size: 16px; padding: 0; margin: 0 0 4px; cursor: pointer; }
+  .bhero { display: grid; gap: 14px; margin-bottom: 14px; background: linear-gradient(135deg, rgba(48,209,88,.16), rgba(255,255,255,.03) 60%) !important; }
+  @media (min-width: 760px) { .bhero { grid-template-columns: 1.2fr 1fr; } .bhero .obar, .bhero .oleg { grid-column: 1 / -1; } }
+  .bh-l span { font-size: 13px; color: var(--muted); font-weight: 600; } .bh-l > b { display: block; font-size: 52px; letter-spacing: -.03em; line-height: 1.05; color: var(--up); margin: 4px 0; }
+  .bh-l em { font-style: normal; color: var(--muted); font-size: 14px; } .bh-l em b { color: var(--text); }
+  .bh-r { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; align-self: center; }
+  .bh-r .mt span { white-space: normal; line-height: 1.25; }
+  .obar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
+  .obar i.t1 { background: var(--up); } .obar i.op { background: var(--surface-3); } .obar i.st { background: var(--red); }
+  .oleg { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; font-weight: 650; margin-top: 6px; }
+  svg.rp { width: 100%; height: auto; max-height: 260px; display: block; } svg.rp text { fill: var(--muted); font-size: 11px; } svg.rp text.lb { font-weight: 700; font-size: 12px; }
+  table.bt { min-width: 640px; table-layout: auto; } table.bt td:first-child, table.bt th:first-child { width: auto; } table.bt tr.muted td { color: var(--muted); }
+  .hcard + .hcard { margin-top: 14px; } .hcol > .hcard + .hcard, .hgrid .hcard + .hcard { margin-top: 0; }
+  /* Einstellungen: Telegram & Backup */
+  .tgdesc { font-size: 14.5px; line-height: 1.5; }
+  ol.steps { margin: 12px 0 0; padding-left: 20px; font-size: 14.5px; line-height: 1.5; } ol.steps li { margin-bottom: 8px; } ol.steps a { color: var(--accent); }
+  .tgtext { width: 100%; margin-top: 10px; min-height: 70px; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 10px; font: 13px/1.4 ui-monospace, Menlo, monospace; }
   /* Journal */
+  tr.jrow { cursor: pointer; } tr.jrow.open td { background: var(--surface-2); } .jhas { color: var(--accent); font-size: 12px; }
+  tr.jdet td { background: var(--surface-2); padding: 4px 12px 14px; }
+  .jdet-in { display: grid; gap: 12px; } @media (min-width: 760px) { .jdet-in { grid-template-columns: 1fr 1fr; } }
+  .jev { border-left: 3px solid var(--c, var(--muted)); padding-left: 10px; font-size: 13.5px; } .jev span { color: var(--muted); font-size: 12px; }
+  .jev.tone-green { --c: var(--up); } .jev.tone-red { --c: var(--red); } .jev.tone-yellow { --c: var(--gold); }
+  .jev ul { list-style: none; margin: 6px 0 0; padding: 0; } .jev li { padding: 2px 0; white-space: normal; } .jev li b { color: var(--text); }
+  .jtags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .jtag { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: 6px 10px; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+  .jtag.on.g { background: var(--up-bg); color: var(--up); border-color: transparent; } .jtag.on.r { background: var(--red-bg); color: var(--red); border-color: transparent; }
+  .jtag.on.n { background: var(--accent-bg); color: var(--accent); border-color: transparent; }
+  .jnote { width: 100%; margin-top: 8px; min-height: 64px; background: var(--surface); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 9px 10px; font: inherit; font-size: 14px; resize: vertical; }
   .jempty { text-align: center; padding: 34px 22px; } .jempty b { font-size: 20px; } .jempty p { color: var(--muted); max-width: 520px; margin: 8px auto 18px; }
   .jicon { font-size: 40px; margin-bottom: 6px; }
   .jhero { display: grid; grid-template-columns: 1fr auto; gap: 14px 18px; align-items: center; margin-bottom: 12px;
@@ -487,7 +575,7 @@
 <script src="splash.js" data-autoplay></script>
 <div class="wrap">
   <header class="hello">
-    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b></div>
+    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
     <h1 id="greet">Hallo 👋</h1>
     <p id="sub">Lade den heutigen Scan …</p>
   </header>
@@ -508,7 +596,10 @@
 
 <nav class="tabbar" aria-label="Navigation">
   <div class="tabs">
-    <button class="tab on" data-sec="scanner">
+    <button class="tab" data-sec="today">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg>
+      Heute</button>
+    <button class="tab" data-sec="scanner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8 11h6M11 8v6"/></svg>
       Scanner<span class="badge" id="wlBadge" hidden></span></button>
     <button class="tab" data-sec="calendar">
@@ -520,9 +611,6 @@
     <button class="tab" data-sec="journal">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 11.5h4"/></svg>
       Journal</button>
-    <button class="tab" data-sec="settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      Einstellungen</button>
   </div>
 </nav>
 
@@ -552,6 +640,9 @@
     <div class="links"><button class="btn ghost" id="csv">CSV</button><button class="btn ghost" id="xlsx">Excel</button></div></div>
   <button class="btn" id="done">Fertig</button>
   <button class="opt" id="reset" style="width:100%;margin-top:10px">Filter zurücksetzen</button>
+  <div class="group"><div class="group-label">Filter als Vorlage speichern (erscheint oben als Schnellwahl)</div>
+    <div class="links" style="margin-top:0"><button class="btn ghost" id="savePreset">Aktuelle Filter speichern …</button></div><div id="presetList" class="opts" style="margin-top:10px"></div></div>
+  <div class="group"><div class="group-label">Spalten in der Tabelle</div><div id="colOpts" class="opts"></div></div>
 </section>
 
 <div class="cmodal" aria-label="Aktien-Übersicht"><div class="cm-back" data-closecard></div><div class="cm-box"><button class="cm-x" data-closecard aria-label="Schließen">✕</button><div id="cardModalBody"></div></div></div>
@@ -598,6 +689,7 @@ const state = { name: "Jonny", calView: "month", budget: 400, sec: "scanner", ta
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
 if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
+state.sec = "today";   // App startet immer auf „Heute“
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
 const SORTS = {
@@ -728,6 +820,24 @@ function sentiHtml(r) {
   </div>`;
 }
 
+// Fundament & Wochentrend: kurze Ampel – Kairo bleibt technisch, das hier ist der Rahmen
+function fundHtml(r) {
+  const fu = (r.senti || {}).fu, wk = r.wk, cells = [];
+  const cell = (l, v, tone, sub) => `<div class="fc"><i class="d-${tone}"></i><span>${l}</span><b>${v}</b>${sub ? `<em>${sub}</em>` : ""}</div>`;
+  if (wk && wk.label) cells.push(cell("Wochentrend", esc(wk.label), wk.tone, `Wochen-RSI ${fmt(wk.rsi, 0)}${wk.above30 ? "" : " · unter EMA 30 W."}`));
+  if (fu) {
+    if (fu.pe != null) { const rel = fu.pe_sec ? fu.pe / fu.pe_sec : null;
+      cells.push(cell("KGV", fu.pe > 0 ? fmt(fu.pe, 1) : "Verlust", fu.pe <= 0 ? "red" : rel == null ? "gray" : rel < .8 ? "green" : rel > 1.3 ? "red" : "yellow",
+        fu.pe_sec ? `Branche ${fmt(fu.pe_sec, 1)}${fu.fpe ? ` · erw. ${fmt(fu.fpe, 1)}` : ""}` : fu.fpe ? `erwartet ${fmt(fu.fpe, 1)}` : "")); }
+    else if (fu.fpe != null) cells.push(cell("KGV erwartet", fmt(fu.fpe, 1), "gray"));
+    if (fu.rg != null) cells.push(cell("Umsatzwachstum", sgnPct(fu.rg, 0), fu.rg > .1 ? "green" : fu.rg >= 0 ? "yellow" : "red", "zum Vorjahresquartal"));
+    if (fu.pm != null) cells.push(cell("Gewinnmarge", pct(fu.pm, 0), fu.pm > .15 ? "green" : fu.pm >= 0 ? "yellow" : "red", fu.roe != null ? `Eigenkapitalrendite ${pct(fu.roe, 0)}` : ""));
+    if (fu.de != null) cells.push(cell("Verschuldung", fmt(fu.de / 100, 2) + "×", fu.de < 50 ? "green" : fu.de <= 150 ? "yellow" : "red", "Schulden ÷ Eigenkapital"));
+  }
+  if (!cells.length) return "";
+  return `<div class="fund"><div class="se-h"><b>Fundament &amp; Wochentrend</b></div><div class="fgrid">${cells.join("")}</div></div>`;
+}
+
 // ---------- Karte ----------
 function ampel(r) {
   return `<div class="ampel" title="Pflichtkriterien">${SETUP_KEYS.map(k => {
@@ -767,6 +877,7 @@ function card(r) {
     <div class="chips">${chips(r)}</div>
     ${tipHtml(r.hint)}
     ${sentiHtml(r)}
+    ${fundHtml(r)}
     <div class="actions">
       <button class="btn" data-open="${esc(r.ticker)}">Details &amp; Chart</button>
       <a class="btn ghost" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
@@ -873,7 +984,7 @@ function searchHtml() {
 let calData = null, calLoading = null;
 function loadCalendar() {
   if (!calLoading) calLoading = fetch("data/calendar.json", { cache: "no-store" }).then(r => r.json())
-    .then(d => { calData = d.events || []; calBadge(); if (state.sec === "calendar") render(); })
+    .then(d => { calData = d.events || []; calBadge(); if (["calendar", "today"].includes(state.sec)) render(); })
     .catch(() => { calData = []; if (state.sec === "calendar") render(); });
   return calLoading;
 }
@@ -1045,13 +1156,13 @@ let anaData = null, anaLoading = null;
 const chartReady = {};
 function loadAnalysis() {
   if (!anaLoading) anaLoading = fetch("data/analysis.json", { cache: "no-store" }).then(r => r.json())
-    .then(d => { anaData = d; if (state.sec === "depot") render(); }).catch(() => { anaData = { tickers: {}, market: {} }; });
+    .then(d => { anaData = d; if (["depot", "today"].includes(state.sec)) render(); }).catch(() => { anaData = { tickers: {}, market: {} }; });
   return anaLoading;
 }
 function needChart(t) {
   if (!t || chartReady[t] !== undefined) return chartReady[t] || null;
   chartReady[t] = null;
-  loadChart(t).then(c => { chartReady[t] = c; if (state.sec === "depot") render(); }).catch(() => { chartReady[t] = false; });
+  loadChart(t).then(c => { chartReady[t] = c; if (["depot", "journal"].includes(state.sec)) render(); }).catch(() => { chartReady[t] = false; });
   return null;
 }
 // Einstieg bewerten: Lage in der 20-Tage-Spanne, RSI, MACD, MBI und Abstand zur EMA 20 am Kauftag
@@ -1484,6 +1595,12 @@ document.addEventListener("click", e => {
   if (cdy) { calDay = cdy.dataset.calday; render(); const el = document.querySelector(".mcal"); if (el) { const y = el.getBoundingClientRect().bottom + scrollY - 80; if (y > scrollY) scrollTo({ top: y, behavior: "smooth" }); } return; }
   const js = e.target.closest("[data-jsort]");
   if (js) { const k = js.dataset.jsort; if (jSort === k) jAsc = !jAsc; else { jSort = k; jAsc = k === "under"; } render(); return; }
+  const jt = e.target.closest("[data-jtag]");
+  if (jt) { const o = jnLoad(), k = jt.dataset.jtag, n = o[k] = o[k] || {}, set = new Set(n.tags || []); set.has(jt.dataset.v) ? set.delete(jt.dataset.v) : set.add(jt.dataset.v);
+    n.tags = [...set]; jnSave(o); render(); return; }
+  if (e.target.closest(".jdet")) return;
+  const jr = e.target.closest("[data-jrow]");
+  if (jr) { const k = jr.dataset.jrow; jOpen.has(k) ? jOpen.delete(k) : jOpen.add(k); render(); return; }
   const jf = e.target.closest("[data-jfilter]"); if (jf) { jFilter = jf.dataset.jfilter; render(); return; }
   if (e.target.closest("[data-jclear]")) { if (confirm("Alle Transaktionen aus dem Journal auf diesem Gerät löschen? (Das Depot bleibt.)")) { txSave([]); depotMsg = ""; render(); } return; }
   const b = e.target.closest("[data-cal]");
@@ -1525,9 +1642,18 @@ document.addEventListener("click", e => {
   render();
 });
 document.addEventListener("input", e => {
+  if (e.target.dataset && e.target.dataset.jnote) { const o = jnLoad(), k = e.target.dataset.jnote; (o[k] = o[k] || {}).note = e.target.value; jnSave(o); return; }
   if (e.target.id === "cfgName") { state.name = e.target.value.trim(); save(); renderHead(); }
 });
 document.addEventListener("change", async e => {
+  if (e.target.id === "restoreFile" && e.target.files[0]) {
+    try { const j = JSON.parse(await e.target.files[0].text());
+      if (j.app !== "kairo" || !j.data) throw new Error("keine Kairo-Sicherung");
+      if (confirm(`Backup vom ${new Date(j.date).toLocaleString("de-DE")} einlesen? Merkliste, Depot, Journal und Einstellungen auf diesem Gerät werden ersetzt.`)) {
+        Object.entries(j.data).forEach(([k, v]) => BACKUP_KEYS(k) && localStorage.setItem(k, v)); location.reload(); }
+    } catch (err) { alert("Datei konnte nicht gelesen werden: " + err.message); }
+    e.target.value = ""; return;
+  }
   if (!["depCsv", "jrCsv"].includes(e.target.id) || !e.target.files[0]) return;
   if (!searchIdx) await loadSearch();
   await loadAnalysis();
@@ -1648,7 +1774,39 @@ function jStats(ts) {
     holdW: avg(w, t => t.days), holdL: avg(l, t => t.days),
     best: ts.slice().sort((a, b) => b.pnl - a.pnl)[0], worst: ts.slice().sort((a, b) => a.pnl - b.pnl)[0] };
 }
-let jSort = "close", jAsc = false, jFilter = "", jShowTx = false;
+let jSort = "close", jAsc = false, jFilter = "", jShowTx = false, jOpen = new Set();
+// Notizen & Tags je Trade (nur auf diesem Gerät)
+const JN_KEY = "kairo-jnotes-v1";
+const J_TAGS = [["plan", "nach Plan", "g"], ["kairo", "Kairo-Signal", "g"], ["fomo", "FOMO / gejagt", "r"], ["early_in", "zu früh rein", "r"], ["early_out", "Gewinn zu früh mitgenommen", "r"],
+  ["held", "Verlust laufen lassen", "r"], ["news", "News-Trade", "n"], ["earn", "über Quartalszahlen", "n"]];
+function jnLoad() { try { return JSON.parse(localStorage.getItem(JN_KEY) || "{}"); } catch (e) { return {}; } }
+function jnSave(o) { try { localStorage.setItem(JN_KEY, JSON.stringify(o)); } catch (e) {} }
+const jKey = t => `${t.key}|${t.open}`;
+// Kairo-Sicht auf den Einstieg: technische Lage des Basiswerts am Kauftag (sofern Chartdaten im Scan)
+function jEntry(t) {
+  if (!searchIdx) { loadSearch(); return null; }
+  const r = t.d ? matchUnderlying(t.under, t.d.cur) : matchName(t.under);
+  if (!r || !data.results.some(x => x.ticker === r.t)) return { none: true };
+  const c = needChart(r.t); if (!c) return null;
+  const ev = entryEval(c, t.open);
+  return ev ? { ...ev, t: r.t } : { none: true };
+}
+function jDetailHtml(t) {
+  const k = jKey(t), n = jnLoad()[k] || {}, tags = new Set(n.tags || []), ev = jEntry(t);
+  const evHtml = ev == null ? `<div class="note" style="margin:0">Kairo-Bewertung des Einstiegs lädt …</div>`
+    : ev.none ? `<div class="note" style="margin:0">Keine Chartdaten für ${esc(t.under)} im aktuellen Scan – Einstiegsbewertung nicht möglich.</div>`
+    : `<div class="jev tone-${ev.tone}"><b>${ev.label}</b> <span>(${t.d ? "Basiswert " : ""}${esc(ev.t)} am ${dateDE(ev.date)})</span>
+        <ul>${ev.checks.map(x => `<li class="${x.s > 0 ? "up" : x.s < 0 ? "down" : ""}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "•"} <b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`;
+  return `<div class="jdet-in"><div class="jdet-l">${evHtml}</div><div class="jdet-r">
+      <div class="jtags">${J_TAGS.map(([v, l, c]) => `<button class="jtag ${c}${tags.has(v) ? " on" : ""}" data-jtag="${esc(k)}" data-v="${v}">${l}</button>`).join("")}</div>
+      <textarea class="jnote" data-jnote="${esc(k)}" placeholder="Notiz: Warum rein, warum raus, was lerne ich daraus?">${esc(n.note || "")}</textarea></div></div>`;
+}
+function jTagStatsHtml(trades) {
+  const notes = jnLoad(), rows = J_TAGS.map(([v, l]) => { const ts = trades.filter(t => ((notes[jKey(t)] || {}).tags || []).includes(v)); return [l, ts.length ? jStats(ts) : null]; }).filter(x => x[1]);
+  if (!rows.length) return `<div class="note" style="margin:0">Tippe in der Trade-Liste auf einen Trade und vergib Tags wie „nach Plan“ oder „FOMO“ – hier siehst du dann, welche Verhaltensweisen dich Geld kosten.</div>`;
+  return `<table class="jt"><thead><tr><th>Tag</th><th class="num">Trades</th><th class="num">Quote</th><th class="num">Ergebnis</th></tr></thead><tbody>
+    ${rows.map(([l, x]) => `<tr><td>${esc(l)}</td><td class="num">${x.n}</td><td class="num">${pct(x.rate, 0)}</td><td class="num ${x.pnl >= 0 ? "up" : "down"}">${sEur2(x.pnl)}</td></tr>`).join("")}</tbody></table>`;
+}
 const MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
 const eur2 = v => v == null ? "–" : `${v < 0 ? "−" : ""}${fmt(Math.abs(v), 2)} €`;
 const sEur2 = v => v == null ? "–" : `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 2)} €`;
@@ -1760,9 +1918,12 @@ function journalHtml() {
   const tradesTbl = `<div class="section-title" style="margin-top:26px"><span>Abgeschlossene Trades</span><span>${list.length}</span></div>
     <div class="kbar">${fchips.map(([v, l]) => `<button class="kchip${jFilter === v ? " on" : ""}" data-jfilter="${v}">${l}</button>`).join("")}</div>
     <div class="table-wrap"><table class="jtrades"><thead><tr>${th("close", "Geschlossen")}${th("under", "Wert")}<th>Art</th>${th("days", "Dauer", 1)}${th("cost", "Einsatz", 1)}${th("pnl", "Ergebnis", 1)}${th("ret", "in %", 1)}</tr></thead>
-    <tbody>${list.map(t => `<tr><td>${dateDE(t.close)}<small>seit ${dateDE(t.open)}</small></td><td><b>${esc(t.under)}</b><small>${esc(t.isin)}${t.buys + t.sells > 2 ? ` · ${t.buys} Käufe, ${t.sells} Verkäufe` : ""}</small></td>
+    <tbody>${list.map(t => { const k = jKey(t), nt = jnLoad()[k], open = jOpen.has(k); return `<tr class="jrow${open ? " open" : ""}" data-jrow="${esc(k)}"><td>${dateDE(t.close)}<small>seit ${dateDE(t.open)}</small></td><td><b>${esc(t.under)}</b><small>${esc(t.isin)}${t.buys + t.sells > 2 ? ` · ${t.buys} Käufe, ${t.sells} Verkäufe` : ""}</small></td>
       <td><span class="kp" style="--k:${KIND_COL[t.k]}">${t.label}</span></td><td class="num">${t.days} T.</td><td class="num">${eur2(t.cost)}</td>
-      <td class="num ${t.pnl >= 0 ? "up" : "down"}"><b>${sEur2(t.pnl)}</b></td><td class="num ${t.pnl >= 0 ? "up" : "down"}">${sgnPct(t.ret, 1)}</td></tr>`).join("")}</tbody></table></div>`;
+      <td class="num ${t.pnl >= 0 ? "up" : "down"}"><b>${sEur2(t.pnl)}</b></td><td class="num ${t.pnl >= 0 ? "up" : "down"}">${sgnPct(t.ret, 1)}${nt && ((nt.tags || []).length || nt.note) ? ' <span class="jhas">✎</span>' : ""}</td></tr>
+      ${open ? `<tr class="jdet"><td colspan="7">${jDetailHtml(t)}</td></tr>` : ""}`; }).join("")}</tbody></table></div>
+    <div class="note" style="margin:8px 2px 0">Trade antippen: Kairo-Bewertung des Einstiegs, Tags und Notiz.</div>
+    <div class="card jcard" style="margin-top:14px"><div class="jc-h"><b>Nach Tags</b><span>dein Verhalten in Zahlen</span></div>${jTagStatsHtml(all)}</div>`;
   const openTbl = m.open.length ? `<div class="section-title" style="margin-top:26px"><span>Noch offen</span><span>${m.open.length}</span></div>
     <div class="table-wrap"><table class="jtrades"><thead><tr><th>Seit</th><th>Wert</th><th>Art</th><th class="num">Stück</th><th class="num">Einsatz</th><th class="num">schon realisiert</th></tr></thead><tbody>
     ${m.open.map(p => { const c = p.lots.reduce((s2, l) => s2 + l.qty * l.unit, 0); return `<tr><td>${dateDE(p.open)}</td><td><b>${esc(p.under)}</b><small>${esc(p.isin)}</small></td><td><span class="kp" style="--k:${KIND_COL[p.k]}">${p.label}</span></td>
@@ -1779,6 +1940,202 @@ function journalHtml() {
     + txTbl + `<div class="note" style="margin:16px 2px 0">Berechnung: Käufe und Verkäufe je Wertpapier nach FIFO zugeordnet, ein Trade läuft von der Eröffnung bis der Bestand wieder 0 ist. Ergebnis = Verkaufserlös − Kaufpreis, jeweils inklusive Ordergebühren, vor Steuern. Alles bleibt nur auf diesem Gerät gespeichert.</div>`;
 }
 
+// ---------- Zusatzdaten (Bilanz, Alarme, Änderungen) ----------
+const jsonData = {};
+function getJson(name) {
+  if (!(name in jsonData)) {
+    jsonData[name] = undefined;
+    fetch(`data/${name}`, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null)
+      .then(d => { jsonData[name] = d || null; if (["today", "bilanz", "settings"].includes(state.sec)) render(); });
+  }
+  return jsonData[name];
+}
+const byTicker = t => data.results.find(r => r.ticker === t);
+const myTickers = () => new Set([...favs(), ...depotTickers(), ...data.results.filter(r => r.in_watchlist).map(r => r.ticker)]);
+const statusPill = r => r.passed ? `<span class="st hit">Treffer ${r.score}</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">${r.met ?? "–"}/${r.total ?? 11}</span>`;
+const hHead = (t, link, lbl) => `<div class="hh"><b>${t}</b>${link ? `<button class="hlink" ${link}>${lbl || "Alle"} ›</button>` : ""}</div>`;
+const SEC_LINK = sec => `data-gosec="${sec}"`;
+
+function marketHtml() {
+  const m = anaData && anaData.market; if (!m) { loadAnalysis(); return ""; }
+  const reg = m.regime, ids = ["^GSPC", "^NDX", "^GDAXI", "^STOXX", "^VIX"].filter(k => m[k]);
+  const tone = { green: "up", red: "down", yellow: "" };
+  return `<div class="hcard mkt">${hHead("Markt")}
+    ${reg ? `<div class="regime tone-${reg.tone}"><i></i><div><b>${esc(reg.label)}</b><span>${reg.tone === "green" ? "Rückenwind für Long-Setups – S&P 500 über der EMA 50, VIX ruhig." : reg.tone === "red" ? "Gegenwind – Reversal-Einstiege scheitern häufiger. Kleiner positionieren." : "Gemischtes Umfeld – Einstiege selektiv."}</span></div></div>` : ""}
+    <div class="mtiles">${ids.map(k => { const x = m[k]; return `<div class="mt"><span>${esc(x.name)}</span><b>${fmt(x.c, k === "^VIX" ? 1 : 0)}</b>
+      <em class="${k === "^VIX" ? (x.tone === "green" ? "up" : x.tone === "red" ? "down" : "") : tone[x.tone]}">${k === "^VIX" ? esc(x.label) : `${sgnPct(x.chg1m, 1)} · 1 Mon.`}</em></div>`; }).join("")}</div></div>`;
+}
+function changesHtml() {
+  const ch = getJson("changes.json");
+  if (ch === undefined) return `<div class="hcard">${hHead("Seit dem letzten Scan")}<div class="skel"></div></div>`;
+  if (!ch || !ch.since) return "";
+  const mine = myTickers(), rowL = (t, extra) => { const r = byTicker(t); return r ? `<button class="hrow" data-card="${esc(t)}"><span class="hn">${mine.has(t) ? (favs().has(t) ? "★ " : "") : ""}${esc((r.name || t).slice(0, 30))}</span>${extra || statusPill(r)}${trendHtml(r)}</button>` : ""; };
+  const nh = ch.new_hit.map(byTicker).filter(Boolean).sort((a, b) => b.score - a.score);
+  const moves = Object.entries(ch.met || {}).filter(([t]) => mine.has(t)).map(([t, [a, b]]) => [t, a, b]).filter(x => Math.abs(x[2] - x[1]) >= 1).sort((x, y) => (y[2] - y[1]) - (x[2] - x[1]));
+  const lostMine = ch.lost_hit.filter(t => mine.has(t));
+  return `<div class="hcard">${hHead(`Seit dem letzten Scan <small>${dateDE(ch.since)}</small>`)}
+    <div class="chg"><span class="up"><b>+${ch.new_hit.length}</b> neue Treffer</span><span><b>${ch.lost_hit.length}</b> weggefallen</span><span class="gold"><b>+${ch.new_fast.length}</b> neue Fast-Treffer</span></div>
+    ${moves.length || lostMine.length ? `<div class="hsub">Deine Aktien</div>${moves.slice(0, 6).map(([t, a, b]) => rowL(t, `<span class="mv ${b > a ? "up" : "down"}">${a} → ${b}/11</span>`)).join("")}${lostMine.map(t => rowL(t, `<span class="mv down">kein Treffer mehr</span>`)).join("")}` : ""}
+    ${nh.length ? `<div class="hsub">Neue Treffer</div>${nh.slice(0, 6).map(r => rowL(r.ticker)).join("")}` : ""}</div>`;
+}
+function myStocksHtml() {
+  const mine = myTickers(), list = data.results.filter(r => mine.has(r.ticker))
+    .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || (b.met ?? 0) - (a.met ?? 0));
+  if (!list.length) return `<div class="hcard">${hHead("Deine Aktien")}<div class="note" style="margin:0">Tippe im Scanner bei einer Aktie auf ☆ – dann erscheint sie hier mit Status und Prognose.</div></div>`;
+  return `<div class="hcard">${hHead("Deine Aktien", `data-gokinds="fav,watch"`, "Liste")}
+    ${list.slice(0, 9).map(r => `<button class="hrow" data-card="${esc(r.ticker)}"><span class="hn">${favs().has(r.ticker) ? "★ " : depotTickers().has(r.ticker) ? "◆ " : ""}${esc((r.name || r.ticker).slice(0, 28))}<small>${esc(r.hint && r.hint.title || "")}</small></span>${statusPill(r)}${trendHtml(r)}</button>`).join("")}
+    ${list.length > 9 ? `<div class="note" style="margin:6px 0 0">+ ${list.length - 9} weitere</div>` : ""}</div>`;
+}
+function topHitsHtml() {
+  const list = data.results.filter(r => r.passed).sort((a, b) => b.score - a.score).slice(0, 5);
+  if (!list.length) return "";
+  return `<div class="hcard">${hHead("Beste Treffer heute", `data-gokinds="hit"`)}
+    ${list.map(r => `<button class="hrow" data-card="${esc(r.ticker)}"><span class="hn">${esc((r.name || r.ticker).slice(0, 28))}<small>${esc(r.ticker)} · CRV ${fmt(r.crv, 1)}${r.earnings_risk ? " · ⚠ Earnings" : ""}</small></span>${statusPill(r)}${trendHtml(r)}</button>`).join("")}</div>`;
+}
+function depotSnapHtml() {
+  const list = depotLoad(); if (!list.length) return "";
+  if (!searchIdx) { loadSearch(); return ""; }
+  const inv = list.reduce((s, p) => s + p.price * p.qty, 0);
+  const ko = list.filter(p => p.d && p.t).map(p => { const r = rowOf(p.t); if (!r || (p.d.cur && p.d.cur !== r.cur)) return null;
+    return { p, dist: p.d.dir === "long" ? (r.c - p.d.ko) / r.c : (p.d.ko - r.c) / r.c }; }).filter(Boolean).sort((a, b) => a.dist - b.dist);
+  const near = ko[0];
+  return `<div class="hcard">${hHead("Depot", SEC_LINK("depot"), "Öffnen")}
+    <div class="mtiles"><div class="mt"><span>Positionen</span><b>${list.length}</b><em>${list.filter(p => p.d).length} Turbos</em></div>
+      <div class="mt"><span>Eingesetzt</span><b>${eur(inv)}</b><em>Kaufwert</em></div>
+      ${near ? `<div class="mt"><span>Knappster K.-o.</span><b class="${near.dist < .05 ? "down" : near.dist < .12 ? "gold" : "up"}">${pct(near.dist, 1)}</b><em>${esc(near.p.d.under)}</em></div>` : ""}</div>
+    ${ko.filter(x => x.dist < .06).map(x => `<div class="tip tone-red" style="margin:10px 0 0"><b class="t">Knock-out nah: ${esc(x.p.d.under)}</b>Nur noch ${pct(x.dist, 1)} bis zur Schwelle ${fmt(x.p.d.ko)}.</div>`).join("")}</div>`;
+}
+function soonHtml() {
+  if (!calData) { loadCalendar(); return ""; }
+  const mine = myTickers(), evs = calData.filter(e => { const d = daysUntil(e.date); return d >= 0 && d <= 4 && (!e.ticker || mine.has(e.ticker)); }).slice(0, 7);
+  if (!evs.length) return "";
+  return `<div class="hcard">${hHead("Nächste Termine", SEC_LINK("calendar"), "Kalender")}
+    ${evs.map(e => { const [icon, cls] = CAL_KIND[e.kind] || ["•", "k-exp"], n = daysUntil(e.date);
+      return `<div class="hev"><span class="k ${cls}">${icon}</span><span class="hn">${esc(e.ticker ? (e.name || e.ticker) + " · " + (e.kind === "earnings" ? "Quartalszahlen" : "Dividende") : e.title)}</span><em>${n === 0 ? "heute" : n === 1 ? "morgen" : new Date(e.date + "T12:00:00").toLocaleDateString("de-DE", { weekday: "short" })}</em></div>`; }).join("")}</div>`;
+}
+function bilanzTeaserHtml() {
+  const b = getJson("bilanz.json"); if (b === undefined) return `<div class="hcard">${hHead("Kairo-Bilanz")}<div class="skel"></div></div>`;
+  const s = b && b.backtest && b.backtest.stats && b.backtest.stats.hit;
+  const lv = b && b.live && b.live.stats && b.live.stats.hit;
+  if (!s && !lv) return "";
+  const x = s && s.n ? s : lv;
+  return `<button class="hcard bil" ${SEC_LINK("bilanz")}>${hHead("Kairo-Bilanz", "", "")}
+    <div class="bilrow"><div class="ring-s">${ringSvg(x.t1, "var(--up)")}<b>${pct(x.t1, 0)}</b></div>
+      <div><b>der Treffer erreichten Ziel 1 vor dem Stop</b><span>${fmt(x.n, 0)} Signale${s && s.n ? ` im Backtest (${b.backtest.stocks} Aktien, 2 Jahre)` : " live"} · Ø ${x.avg_r >= 0 ? "+" : ""}${fmt(x.avg_r, 2)} R je Trade</span></div></div>
+    <span class="hlink">Details ›</span></button>`;
+}
+function journalTeaserHtml() {
+  const tx = txLoad(); if (!tx.length) return "";
+  const m = journalModel(tx), s = jStats(m.trades);
+  return `<button class="hcard" ${SEC_LINK("journal")}>${hHead("Journal", "", "")}
+    <div class="mtiles"><div class="mt"><span>Realisiert</span><b class="${m.realized >= 0 ? "up" : "down"}">${sEur2(m.realized)}</b></div>
+      <div class="mt"><span>Trefferquote</span><b>${pct(s.rate, 0)}</b><em>${s.w} / ${s.n}</em></div>
+      <div class="mt"><span>Profit-Faktor</span><b>${s.pf == null ? "–" : s.pf === Infinity ? "∞" : fmt(s.pf, 2)}</b></div></div></button>`;
+}
+function todayHtml() {
+  const al = getJson("alerts.json");
+  const tgHint = al && !al.connected ? `<button class="hcard tg" ${SEC_LINK("settings")}><b>📲 Abendbericht aufs Handy</b><span>Neue Treffer, deine Aktien und Knock-out-Warnungen jeden Abend per Telegram – in 3 Minuten eingerichtet.</span><span class="hlink">Einrichten ›</span></button>` : "";
+  return `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
+    <div class="hcol">${bilanzTeaserHtml()}${depotSnapHtml()}${soonHtml()}${topHitsHtml()}${journalTeaserHtml()}${tgHint}</div></div>`;
+}
+
+// ---------- Kairo-Bilanz ----------
+const RES_TXT = { t1: ["Ziel 1 ✓", "up"], stop: ["Stop", "down"], open: ["offen (30 T.)", "muted"], running: ["läuft", "muted"] };
+function retPathSvg(groups) {
+  const W = 560, H = 170, pl = 40, pr = 118, pt = 12, pb = 24, xs = [0, 5, 10, 20];
+  const all = groups.flatMap(g => [0, g.s.r5, g.s.r10, g.s.r20]).filter(v => v != null);
+  const lo = Math.min(0, ...all), hi = Math.max(0, ...all), sp = hi - lo || 1;
+  const X = d => pl + (W - pl - pr) * d / 20, Y = v => pt + (H - pt - pb) * (hi - v) / sp;
+  return `<svg class="rp" viewBox="0 0 ${W} ${H}"><line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="4 4"/>
+    ${xs.map(d => `<text x="${X(d)}" y="${H - 6}" text-anchor="middle">${d ? d + " T." : "Signal"}</text>`).join("")}
+    ${groups.map(g => { const v = [0, g.s.r5, g.s.r10, g.s.r20]; const pts = xs.map((d, i) => v[i] == null ? null : `${X(d)},${Y(v[i])}`).filter(Boolean).join(" ");
+      return `<polyline points="${pts}" fill="none" stroke="${g.c}" stroke-width="2.4" stroke-linejoin="round"/>${xs.map((d, i) => v[i] == null ? "" : `<circle cx="${X(d)}" cy="${Y(v[i])}" r="3.2" fill="${g.c}"/>`).join("")}
+        <text x="${W - pr + 6}" y="${Y(g.s.r20) + 4}" fill="${g.c}" class="lb">${g.l} ${sgnPct(g.s.r20, 1)}</text>`; }).join("")}
+    <text x="4" y="${Y(hi) + 4}">${sgnPct(hi, 0)}</text><text x="4" y="${Y(lo) + 4}">${sgnPct(lo, 0)}</text></svg>`;
+}
+function outcomeBar(s) {
+  return `<div class="obar"><i class="t1" style="flex:${s.t1}"></i><i class="op" style="flex:${s.open}"></i><i class="st" style="flex:${s.stop}"></i></div>
+    <div class="oleg"><span class="up">Ziel 1 zuerst ${pct(s.t1, 0)}</span><span class="muted">offen ${pct(s.open, 0)}</span><span class="down">Stop zuerst ${pct(s.stop, 0)}</span></div>`;
+}
+// Automatische Erkenntnisse: welche Teilgruppen der Treffer schneiden deutlich besser/schlechter ab?
+function bilanzInsights(S) {
+  const all = S.hit, g = [];
+  [["score", "Score "], ["crv", "CRV "], ["zone", ""], ["div", "Divergenz "]].forEach(([k, pre]) => Object.entries(S[k] || {}).forEach(([n, s]) => {
+    if (s && s.n >= 150) g.push({ l: pre + n + (k === "zone" ? "-Zone" : ""), s }); }));
+  if (!g.length) return "";
+  g.sort((a, b) => b.s.avg_r - a.s.avg_r);
+  const fmtR = r => `${r >= 0 ? "+" : ""}${fmt(r, 2)} R`;
+  const best = g.slice(0, 2).filter(x => x.s.avg_r > all.avg_r + .03), worst = g.slice(-2).reverse().filter(x => x.s.avg_r < all.avg_r - .03);
+  return `<div class="jins" style="margin-bottom:14px">${best.map(x => `<div class="tip tone-green"><b class="t">Stärker: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade (alle Treffer ${fmtR(all.avg_r)}) · ${fmt(x.s.n, 0)} Signale.</div>`).join("")}
+    ${worst.map(x => `<div class="tip tone-orange"><b class="t">Schwächer: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade · ${fmt(x.s.n, 0)} Signale – hier besonders streng prüfen.</div>`).join("")}</div>`;
+}
+function bilanzHtml() {
+  const b = getJson("bilanz.json");
+  const back = `<button class="backbtn" data-gosec="today">‹ Heute</button>`;
+  if (b === undefined) return back + `<div class="hcard"><div class="skel"></div></div>`;
+  if (!b) return back + `<div class="empty">Die Bilanz erscheint nach dem nächsten Scan.</div>`;
+  const bt = b.backtest, S = bt && bt.stats, h = S && S.hit;
+  const row = (l, s, cls = "") => s && s.n ? `<tr class="${cls}"><td>${l}</td><td class="num">${fmt(s.n, 0)}</td><td class="num up">${pct(s.t1, 0)}</td><td class="num down">${pct(s.stop, 0)}</td>
+    <td class="num ${s.avg_r >= 0 ? "up" : "down"}">${s.avg_r >= 0 ? "+" : ""}${fmt(s.avg_r, 2)} R</td><td class="num ${s.r20 >= 0 ? "up" : "down"}">${sgnPct(s.r20, 1)}</td><td class="num">${pct(s.win20, 0)}</td></tr>` : "";
+  const head = `<thead><tr><th></th><th class="num">Signale</th><th class="num">Ziel 1 zuerst</th><th class="num">Stop zuerst</th><th class="num">Ø Ergebnis</th><th class="num">Ø 20 T.</th><th class="num">im Plus nach 20 T.</th></tr></thead>`;
+  const btHtml = h && h.n ? `
+    <div class="hcard bhero"><div class="bh-l"><span>Backtest · ${bt.stocks} zufällige Aktien · ${dateDE(bt.period[0])} – ${dateDE(bt.period[1])}</span>
+      <b>${pct(h.t1, 0)}</b><em>der ${fmt(h.n, 0)} Treffer-Signale erreichten <b>Ziel 1 vor dem Stop</b> (innerhalb von 30 Handelstagen).</em></div>
+      <div class="bh-r"><div class="mt"><span>Ø Ergebnis je Trade</span><b class="${h.avg_r >= 0 ? "up" : "down"}">${h.avg_r >= 0 ? "+" : ""}${fmt(h.avg_r, 2)} R</b><em>R = Risiko bis zum Stop</em></div>
+        <div class="mt"><span>Ø Tage bis Ziel 1</span><b>${fmt(h.days_t1, 0)}</b><em>Handelstage</em></div>
+        <div class="mt"><span>Ø nach 20 Tagen</span><b class="${h.r20 >= 0 ? "up" : "down"}">${sgnPct(h.r20, 1)}</b><em>alle Tage ${sgnPct(S.base.r20, 1)}</em></div></div>
+      ${outcomeBar(h)}</div>
+    ${bilanzInsights(S)}
+    <div class="hcard">${hHead("Kursverlauf nach dem Signal (Ø)")}${retPathSvg([{ l: "Treffer", s: h, c: "var(--up)" }, { l: "Fast", s: S.fast, c: "var(--gold)" }, { l: "alle Tage", s: S.base, c: "var(--muted)" }])}
+      <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Der Abstand zeigt den Vorteil des Setups.</div></div>
+    <div class="hcard">${hHead("Nach Score, CRV und Zone")}<div class="table-wrap"><table class="jt bt">${head}<tbody>
+      ${row("<b>Alle Treffer</b>", h)}${Object.entries(S.score).map(([k, s]) => row("Score " + k, s)).join("")}
+      ${Object.entries(S.crv).map(([k, s]) => row("CRV " + k, s)).join("")}${Object.entries(S.zone).map(([k, s]) => row(k + "-Zone", s)).join("")}
+      ${Object.entries(S.div).map(([k, s]) => row("Divergenz " + k, s)).join("")}
+      ${row("Fast-Treffer", S.fast, "muted")}</tbody></table></div>
+      <div class="note">Ziel 1 = EMA 50 bzw. Fib 0,382, Stop laut Trade-Plan. Liegen Stop und Ziel am selben Tag, zählt der Stop (vorsichtig). Ergebnis ohne Gebühren und Hebel; mit Turbo vervielfacht sich der Ausschlag.</div></div>` : "";
+  const L = b.live, ls = L && L.stats && L.stats.hit;
+  const sig = (b.signals || []).slice(0, 40);
+  const liveHtml = `<div class="hcard">${hHead(`Live-Bilanz <small>seit ${dateDE(L && L.since)}</small>`)}
+    ${ls && ls.n ? `${outcomeBar(ls)}<div class="note">${fmt(ls.n, 0)} abgeschlossene Treffer-Signale · Ø ${ls.avg_r >= 0 ? "+" : ""}${fmt(ls.avg_r, 2)} R</div>` : `<div class="note" style="margin:0 0 8px">Jeder neue Treffer und Fast-Treffer wird ab jetzt am Signaltag gespeichert und täglich nachverfolgt – hier entsteht Kairos echte Erfolgsbilanz.</div>`}
+    ${sig.length ? `<div class="table-wrap"><table class="jtrades"><thead><tr><th>Signal</th><th>Aktie</th><th class="num">Entry</th><th class="num">Stop / Ziel 1</th><th class="num">Stand</th><th>Ergebnis</th></tr></thead><tbody>
+      ${sig.map(s => { const [rt, rc] = RES_TXT[s.res] || RES_TXT.running; return `<tr><td>${dateDE(s.d)}<small>${s.k === "hit" ? "Treffer " + s.score : "Fast-Treffer"}</small></td>
+        <td><a href="#" data-card="${esc(s.t)}"><b>${esc(s.n || s.t)}</b></a><small>${esc(s.t)}</small></td><td class="num">${fmt(s.entry)}</td><td class="num">${fmt(s.stop)}<small>${fmt(s.t1)}</small></td>
+        <td class="num ${(s.now ?? 0) >= 0 ? "up" : "down"}">${s.now != null ? sgnPct(s.now, 1) : "–"}</td><td class="${rc}">${rt}${s.r != null && s.res !== "running" ? ` <small>${s.r >= 0 ? "+" : ""}${fmt(s.r, 2)} R</small>` : ""}</td></tr>`; }).join("")}</tbody></table></div>` : ""}</div>`;
+  return back + `<div class="section-title"><span>Kairo-Bilanz · wie gut sind die Signale?</span><span></span></div>` + btHtml + liveHtml;
+}
+
+// ---------- Telegram & Backup (Einstellungen) ----------
+function syncText() {
+  const dep = depotLoad().filter(p => p.t).map(p => p.d ? `${p.t}:${p.d.dir}:${p.d.ko}` : p.t);
+  return `/sync M=${[...favs()].join(",")};D=${[...new Set(dep)].join(",")}`;
+}
+function telegramHtml() {
+  const a = getJson("alerts.json");
+  const st = a === undefined ? "lädt …" : !a || !a.enabled ? "noch nicht eingerichtet" : !a.connected ? `Bot @${esc(a.bot)} bereit – schreibe ihm /start` : `verbunden mit @${esc(a.bot)}${a.last_sent ? ` · letzter Bericht ${dateDE(a.last_sent)}` : ""}${a.synced ? ` · Merkliste/Depot vom ${dateDE(a.synced)} (${a.n_fav} / ${a.n_dep})` : ""}`;
+  const ok = a && a.enabled && a.connected;
+  return `<div class="section-title"><span>Telegram-Abendbericht</span><span class="${ok ? "up" : ""}">${ok ? "● aktiv" : ""}</span></div>
+    <div class="card tgset"><div class="note" style="margin:0 0 10px">Status: <b>${st}</b></div>
+    <div class="tgdesc">Jeden Abend nach dem Scan: Markt-Lage, neue Treffer, was sich bei <b>deinen Aktien</b> (Merkliste, Watchlist, Depot) getan hat, <b>Knock-out-Warnungen</b> (unter 8 % Abstand) und Termine der nächsten Tage.</div>
+    ${ok ? "" : `<ol class="steps">
+      <li>In Telegram <a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a> öffnen → <code>/newbot</code> → Namen wählen, z. B. „Kairo Jonny“. Du bekommst einen <b>Token</b>.</li>
+      <li>Token in GitHub speichern: <a href="${REPO}/settings/secrets/actions/new" target="_blank" rel="noopener">Neues Secret anlegen</a> → Name <code>TELEGRAM_TOKEN</code>, Wert = Token. (Der Token bleibt geheim, er steht nirgends in der App.)</li>
+      <li>Deinem neuen Bot in Telegram <code>/start</code> schreiben.</li>
+      <li><a href="${REPO}/actions/workflows/scan.yml" target="_blank" rel="noopener">Scan starten</a> (oder bis heute Abend warten) – der Bot bestätigt die Verbindung.</li></ol>`}
+    <div class="row-actions" style="margin-top:12px"><button class="btn${ok ? "" : " ghost"}" data-tgsync>Merkliste &amp; Depot an den Bot senden</button></div>
+    <div class="note">Kopiert eine Nachricht <code>/sync …</code> (nur Ticker und K.-o.-Schwellen, keine Beträge) und öffnet den Bot – dort einfügen und senden. Gilt ab dem nächsten Scan. Pausieren mit <code>/stop</code>, weiter mit <code>/weiter</code>.</div>
+    <textarea id="tgText" class="tgtext" readonly hidden></textarea></div>`;
+}
+const BACKUP_KEYS = k => k.startsWith("kairo-") || k === PREF;
+function backupHtml() {
+  const n = Object.keys(localStorage).filter(BACKUP_KEYS).length;
+  return `<div class="section-title"><span>Daten &amp; Backup</span><span>${n} Bereiche gespeichert</span></div>
+    <div class="card"><div class="tgdesc">Merkliste, Depot, Journal und Einstellungen liegen nur auf diesem Gerät. Mit einem Backup überträgst du sie aufs iPhone/iPad oder sicherst sie.</div>
+    <div class="row-actions" style="margin-top:12px"><button class="btn" data-backup>Backup speichern</button>
+      <label class="btn ghost" style="cursor:pointer">Backup einlesen<input type="file" accept=".json,application/json" id="restoreFile" hidden></label></div>
+    <div class="note">Die Datei enthält deine Depot- und Journal-Daten – nur an sichere Orte speichern (z. B. iCloud Drive).</div></div>`;
+}
+
 // ---------- Einstellungen ----------
 const CFG_LABELS = { universe: "Universum (2.1)", correction: "Korrektur (2.2)", fib: "Fibonacci – Variante A (2.3)",
   support: "Support – Variante B (2.3)", rsi: "RSI (2.4)", macd: "MACD (2.5)", mbi: "Momentum Bias Index (2.6)",
@@ -1792,6 +2149,7 @@ function settingsHtml() {
     <div class="card" style="margin-bottom:18px"><div class="form" style="margin:0">
       <label class="full">Wie soll Kairo dich nennen?<input id="cfgName" value="${esc(state.name || "")}" placeholder="z. B. Jonny" maxlength="24" autocomplete="given-name"></label></div>
       <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div></div>
+    ${telegramHtml()}${backupHtml()}
     <div class="section-title"><span>Scanner-Parameter</span><span>aus config.yaml</span></div>
     <div class="card cfg">
       <div>Alle Parameter stehen zentral in <b>config.yaml</b>. Zum Ändern die Datei auf GitHub bearbeiten und danach den Scan neu starten – die Website zeigt dann die Ergebnisse mit den neuen Parametern.</div>
@@ -1800,7 +2158,7 @@ function settingsHtml() {
         <a class="btn ghost" href="${REPO}/actions/workflows/scan.yml" target="_blank" rel="noopener">Scan jetzt starten</a>
       </div>
       <div class="note">„Scan jetzt starten“ öffnet GitHub Actions → „Run workflow“. Ein kompletter Scan dauert ca. 20–30 Minuten.</div>
-      ${groups}
+      <details class="cfgd"><summary>Alle Parameter anzeigen</summary>${groups}</details>
     </div>`;
 }
 
@@ -1811,6 +2169,8 @@ function render() {
   $("wlBadge").hidden = !fast; $("wlBadge").textContent = fast;
   document.querySelector(".search").hidden = state.sec !== "scanner";
   if (state.sec === "settings") { $("main").innerHTML = settingsHtml(); return; }
+  if (state.sec === "today") { $("main").innerHTML = todayHtml(); return; }
+  if (state.sec === "bilanz") { $("main").innerHTML = bilanzHtml(); return; }
   if (state.sec === "calendar") { $("main").innerHTML = calendarHtml(); return; }
   if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
@@ -1818,6 +2178,7 @@ function render() {
   const list = selRows(), k = new Set(state.kinds || []);
   const nFilt = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
+      ${(state.presets || []).map((p, i) => `<button class="kchip pre${presetActive(p) ? " on" : ""}" data-preset="${i}">${esc(p.name)}</button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
   const extra = k.has("fav") ? favExtraHtml() : "";
   const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ fav: "Merkliste", hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
@@ -1830,11 +2191,19 @@ function render() {
   if (state.tableSort !== "score" || state.tableAsc) list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
   const onlyHits = k.size === 1 && k.has("hit");
   const lead = ["ticker", "name", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
-  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "trend", "miss"].includes(c.k))];
+  const hid = new Set(state.hiddenCols || []);
+  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
 }
 
+const FILTER_KEYS = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"];
+const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
+function sheetExtras() {
+  $("presetList").innerHTML = (state.presets || []).map((p, i) => `<button class="opt" data-delpreset="${i}">${esc(p.name)} ✕</button>`).join("") || `<span class="note" style="margin:0">Noch keine Vorlagen.</span>`;
+  const hid = new Set(state.hiddenCols || []);
+  $("colOpts").innerHTML = COLS.filter(c => c.k !== "ticker").map(c => `<button class="opt${hid.has(c.k) ? "" : " on"}" data-col="${c.k}">${esc(c.l)}</button>`).join("");
+}
 function renderHead() {
   const h = new Date().getHours();
   const nm = String(state.name || "").trim();
@@ -2005,16 +2374,42 @@ $("xlsx").onclick = async () => {
 // ---------- Ereignisse ----------
 document.querySelector(".tabs").addEventListener("click", e => {
   const t = e.target.closest(".tab"); if (!t) return;
-  state.sec = t.dataset.sec; syncOpts(); save(); render(); window.scrollTo({ top: 0, behavior: "smooth" });
-  if (state.sec === "calendar") loadCalendar();
-  if (state.sec === "depot") loadSearch();
+  goSec(t.dataset.sec);
 });
-$("sheet").addEventListener("click", e => { const b = e.target.closest(".opt"); if (!b || !b.closest(".opts")) return; state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); save(); render(); });
+$("sheet").addEventListener("click", e => {
+  const cb = e.target.closest("[data-col]");
+  if (cb) { const h = new Set(state.hiddenCols || []); h.has(cb.dataset.col) ? h.delete(cb.dataset.col) : h.add(cb.dataset.col); state.hiddenCols = [...h]; save(); sheetExtras(); render(); return; }
+  const dp = e.target.closest("[data-delpreset]");
+  if (dp) { state.presets.splice(+dp.dataset.delpreset, 1); save(); sheetExtras(); render(); return; }
+  if (e.target.id === "savePreset") { const name = (prompt("Name der Vorlage, z. B. „Große US-Werte“:") || "").trim().slice(0, 24); if (!name) return;
+    const f = {}; FILTER_KEYS.forEach(k => f[k] = state[k]); state.presets = [...(state.presets || []), { name, f, kinds: state.kinds }]; save(); sheetExtras(); render(); return; }
+  const b = e.target.closest(".opt"); if (!b || !b.closest(".opts") || !b.closest(".opts").dataset.key) return; state[b.closest(".opts").dataset.key] = b.dataset.v; syncOpts(); save(); render(); });
 $("done").onclick = () => document.body.classList.remove("filters-open");
 $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
+function goSec(sec) {
+  state.sec = sec; syncOpts(); save(); render(); window.scrollTo({ top: 0 });
+  if (sec === "calendar") loadCalendar();
+  if (sec === "depot" || sec === "today") loadSearch();
+}
 document.addEventListener("click", e => {
+  const gs = e.target.closest("[data-gosec]");
+  if (gs) { e.preventDefault(); closeCard(); goSec(gs.dataset.gosec); return; }
+  const gk = e.target.closest("[data-gokinds]");
+  if (gk) { e.preventDefault(); state.kinds = gk.dataset.gokinds.split(","); goSec("scanner"); return; }
+  if (e.target.closest("[data-tgsync]")) {
+    const txt = syncText(), ta = $("tgText"), a = jsonData["alerts.json"];
+    ta.value = txt; ta.hidden = false; ta.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).catch(() => { try { document.execCommand("copy"); } catch (x) {} });
+    if (a && a.bot) window.open("https://t.me/" + a.bot, "_blank");
+    return;
+  }
+  if (e.target.closest("[data-backup]")) {
+    const d = {}; Object.keys(localStorage).filter(BACKUP_KEYS).forEach(k => d[k] = localStorage.getItem(k));
+    download(new Blob([JSON.stringify({ app: "kairo", v: 1, date: new Date().toISOString(), data: d })], { type: "application/json" }), `kairo-backup-${new Date().toISOString().slice(0, 10)}.json`);
+    return;
+  }
   const fb = e.target.closest("[data-fav]");
   if (fb) { e.preventDefault(); e.stopPropagation(); const t = fb.dataset.fav; favToggle(t);
     document.querySelectorAll(`[data-fav="${CSS.escape(t)}"]`).forEach(b => { const on = favs().has(t); b.classList.toggle("on", on); b.textContent = on ? "★" : "☆"; b.title = on ? "Von der Merkliste nehmen" : "Auf die Merkliste"; });
@@ -2022,7 +2417,9 @@ document.addEventListener("click", e => {
     else if (state.sec === "scanner") render();
     else if (state.sec === "calendar") render();
     return; }
-  const sb = e.target.closest("[data-sub]"); if (sb) { if (sb.dataset.sub === "filter") { document.body.classList.add("filters-open"); return; }
+  const pr = e.target.closest("[data-preset]");
+  if (pr) { const p = state.presets[+pr.dataset.preset]; if (presetActive(p)) Object.assign(state, DEFAULTS); else { Object.assign(state, p.f); state.kinds = p.kinds; } syncOpts(); save(); render(); return; }
+  const sb = e.target.closest("[data-sub]"); if (sb) { if (sb.dataset.sub === "filter") { sheetExtras(); document.body.classList.add("filters-open"); return; }
     state.tab = sb.dataset.sub; save(); render(); return; }
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
@@ -2039,6 +2436,7 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDetail(); closeCard(); } });
 
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
 fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   data = d; renderHead(); syncOpts(); render(); loadCalendar();
   requestAnimationFrame(() => window.KairoSplash && KairoSplash.ready());   // App steht → Start-Animation darf übergeben
