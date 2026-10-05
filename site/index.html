@@ -304,12 +304,8 @@
   td a.nm { color: var(--text); font-weight: 600; }
   .st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
   .st.hit { background: var(--up-bg); color: var(--up); } .st.fast { background: var(--gold-bg); color: var(--gold); }
-  .cmodal { position: fixed; inset: 0; z-index: 60; display: none; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow-y: auto; }
-  .card-open .cmodal { display: flex; }
-  .cm-back { position: fixed; inset: 0; background: rgba(0,0,0,.6); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
-  .cm-box { position: relative; width: min(560px, 100%); }
-  .cm-box .card { margin: 0; }
-  .cm-x { position: absolute; top: -12px; right: -6px; z-index: 2; width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--surface-3); color: var(--text); font-size: 16px; cursor: pointer; }
+  .d-sum { display: flex; gap: 14px; align-items: center; margin-top: 14px; container-type: inline-size; }
+  .d-sum .score { flex: none; } .d-sum .figures { flex: 1; min-width: 0; }
   .subnav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 16px;
             background: var(--glass); border: 1px solid var(--glass-line); margin: 0 0 18px; }
   .subnav button { border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 14px; padding: 10px 4px; border-radius: 12px; cursor: pointer; }
@@ -423,7 +419,6 @@
   <button class="opt" id="reset" style="width:100%;margin-top:10px">Filter zurücksetzen</button>
 </section>
 
-<div class="cmodal" aria-label="Aktien-Übersicht"><div class="cm-back" data-closecard></div><div class="cm-box"><button class="cm-x" data-closecard aria-label="Schließen">✕</button><div id="cardModalBody"></div></div></div>
 <section class="detail" id="detail" aria-label="Detailseite"><div class="wrap" id="detailBody"></div></section>
 
 <script src="lib/lightweight-charts.standalone.production.js"></script>
@@ -509,16 +504,6 @@ function selRows() {
     .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
 }
 const KIND_BTNS = [["hit", "Treffer", r => r.passed], ["fast", "Fast-Treffer", r => r.fast_hit], ["watch", "★ Watchlist", r => r.in_watchlist]];
-// Übersichtskarte als Fenster (Antippen von Name/Ticker in der Tabelle)
-function openCard(t) {
-  const r = data.results.find(x => x.ticker === t); if (!r) return;
-  $("cardModalBody").innerHTML = card(r);
-  document.body.classList.add("card-open");
-  const el = $("cardModalBody").querySelector("[data-mini]");
-  if (el) loadChart(t).then(c => { el.querySelector("svg").innerHTML = miniSvg(c, r); }).catch(() => {});
-}
-function closeCard() { document.body.classList.remove("card-open"); }
-
 // ---------- Karte ----------
 function ampel(r) {
   return `<div class="ampel" title="Pflichtkriterien">${SETUP_KEYS.map(k => {
@@ -595,8 +580,8 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 
 // ---------- Tabelle ----------
 const COLS = [
-  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
-  { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
+  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-open="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
+  { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-open="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -1306,7 +1291,7 @@ function render() {
   const nFilt = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${data.results.filter(f).length}</small></button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
-  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für Details &amp; Chart</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
   if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = searchHtml() + bar; return; }
   if (!list.length) {
     $("main").innerHTML = head + `<div class="empty">${!k.size ? "Wähle oben Treffer, Fast-Treffer oder Watchlist." : `Keine Aktie mit dieser Auswahl${nFilt ? " und diesen Filtern" : ""}.`}</div>`;
@@ -1348,6 +1333,16 @@ async function openDetail(t) {
       ${r.earnings_risk ? `<span class="warn">⚠ Earnings-Risiko (${dateDE(r.earnings_date)})</span>` : ""}
       <span class="flag">MBI: ${esc(f.mbi_source || "")}</span></div>
       <button class="close" id="closeDetail" aria-label="Schließen">✕</button></div>
+    <div class="d-sum">
+      ${r.passed ? `<div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>`
+        : `<div class="score fast" style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt"><span>${r.met ?? "–"}/${r.total ?? 11}</span></div>`}
+      <div class="figures">
+        <div class="fig"><span>Rückgang</span><b class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown, 0)}</b></div>
+        <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
+        <div class="fig"><span>CRV</span><b class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmt(r.crv, 1)}</b></div>
+        <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
+      </div></div>
+    <div class="chips" style="margin-top:12px">${chips(r)}</div>
     <div style="margin-top:14px">${tipHtml(r.hint)}</div>
     <div class="pane"><div class="pane-label"><span><i style="background:#f4b740"></i>EMA 20</span><span><i style="background:#4aa3ff"></i>EMA 50</span><span><i style="background:#b07cff"></i>EMA 100</span><span><i style="background:#ff8a65"></i>EMA 200</span><span>Fib-Level / Zone gestrichelt · Entry/Stop/Ziele durchgezogen</span></div><div class="lw" id="cMain" style="height:420px"></div></div>
     <div class="pane"><div class="pane-label">RSI 14 · SMA 14 · 30/50/70${r.div && r.div.kind ? " · Divergenz " + esc(r.div.kind) : ""}</div><div class="lw" id="cRsi" style="height:150px"></div></div>
@@ -1480,12 +1475,10 @@ document.addEventListener("click", e => {
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
   const kc = e.target.closest("[data-kind]"); if (kc) { const set = new Set(state.kinds || []); set.has(kc.dataset.kind) ? set.delete(kc.dataset.kind) : set.add(kc.dataset.kind);
     state.kinds = KIND_BTNS.map(x => x[0]).filter(x => set.has(x)); save(); render(); return; }
-  const cd = e.target.closest("[data-card]"); if (cd) { e.preventDefault(); openCard(cd.dataset.card); return; }
-  if (e.target.closest("[data-closecard]")) { closeCard(); return; }
-  const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); closeCard(); openDetail(o.dataset.open); return; }
+  const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); openDetail(o.dataset.open); return; }
   const th = e.target.closest("th[data-k]"); if (th) { if (th.dataset.k === state.tableSort) state.tableAsc = !state.tableAsc; else { state.tableSort = th.dataset.k; state.tableAsc = false; } render(); }
 });
-document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDetail(); closeCard(); } });
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeDetail(); });
 
 fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   data = d; renderHead(); syncOpts(); render(); loadCalendar();
