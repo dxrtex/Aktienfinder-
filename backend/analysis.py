@@ -105,7 +105,42 @@ def _prob_up(a: float, b: float, sigma: float, mu: float) -> float:
     return float((1 - math.exp(-k * a)) / (1 - math.exp(-k * (a + b))))
 
 
-def analyze(df: pd.DataFrame, res) -> dict:
+def _p_touch(b: float, sigma: float, mu: float, days: int) -> float:
+    """Wahrscheinlichkeit, dass der Kurs innerhalb von `days` Handelstagen mindestens einmal um b steigt
+    (Maximum einer Brownschen Bewegung mit Drift, Spiegelungsprinzip)."""
+    if b <= 0:
+        return 1.0
+    s = sigma * math.sqrt(days)
+    phi = lambda x: 0.5 * (1 + math.erf(x / math.sqrt(2)))
+    k = min(50.0, 2 * mu * b / (sigma * sigma))
+    return float(min(1.0, phi((-b + mu * days) / s) + math.exp(k) * phi((-b - mu * days) / s)))
+
+
+def take_profits(df: pd.DataFrame, close: float, atr: float, sigma: float, mu: float, ath: dict | None) -> dict:
+    """Take-Profit-Zonen: nächstes Hoch (Pivot-Hoch über dem Kurs) und Allzeithoch, je mit Chance in 3 / 6 Monaten."""
+    h, dates = df["High"].to_numpy(float), df.index
+    n = len(h)
+    look = max(0, n - 250)
+    piv = [i for i in pivot_highs(df["High"], 3) if i >= look and h[i] > close + 0.5 * atr]
+    nxt = None
+    if piv:
+        i = min(piv, key=lambda j: h[j])
+        nxt = {"p": float(h[i]), "date": str(dates[i].date()), "src": f"Hoch vom {dates[i]:%d.%m.%Y}"}
+    top = ath or {"p": float(h.max()), "date": str(dates[int(h.argmax())].date()), "full": False}
+    allt = {"p": float(top["p"]), "date": top["date"], "src": "Allzeithoch" if top.get("full", True) else "2-Jahres-Hoch"}
+    if nxt and nxt["p"] >= allt["p"] * 0.995:
+        nxt = None                                   # nächstes Hoch = Allzeithoch → nur einmal zeigen
+    out = {}
+    for key, t in (("next", nxt), ("ath", allt)):
+        if not t:
+            continue
+        b = t["p"] - close
+        out[key] = {**t, "p": round(t["p"], 4), "pct": b / close,
+                    "p3m": round(_p_touch(b, sigma, mu, 63), 2), "p6m": round(_p_touch(b, sigma, mu, 126), 2)}
+    return out
+
+
+def analyze(df: pd.DataFrame, res, ath: dict | None = None) -> dict:
     """Kompakte Analyse einer Aktie aus Long-Sicht."""
     f, z = res.flags, res.zone
     c, h, l = (df[k].to_numpy(float) for k in ("Close", "High", "Low"))
@@ -204,7 +239,8 @@ def analyze(df: pd.DataFrame, res) -> dict:
            "tp": [target(tp1), target(tp2)], "fac": fac,
            "sup": [{"p": round(g["p"], 4), "src": " + ".join(g["src"][:2])} for g in sup_g[:3]],
            "res": [{"p": round(g["p"], 4), "src": " + ".join(g["src"][:2])} for g in res_g[:3]],
-           "chg1m": _chg(c, 21), "chg3m": _chg(c, 63), "bench": benchmark_for(res.ticker)}
+           "chg1m": _chg(c, 21), "chg3m": _chg(c, 63), "bench": benchmark_for(res.ticker),
+           "tps": take_profits(df, close, atr, sigma, mu, ath)}
     return out
 
 

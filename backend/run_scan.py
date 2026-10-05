@@ -250,6 +250,14 @@ def main(argv=None) -> int:
             time.sleep(0.3)
         print(f"Watchlist-Termine: {sum(1 for d in watch_dates.values() if d.get('earnings_date'))} von {len(watch)} mit Quartalstermin")
     yf = YFinanceProvider()
+    # Allzeithochs der Watchlist (komplette Historie) – für die Take-Profit-Zonen im Depot
+    aths = {}
+    if not args.end:
+        for t, df in yf.history(list(watch), "max").items():
+            if df is not None and len(df):
+                hi = df["High"]
+                aths[t] = {"p": float(hi.max()), "date": str(hi.idxmax().date()), "full": True}
+        print(f"Allzeithochs: {len(aths)} von {len(watch)} Watchlist-Aktien")
     ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)
     market = market_context(ctx_hist)
     lage = ", ".join(v["name"] + " " + v["label"] for k, v in market.items() if k != "regime")
@@ -332,7 +340,7 @@ def main(argv=None) -> int:
     ana = {}
     for t, (df, res, m) in final.items():
         try:
-            a = analyze(df, res)
+            a = analyze(df, res, aths.get(t))
             add_context(a, market, m.get("sector"), ctx_hist, dated.get(t, {}).get("earnings_date"), today)
             finalize(a)
             ana[t] = _clean(a)
