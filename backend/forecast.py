@@ -39,10 +39,11 @@ LABELS = {
     "rsi_lo": "RSI unter 28, dreht aber nach oben",
     "rsi_mom": "RSI-Dynamik",
     "near_e20": "Kurs nahe an der EMA 20 – Ausbruch würde die Struktur beenden",
-    "mbi_pend": "grünes MBI-X da, Verkaufsdruck baut sich ab",
+    "mbi_pend": "grünes MBI-X da – Bestätigung durch nachlassenden Verkaufsdruck oft kurz bevor",
     "crv_edge": "CRV nur knapp über 2",
     "crv_near": "CRV knapp unter 2",
-    "d5": "Verlauf der letzten 5 Tage",
+    "d5": ("zuletzt Kriterien verloren – das gleicht sich oft wieder aus", "zuletzt viele Kriterien dazugewonnen – oft folgt eine Gegenbewegung"),
+    "met": ("erst wenige Kriterien erfüllt – Luft nach oben", "schon viele Kriterien erfüllt – oft fällt eines wieder weg"),
     "macd_mom": "MACD-Histogramm-Dynamik",
 }
 
@@ -111,7 +112,8 @@ def predict(x: dict, model: dict | None) -> dict:
     direction = "up" if d >= hi else "down" if d <= lo else "flat"
     parts = sorted(((float(c), n) for c, n in zip(contrib[1:], names) if n in LABELS and abs(c) >= 0.15),
                    key=lambda t: -abs(t[0]))
-    why = [[1 if c > 0 else -1, LABELS[n]] for c, n in parts[:3]]
+    lab = lambda n, c: LABELS[n] if isinstance(LABELS[n], str) else LABELS[n][0 if c > 0 else 1]
+    why = [[1 if c > 0 else -1, lab(n, c)] for c, n in parts[:3]]
     return {"dir": direction, "d": round(d, 2), "why": why}
 
 
