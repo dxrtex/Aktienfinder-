@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import company, forecast, live, sentiment, state, telegram
+from . import company, forecast, grade, live, sentiment, state, telegram
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -273,6 +273,7 @@ def score_trend(df: pd.DataFrame, info: dict, ticker: str, res) -> dict:
 
 
 FC_MODEL = forecast.load_model()
+GRADE = grade.load()
 
 
 def main(argv=None) -> int:
@@ -386,6 +387,14 @@ def main(argv=None) -> int:
         except Exception as exc:
             print(f"{t}: Stimmungs-Fehler {exc!r}")
         final[t] = (df, res, m)
+        if res.passed and GRADE:                    # Qualitätsstufe A/B/C (Kriterien bleiben unverändert)
+            p = res.plan or {}
+            sig = {"score": res.score, "crv": p.get("crv") or 0, "zone": "Fib" if (res.zone.get("fib") or {}).get("ok") else "Support",
+                   "div": (res.flags.get("divergence") or {}).get("kind"), "stop_pct": p.get("stop_pct"),
+                   "t1_pct": p["target1"] / p["entry"] - 1 if p.get("target1") and p.get("entry") else None}
+            g, why = grade.grade_of(sig, GRADE)
+            if g:
+                rows[-1]["grade"] = {"g": g, "why": why}
         try:
             rows[-1]["wk"] = weekly_trend(df)
         except Exception:
@@ -410,6 +419,8 @@ def main(argv=None) -> int:
         company.save(about)
         senti["_want"] = [r["ticker"] for r in rows]
         sentiment.save(senti)
+    if GRADE and GRADE.get("valid"):
+        stats["grade"] = {"test": GRADE["test"], "split": GRADE["split"], "period": GRADE["period"]}
     if FC_MODEL:
         stats["forecast"] = {"horizon": FC_MODEL["horizon"], "fitted": FC_MODEL["fitted"], **FC_MODEL["test"]}
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),

@@ -135,7 +135,8 @@ def report(rows: list[dict], last: dict, market: dict, events: list[dict], searc
         fc = ((r.get("trend") or {}).get("fc") or {}).get("dir")
         arrow = {"up": " ▲", "down": " ▼"}.get(fc, "")
         if now == "hit" and was != "hit":
-            mine_lines.append(f"{star} 🟢 <b>{e(r['name'] or t)}</b> ist jetzt <b>Treffer</b> · Score {r['score']}, CRV {_num(r.get('crv'))}")
+            g = (r.get("grade") or {}).get("g")
+            mine_lines.append(f"{star} 🟢 <b>{e(r['name'] or t)}</b> ist jetzt <b>Treffer</b>{' · Stufe ' + g if g else ''} · Score {r['score']}, CRV {_num(r.get('crv'))}")
         elif now == "fast" and was is None:
             mine_lines.append(f"{star} 🟡 <b>{e(r['name'] or t)}</b> ist Fast-Treffer – fehlt: {e(r['missing'][0])}{arrow}")
         elif was and not now:
@@ -163,8 +164,9 @@ def report(rows: list[dict], last: dict, market: dict, events: list[dict], searc
     # Neue Top-Treffer
     if new_hits:
         L.append("\n<b>Neue Treffer</b> (Top 8 nach Score)")
-        for r in sorted(new_hits, key=lambda r: -r["score"])[:8]:
-            L.append(f"• <a href=\"{APP}#{e(r['ticker'])}\">{e((r['name'] or r['ticker'])[:32])}</a> · {r['score']} · CRV {_num(r.get('crv'))}"
+        for r in sorted(new_hits, key=lambda r: ({"A": 0, "B": 1, "C": 2}.get((r.get("grade") or {}).get("g"), 3), -r["score"]))[:8]:
+            g = (r.get("grade") or {}).get("g")
+            L.append(f"• {'🅰️ ' if g == 'A' else ''}<a href=\"{APP}#{e(r['ticker'])}\">{e((r['name'] or r['ticker'])[:32])}</a> · {('Stufe ' + g + ' · ') if g else ''}Score {r['score']} · CRV {_num(r.get('crv'))}"
                      + (" ⚠️ Earnings" if r.get("earnings_risk") else ""))
     # Termine morgen / übermorgen für deine Aktien + Makro
     up = [ev for ev in events if ev.get("days") in (0, 1, 2) and (not ev.get("ticker") or ev["ticker"] in mine)]
