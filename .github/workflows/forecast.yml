@@ -1,0 +1,33 @@
+name: Prognose-Modell schätzen
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: "Anzahl zufälliger Aktien für den Backtest"
+        required: false
+        default: "250"
+  push:
+    branches: ["claude/**"]
+    paths: ["backend/forecast.py", ".github/workflows/forecast.yml"]
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m backend.universe
+      - run: python -m backend.forecast --fit --n "${{ inputs.n || '250' }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prognose-modell
+          path: data/forecast_model.json
