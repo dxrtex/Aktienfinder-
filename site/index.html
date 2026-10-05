@@ -192,13 +192,16 @@
   .gsum .g2 small { display: block; font-size: 12px; }
   .gsum .gact { grid-column: 1 / -1; background: var(--cb); border-radius: var(--radius-s); padding: 9px 12px; font-size: 14px; }
   .gsum .gact b { color: var(--c); margin-right: 6px; } .gsum .gact span { color: var(--text); }
-  @media (min-width: 760px) { .gsum { grid-template-columns: 1.6fr 1fr 1fr 1fr; } .gsum .g1 { grid-column: auto; } }
+  @media (min-width: 760px) { .gsum { grid-template-columns: 1.7fr 1fr 1fr 1fr; } .gsum .g1 { grid-column: auto; } }
   .gbody { padding: 0 18px 18px; display: flex; flex-direction: column; gap: 14px; container-type: inline-size; }
   .alsos { display: flex; flex-wrap: wrap; gap: 6px; }
   .table-wrap.plain { border: 0; background: none; border-radius: 0; }
   table.pos-t td small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; }
   table.pos-t td, table.pos-t th { white-space: nowrap; }
-  .entry-d { margin-top: 10px; } .entry-d .th { font-size: 13px; }
+  .entries { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @container (min-width: 560px) { .entries { grid-template-columns: 1fr 1fr; } }
+  table.tp-t td small { display: block; font-size: 11.5px; color: var(--muted); font-weight: 400; } table.tp-t td, table.tp-t th { white-space: nowrap; }
+  .gold { color: var(--gold); }
   .linkbtn { display: block; margin-left: auto; margin-top: 3px; background: none; border: 0; padding: 0; color: var(--accent); font-size: 12px; font-weight: 600; cursor: pointer; }
   table.ord td small { display: block; font-size: 11.5px; color: var(--muted); }
   table.ord td, table.ord th { white-space: nowrap; } table.ord tr.sl td b { color: var(--red); } table.ord tr.tp td b { color: var(--up); }
@@ -736,7 +739,7 @@ function depotHtml() {
   }).join("");
   const empty = list.length ? "" : `<div class="empty">Noch keine Positionen. Füge sie mit „+ Position“ hinzu oder importiere den Transaktions-Export aus Scalable Capital (Web-Version → Transaktionen → Export).</div>`;
   return head + (groups.length ? cockpitHtml(groups, items) : sum) + actions + form + empty
-    + (groups.length ? `<div class="plan-h" style="margin:4px 2px 8px">Positionen · dringendste zuerst · antippen zum Aufklappen</div>${groups.map(groupHtml).join("")}` : "")
+    + (groups.length ? `<div class="plan-h" style="margin:4px 2px 8px">Deine Positionen · antippen zum Aufklappen</div>${groups.map(groupHtml).join("")}` : "")
     + (cards.length ? `${groups.length ? `<div class="plan-h" style="margin:18px 2px 8px">Ohne Analyse (nicht auf der Watchlist)</div>` : ""}<div class="grid">${cards}</div>` : "")
     + `<div class="note" style="margin:16px 2px 0">Dein Depot wird nur auf diesem Gerät gespeichert (nicht im Internet). Kurse vom letzten Scan, Umrechnung in Euro zum Tageskurs${missingFx ? " – für einige Währungen fehlt der Wechselkurs" : ""}. Die Einschätzung ist rein technisch und keine Anlageberatung.</div>`;
 }
@@ -811,28 +814,11 @@ function posModel(p, r, a) {
   return { p, r, a, d, short, cur, ent, held, tm, valAt, nowPos, pl, plAt, dist, score, tone, label, underMove,
            levNow: lev(a.c), levBuy: ent ? lev(ent.u) : null, stopBelowKo: !!(d && !short && a.stop.p <= d.ko) };
 }
-// ---------- Depot-Cockpit: Risiko in €, Kaufgrund-Check, Dringlichkeit, gruppiert nach Basiswert ----------
+// ---------- Depot: Übersicht je Basiswert (aufklappbar) – Stand, Hebel, Einstieg, Take-Profit-Zonen ----------
 const depOpen = new Set();   // aufgeklappte Gruppen (bleiben beim Neuzeichnen offen)
 const sgnPct = (v, d = 0) => v == null ? "–" : (v >= 0 ? "+" : "") + pct(v, d);
-// Gilt der Grund für den Kauf (Reversal) noch? Struktur + Momentum heute
-function thesisCheck(c, a, stop) {
-  const n = c.t.length - 1, px = c.c[n];
-  const gx = c.gx.slice(-10).some(Boolean), mbiBuy = c.mbi_up[n] > c.mbi_lo[n], r = c.rsi[n];
-  const histUp = c.hist[n] > c.hist[n - 2];
-  const checks = [
-    { ok: px > stop, l: "Struktur", t: px > stop ? `Kurs über dem Stop (${fmt(stop)}) – Unterstützung hält` : `Kurs unter dem Stop (${fmt(stop)}) – Unterstützung gebrochen` },
-    { ok: histUp, l: "MACD", t: histUp ? `Histogramm ${c.hist[n] < 0 ? "rot, aber steigend" : "grün und steigend"}` : `Histogramm ${c.hist[n] < 0 ? "rot und fallend" : "grün, aber fallend"}` },
-    { ok: mbiBuy || gx, l: "MBI", t: gx ? "grünes X in den letzten 10 Tagen" : mbiBuy ? "Kaufdruck überwiegt" : "Verkaufsdruck überwiegt" },
-    { ok: px > c.e20[n], l: "EMA 20", t: px > c.e20[n] ? "Kurs über der EMA 20 – Erholung bestätigt" : "Kurs noch unter der EMA 20" },
-    { ok: r >= 40 && r < 75, l: "RSI", t: `${fmt(r, 0)} – ${r >= 75 ? "überkauft" : r >= 55 ? "starkes Momentum" : r >= 40 ? "neutral" : "schwach"}` }];
-  const okN = checks.slice(1).filter(x => x.ok).length;
-  const [tone, label] = !checks[0].ok ? ["red", "Gebrochen"] : okN >= 3 ? ["green", "Intakt"] : okN === 2 ? ["yellow", "Wackelt"] : ["orange", "Schwach"];
-  // Tendenz der Indikatoren über 5 Tage
-  const tr = (arr) => arr[n] - arr[Math.max(0, n - 5)];
-  const trend = [["RSI", fmt(r, 0), tr(c.rsi)], ["MACD-Histogramm", fmt(c.hist[n], 3), tr(c.hist)],
-                 ["MBI Kauf − Verkauf", fmt(c.mbi_up[n] - c.mbi_lo[n], 0), tr(c.mbi_up) - tr(c.mbi_lo)]];
-  return { checks, okN, tone, label, trend };
-}
+const eur = v => v == null ? "–" : `${fmt(v, 0)} €`;
+const sgnEur = v => v == null ? "–" : `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 0)} €`;
 function groupPositions(items) {
   const by = new Map();
   items.forEach(({ p, i, r }) => {
@@ -843,65 +829,50 @@ function groupPositions(items) {
   });
   const total = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
   return [...by.values()].map(g => {
-    const { a } = g, c = needChart(g.t), longs = g.ms.filter(m => !m.short);
-    const kos = longs.filter(m => m.d).map(m => m.d.ko);
-    g.ko = kos.length ? Math.max(...kos) : null;                       // nächster K.-o. (Long)
-    g.stop = g.ko != null && a.stop.p <= g.ko ? null : a.stop.p;        // Stop unter dem K.-o. ergibt keinen Sinn
-    const stopX = g.stop ?? g.ko ?? a.stop.p;
+    const a = g.a, longs = g.ms.filter(m => m.d && !m.short);
+    g.ko = longs.length ? Math.max(...longs.map(m => m.d.ko)) : null;   // nächster K.-o.
+    g.koDist = g.ko != null ? (a.c - g.ko) / a.c : null;
+    g.koAtr = g.ko != null && a.atr ? (a.c - g.ko) / a.atr : null;
     g.invested = g.ms.reduce((s, m) => s + m.p.price * m.p.qty, 0);
     const vals = g.ms.map(m => m.nowPos != null ? m.nowPos * m.p.qty : null);
     g.known = vals.every(v => v != null);
     g.value = vals.reduce((s, v) => s + (v ?? 0), 0);
-    const atX = x => g.ms.reduce((s, m) => s + (m.valAt(x) ?? 0) * m.p.qty, 0);
-    g.atStop = atX(stopX); g.atTp1 = atX(a.tp[0].p); g.atTp2 = atX(a.tp[1].p);
-    g.risk = g.known ? Math.max(0, g.value - g.atStop) : null;
-    // ohne Stop-Loss: Turbos verlieren bis zum Knock-out den kompletten Wert
-    g.koRisk = g.known && g.ms.some(m => m.d && !m.short) ? g.ms.reduce((s, m) => s + (m.d ? m.nowPos * m.p.qty : 0), 0) : null;
+    g.pl = g.known && g.invested ? g.value / g.invested - 1 : null;
     g.share = total ? g.invested / total : 0;
-    g.koAtr = g.ko != null && a.atr ? (a.c - g.ko) / a.atr : null;
-    g.crv = a.c > stopX ? (a.tp[0].p - a.c) / (a.c - stopX) : null;
-    g.th = c ? thesisCheck(c, a, stopX) : null;
+    g.atX = x => g.ms.reduce((s, m) => s + (m.valAt(x) ?? 0) * m.p.qty, 0);
+    g.koRisk = g.known && longs.length ? longs.reduce((s, m) => s + m.nowPos * m.p.qty, 0) : null;
     const ent = g.ms.filter(m => m.ent);
     g.avgEntry = ent.length ? ent.reduce((s, m) => s + m.ent.u * m.p.qty, 0) / ent.reduce((s, m) => s + m.p.qty, 0) : null;
-    g.pl = g.known && g.invested ? g.value / g.invested - 1 : null;
-    const ev = nextEvent(g.t), evDays = ev ? daysUntil(ev.date) : null;
-    // Dringlichkeit + nächste Aktion
-    const acts = [];
-    const be = g.avgEntry, trail = be && a.c - be > a.atr ? Math.max(stopX, be) : stopX;
-    if (g.koAtr != null && g.koAtr < 2) acts.push([100, "red", "Knock-out droht", `Nur ${fmt(g.koAtr, 1)} Tagesschwankungen bis zum K.-o. (${fmt(g.ko)}) – verkleinern oder aussteigen.`]);
-    if (g.th && !g.th.checks[0].ok) acts.push([95, "red", "Stop unterschritten", `Kurs unter ${fmt(stopX)} – Plan sagt: verkaufen.`]);
-    if (a.c >= a.tp[0].p - .3 * a.atr) acts.push([85, "green", "Ziel 1 erreicht", `Teilgewinn mitnehmen und Stop auf ${fmt(Math.max(trail, a.c - 1.5 * a.atr))} nachziehen.`]);
-    if (g.th && g.th.label === "Schwach") acts.push([75, "orange", "Kaufgrund kippt", "Nur noch wenige Signale positiv – Stop eng halten, kein Nachkauf."]);
-    if (evDays != null && evDays >= 0 && evDays <= 7 && ev.kind === "earnings") acts.push([72, "orange", `Zahlen in ${evDays} T.`, `Quartalszahlen am ${dateDE(ev.date)} – mit Hebel absichern oder Teil verkaufen.`]);
-    if (g.koAtr != null && g.koAtr < 4) acts.push([65, "orange", "Wenig Puffer", `${fmt(g.koAtr, 1)} Tagesschwankungen bis zum K.-o. – normale Schwankung kann reichen.`]);
-    if (g.crv != null && g.crv < 1 && (g.pl ?? 0) > 0) acts.push([60, "yellow", "Wenig Luft nach oben", `Bis Ziel 1 weniger zu holen als bis zum Stop zu verlieren – Gewinne sichern (Stop ${fmt(trail)}).`]);
-    if (g.share > .35 && g.ms.length > 1) acts.push([55, "yellow", "Klumpenrisiko", `${pct(g.share, 0)} deines Einsatzes in einer Aktie – nicht weiter aufstocken.`]);
-    if (g.th && g.th.label === "Wackelt") acts.push([40, "yellow", "Beobachten", "Ein Teil der Signale ist gekippt – Stop beachten."]);
-    acts.push([10, "green", "Halten – Plan läuft", (g.pl ?? 0) > .03 && trail > stopX ? `Stop auf ${fmt(trail)} (Einstand) nachziehen, Ziel 1 bei ${fmt(a.tp[0].p)}.` : `Stop ${fmt(stopX)}, Ziel 1 ${fmt(a.tp[0].p)}.`]);
-    acts.sort((x, y) => y[0] - x[0]);
-    g.acts = acts; g.urg = acts[0][0]; g.ev = ev; g.stopX = stopX;
+    const levs = g.ms.map(m => m.levNow);
+    g.levTxt = g.ms.some(m => m.d) ? (Math.min(...levs).toFixed(1) === Math.max(...levs).toFixed(1) ? `${fmt(levs[0], 1)}×` : `${fmt(Math.min(...levs), 1)}–${fmt(Math.max(...levs), 1)}×`) : "1×";
+    g.tps = [a.tps && a.tps.next && { ...a.tps.next, l: "Nächstes Hoch" }, a.tps && a.tps.ath && { ...a.tps.ath, l: a.tps.ath.src }].filter(Boolean);
+    g.ev = nextEvent(g.t);
     return g;
-  }).sort((x, y) => y.urg - x.urg || y.invested - x.invested);
+  }).sort((x, y) => y.invested - x.invested);
 }
-// Chart einer Gruppe: alle Käufe, Ø-Einstieg, Ziele, Stop, nächster K.-o.
+// Chart: Kerzen, EMA 20/50, alle Käufe, Ø-Kauf, Take-Profit-Zonen, nächster K.-o.
 function groupChartSvg(c, g) {
   const a = g.a, n = c.t.length, ents = g.ms.filter(m => m.ent).map(m => m.ent);
   const first = ents.length ? Math.min(...ents.map(e => e.i)) : n - 90;
   const from = Math.max(0, Math.min(n - 70, first - 25));
-  const W = 680, H = 290, L = 6, R = W - 128, T = 12, B = H - 24, idx = [];
+  const W = 680, H = 300, L = 6, R = W - 150, T = 14, B = H - 24, idx = [];
   for (let k = from; k < n; k++) idx.push(k);
-  const lv = [{ k: "tp", v: a.tp[1].p, l: "Ziel 2" }, { k: "tp", v: a.tp[0].p, l: "Ziel 1" }];
-  if (g.stop != null) lv.push({ k: "stop", v: g.stop, l: "Stop" });
+  const hiC = Math.max(...idx.map(k => c.h[k])), loC = Math.min(...idx.map(k => c.l[k]));
+  const inView = v => v <= hiC * 1.35 && v >= loC * .65;   // sehr ferne Marken nur als Pfeil
+  const lv = [];
+  g.tps.forEach((tp, j) => lv.push({ k: "tp", v: tp.p, l: tp.l === "Nächstes Hoch" ? "Nächstes Hoch" : tp.l.replace("Allzeithoch", "ATH"), far: !inView(tp.p) }));
   if (g.avgEntry) lv.push({ k: "entry", v: g.avgEntry, l: ents.length > 1 ? "Ø Kauf" : "Kauf" });
-  if (g.ko != null && Math.abs(g.ko / a.c - 1) < .7) lv.push({ k: "ko", v: g.ko, l: "K.-o." });
-  const vals = idx.flatMap(k => [c.h[k], c.l[k]]).concat(lv.map(x => x.v));
-  let lo = Math.min(...vals), hi = Math.max(...vals); const pv = (hi - lo) * .04; lo -= pv; hi += pv;
-  const X = k => L + (R - L) * (k - from + .5) / idx.length, Y = v => T + (B - T) * (hi - v) / (hi - lo);
+  if (g.ko != null) lv.push({ k: "ko", v: g.ko, l: "K.-o.", far: !inView(g.ko) });
+  const vals = idx.flatMap(k => [c.h[k], c.l[k]]).concat(lv.filter(x => !x.far).map(x => x.v));
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pv = (hi - lo) * .05; lo -= pv; hi += pv;
+  const X = k => L + (R - L) * (k - from + .5) / idx.length, Y = v => T + (B - T) * (hi - Math.min(hi, Math.max(lo, v))) / (hi - lo);
   const bw = Math.max(1.5, (R - L) / idx.length * .62);
-  const col = { tp: "#30d158", stop: "#ff9f43", entry: "#e5e5ea", ko: "#ff453a", now: "#ffffff" };
-  let s = `<rect x="${L}" y="${Y(a.tp[1].p)}" width="${R - L}" height="${Math.max(0, Y(a.tp[0].p) - Y(a.tp[1].p))}" fill="rgba(48,209,88,.10)"/>`;
-  const sx = g.stopX, bottom = g.ko != null && Math.abs(g.ko / a.c - 1) < .7 ? g.ko : lo;
-  s += `<rect x="${L}" y="${Y(sx)}" width="${R - L}" height="${Math.max(0, Y(bottom) - Y(sx))}" fill="rgba(255,69,58,.08)"/>`;
+  const col = { tp: "#30d158", entry: "#e5e5ea", ko: "#ff453a", now: "#ffffff" };
+  let s = "";
+  // Take-Profit-Zone: Band von ± ½ Tagesschwankung um jedes sichtbare Ziel
+  g.tps.filter(t => inView(t.p)).forEach(t => { const w = .5 * (a.atr || t.p * .01);
+    s += `<rect x="${L}" y="${Y(t.p + w)}" width="${R - L}" height="${Math.max(3, Y(t.p - w) - Y(t.p + w))}" fill="rgba(48,209,88,.16)"/>`; });
+  if (g.ko != null && inView(g.ko)) s += `<rect x="${L}" y="${Y(g.ko)}" width="${R - L}" height="${Math.max(0, B - Y(g.ko))}" fill="rgba(255,69,58,.10)"/>`;
   idx.forEach(k => {
     const up = c.c[k] >= c.o[k], cl = up ? "#30d158" : "#ff453a", x = X(k);
     s += `<line x1="${x}" x2="${x}" y1="${Y(c.h[k])}" y2="${Y(c.l[k])}" stroke="${cl}" stroke-width="1" opacity=".75"/>`
@@ -916,108 +887,65 @@ function groupChartSvg(c, g) {
   const labs = lv.map(x => ({ ...x, y: Y(x.v) })).concat([{ k: "now", v: a.c, l: "Jetzt", y: Y(a.c) }]).sort((p, q) => p.y - q.y);
   for (let k = 1; k < labs.length; k++) if (labs[k].y - labs[k - 1].y < 17) labs[k].y = labs[k - 1].y + 17;
   const over = labs.length ? labs[labs.length - 1].y - (H - 6) : 0; if (over > 0) labs.forEach(x => x.y -= over);
+  if (labs.length && labs[0].y < 12) { const d = 12 - labs[0].y; labs.forEach(x => x.y += d); }
   labs.forEach(x => {
-    s += x.k !== "now" ? `<line x1="${L}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="${col[x.k]}" stroke-width="1.3" stroke-dasharray="${x.k === "entry" ? "" : "6 4"}" opacity=".9"/>`
-      : `<line x1="${X(n - 1)}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="#fff" opacity=".6"/>`;
-    s += `<line x1="${R}" x2="${R + 6}" y1="${Y(x.v)}" y2="${x.y}" stroke="${col[x.k]}" opacity=".6"/><text x="${R + 9}" y="${x.y + 5}" font-size="14" font-weight="${x.k === "now" ? 700 : 600}" fill="${col[x.k]}">${esc(x.l)} ${fmt(x.v)}</text>`;
+    if (x.k === "now") s += `<line x1="${X(n - 1)}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="#fff" opacity=".6"/>`;
+    else if (!x.far) s += `<line x1="${L}" x2="${R}" y1="${Y(x.v)}" y2="${Y(x.v)}" stroke="${col[x.k]}" stroke-width="1.3" stroke-dasharray="${x.k === "entry" ? "" : "6 4"}" opacity=".9"/>`;
+    s += `<line x1="${R}" x2="${R + 6}" y1="${Y(x.v)}" y2="${x.y}" stroke="${col[x.k]}" opacity=".6"/><text x="${R + 9}" y="${x.y + 5}" font-size="14" font-weight="${x.k === "now" ? 700 : 600}" fill="${col[x.k]}">${esc(x.l)} ${fmt(x.v)}${x.far ? (x.v > a.c ? " ↑" : " ↓") : ""}</text>`;
   });
   const dl = k => { const [, mo, dd] = c.t[k].split("-"); return `${+dd}.${+mo}.`; };
   [from, Math.floor((from + n - 1) / 2), n - 1].forEach((k, j) => s += `<text x="${X(k)}" y="${H - 6}" font-size="12" fill="#8e8e93" text-anchor="${j === 0 ? "start" : j === 2 ? "end" : "middle"}">${dl(k)}</text>`);
-  return `<svg class="poschart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kurschart mit Käufen, Zielen und Stop">${s}</svg>
-    <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;border-radius:50%;width:9px;height:9px"></i>Kauf${ents.length > 1 ? " (Nr. wie Tabelle)" : ""}</span><span><i style="background:rgba(48,209,88,.35)"></i>Zielbereich</span><span><i style="background:rgba(255,69,58,.3)"></i>unter dem Stop</span></div>`;
+  return `<svg class="poschart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Kurschart mit Käufen und Take-Profit-Zonen">${s}</svg>
+    <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;border-radius:50%;width:9px;height:9px"></i>Kauf${ents.length > 1 ? " (Nr. wie Tabelle)" : ""}</span><span><i style="background:rgba(48,209,88,.35)"></i>Take-Profit-Zone</span>${g.ko != null ? `<span><i style="background:rgba(255,69,58,.35)"></i>unter dem K.-o.</span>` : ""}</div>`;
 }
-const eur = v => v == null ? "–" : `${fmt(v, 0)} €`;
-const sgnEur = v => v == null ? "–" : `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 0)} €`;
+const chanceTone = p => p >= .6 ? "up" : p >= .3 ? "gold" : "down";
 function groupHtml(g) {
-  const a = g.a, c = needChart(g.t), act = g.acts[0], open = depOpen.has(g.t), th = g.th;
-  const tp1 = a.tp[0], tp2 = a.tp[1], chance = pr => pr >= .6 ? "realistisch" : pr >= .4 ? "möglich" : "ambitioniert";
-  const ents = g.ms.filter(m => m.ent);
+  const a = g.a, c = needChart(g.t), open = depOpen.has(g.t), nx = g.tps[0];
   const head = `<summary class="gsum">
-      <div class="g1"><b class="gname">${esc(g.name)}</b><span class="muted">${g.ms.length > 1 ? `${g.ms.length} Zertifikate` : g.ms[0].d ? `Turbo ${g.ms[0].short ? "Short" : "Long"} ${fmt(g.ms[0].levNow, 1)}×` : "Aktie"} · ${pct(g.share, 0)} vom Einsatz</span></div>
-      <div class="g2"><span class="muted">G/V</span><b class="${g.pl == null ? "" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnEur(g.value - g.invested) : "–"}</b><small class="${g.pl == null ? "muted" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnPct(g.pl) : "Wert unbekannt"}</small></div>
-      <div class="g2"><span class="muted">${g.koRisk != null ? "Risiko ohne Stop" : "Risiko bis Stop"}</span><b class="down">${g.koRisk != null ? "−" + eur(g.koRisk) : g.risk != null ? "−" + eur(g.risk) : "–"}</b><small class="muted">${g.koRisk != null && g.risk != null ? `mit Stop −${eur(g.risk)}` : ""}${g.koAtr != null ? ` · K.-o. in ${fmt(g.koAtr, 1)} TS` : ""}</small></div>
-      <div class="g2"><span class="muted">Kaufgrund</span><b class="th tone-${th ? th.tone : "gray"}">${th ? th.label : "…"}</b><small class="muted">${th ? `${th.okN + (th.checks[0].ok ? 1 : 0)}/5 Signale` : ""}</small></div>
-      <div class="gact tone-${act[1]}"><b>${esc(act[2])}</b><span>${esc(act[3])}</span></div>
+      <div class="g1"><b class="gname">${esc(g.name)}</b><span class="muted">${g.ms.length > 1 ? `${g.ms.length} Positionen` : g.ms[0].d ? `Turbo ${g.ms[0].short ? "Short" : "Long"}` : "Aktie"} · ${pct(g.share, 0)} vom Einsatz · ${fmt(a.c)} ${esc(g.cur)}</span></div>
+      <div class="g2"><span class="muted">Gewinn / Verlust</span><b class="${g.pl == null ? "" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnEur(g.value - g.invested) : "–"}</b><small class="${g.pl == null ? "muted" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnPct(g.pl, 1) : "Wert unbekannt"}</small></div>
+      <div class="g2"><span class="muted">Hebel</span><b>${g.levTxt}</b><small class="${g.koDist != null && g.koDist < .1 ? "down" : "muted"}">${g.koDist != null ? `K.-o. ${pct(g.koDist, 0)} entfernt` : "ohne Knock-out"}</small></div>
+      <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
     <div class="chartbox">${c ? groupChartSvg(c, g) : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
-    ${g.acts.length > 2 ? `<div class="alsos">${g.acts.slice(1, -1).map(x => `<span class="chip fac tone-${x[1]}" style="color:var(--c)">${esc(x[2])}</span>`).join("")}</div>` : ""}
-    <div class="two-eval">
-      <div class="evalbox tone-${th ? th.tone : "gray"}"><div class="eh">Gilt der Kaufgrund noch?</div><b class="et">${th ? th.label : "…"}</b>
-        ${th ? `<ul class="checks">${th.checks.map(x => `<li><i class="${x.ok ? "up" : "down"}">${x.ok ? "✓" : "✗"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul>` : ""}</div>
-      <div class="evalbox tone-${g.crv == null ? "gray" : g.crv >= 2 ? "green" : g.crv >= 1 ? "yellow" : "red"}"><div class="eh">Chance / Risiko ab heute</div>
-        <b class="et">${g.crv != null ? `CRV ${fmt(g.crv, 1)} : 1` : "–"}</b>
-        <ul class="checks">
-          <li><i class="up">▲</i>Bis Ziel 1 (${fmt(tp1.p)}, ${sgnPct(tp1.pct, 0)}): <b class="up">${g.known ? sgnEur(g.atTp1 - g.value) : "–"}</b> · Chance ${pct(tp1.prob, 0)} (${chance(tp1.prob)}), ~${tp1.days} T.</li>
-          <li><i class="up">▲</i>Bis Ziel 2 (${fmt(tp2.p)}, ${sgnPct(tp2.pct, 0)}): <b class="up">${g.known ? sgnEur(g.atTp2 - g.value) : "–"}</b> · Chance ${pct(tp2.prob, 0)}</li>
-          <li><i class="down">▼</i>Bis ${g.stop != null ? `Stop (${fmt(g.stop)})` : `K.-o. (${fmt(g.ko)})`}: <b class="down">${g.risk != null ? "−" + eur(g.risk) : "–"}</b>${g.stop == null ? " – technischer Stop läge unter dem K.-o." : ""}</li>
-          ${g.ev ? `<li><i class="down">!</i>${(CAL_KIND[g.ev.kind] || [])[2] || "Termin"} am ${dateDE(g.ev.date)} (in ${daysUntil(g.ev.date)} T.)</li>` : ""}
-        </ul></div>
-    </div>
-    <div><div class="plan-h">Deine Positionen</div><div class="table-wrap plain"><table class="xplan pos-t"><thead><tr><th>#</th><th>Kauf</th><th class="num">Hebel</th><th class="num">Einsatz</th><th class="num">Wert</th><th class="num">G/V</th><th class="num">bei Ziel 1</th><th>Einstieg</th></tr></thead><tbody>
-      ${g.ms.map((m, j) => { const v1 = m.valAt(tp1.p);
-        return `<tr><td>${j + 1}</td><td><b>${m.p.date ? dateDE(m.p.date) : "–"}</b><small>${m.held != null ? `seit ${m.held} T. · ` : ""}${m.d ? `K.-o. ${fmt(m.d.ko)}` : "Aktie"}</small></td>
-          <td class="num">${m.d ? fmt(m.levNow, 1) + "×" : "1×"}<small>${m.levBuy && m.d ? "Kauf " + fmt(m.levBuy, 1) + "×" : ""}</small></td>
+    ${g.tps.length ? `<div><div class="plan-h">Take-Profit-Zonen</div><div class="table-wrap plain"><table class="xplan tp-t"><thead><tr><th></th><th class="num">Kurs</th><th class="num">Abstand</th><th class="num">Chance 3 Mon.</th><th class="num">6 Mon.</th><th class="num">Deine Position dort</th></tr></thead><tbody>
+      ${g.tps.map(tp => { const v = g.known ? g.atX(tp.p) : null;
+        return `<tr><td><b class="up">${esc(tp.l)}</b><small>${tp.l === "Nächstes Hoch" ? esc(tp.src) : `vom ${dateDE(tp.date)}`}</small></td><td class="num">${fmt(tp.p)}<small>${esc(g.cur)}</small></td>
+          <td class="num up">${sgnPct(tp.pct, 1)}</td><td class="num"><b class="${chanceTone(tp.p3m)}">${pct(tp.p3m, 0)}</b></td><td class="num ${chanceTone(tp.p6m)}">${pct(tp.p6m, 0)}</td>
+          <td class="num">${v != null ? `<b class="up">${eur(v)}</b><small class="up">${sgnPct(g.invested ? v / g.invested - 1 : null, 0)} auf den Einsatz</small>` : "–"}</td></tr>`; }).join("")}
+    </tbody></table></div>
+    <div class="note" style="margin:6px 2px 0">Chance = Wahrscheinlichkeit, dass der Kurs die Marke im Zeitraum mindestens einmal erreicht – aus der aktuellen Schwankung und dem Trend (Faustregel, keine Prognose).${g.ms.some(m => m.d) ? " Ein Knock-out vorher beendet die Position." : ""}</div></div>` : ""}
+    <div><div class="plan-h">Deine Positionen</div><div class="table-wrap plain"><table class="xplan pos-t"><thead><tr><th>#</th><th>Kauf</th><th class="num">Hebel</th><th class="num">Einsatz</th><th class="num">Wert</th><th class="num">G/V</th>${nx ? `<th class="num">beim nächsten Hoch</th>` : ""}<th>Einstieg</th></tr></thead><tbody>
+      ${g.ms.map((m, j) => { const v1 = nx ? m.valAt(nx.p) : null;
+        return `<tr><td>${j + 1}</td><td><b>${m.p.date ? dateDE(m.p.date) : "–"}</b><small>${m.held != null ? `seit ${m.held} T.` : ""}${m.ent ? ` · bei ${fmt(m.ent.u)}` : ""}</small></td>
+          <td class="num">${m.d ? fmt(m.levNow, 1) + "×" : "1×"}<small>${m.d ? `K.-o. ${fmt(m.d.ko)} (${pct(m.dist, 0)})` : ""}</small></td>
           <td class="num">${eur(m.p.price * m.p.qty)}<small>${fmt(m.p.qty, 0)} × ${fmt(m.p.price)} €</small></td>
           <td class="num">${m.nowPos != null ? eur(m.nowPos * m.p.qty) : "–"}<small>${m.nowPos != null ? fmt(m.nowPos) + " € je Stk." : ""}</small>${m.d ? `<button class="linkbtn" data-dep="mark" data-i="${m.i}">${m.tm && m.tm.exact ? `✓ exakt (${dateDE(m.p.markDate)})` : "Kurs eintragen"}</button>` : ""}</td>
-          <td class="num ${(m.pl ?? 0) >= 0 ? "up" : "down"}">${sgnPct(m.pl)}</td>
-          <td class="num up">${v1 != null ? eur(v1 * m.p.qty) : "–"}<small>${v1 != null ? fmt(v1) + " € je Stk." : ""}</small></td>
+          <td class="num ${m.pl == null ? "" : m.pl >= 0 ? "up" : "down"}">${sgnPct(m.pl)}</td>
+          ${nx ? `<td class="num up">${v1 != null ? eur(v1 * m.p.qty) : "–"}<small>${v1 != null ? sgnPct(v1 / m.p.price - 1, 0) : ""}</small></td>` : ""}
           <td>${m.ent ? `<span class="th tone-${m.ent.tone}">${m.ent.short}</span>` : "–"}</td></tr>`; }).join("")}
     </tbody></table></div>
-    <div class="note" style="margin:6px 2px 0">${g.ms.some(m => m.d) ? "Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag, ohne Spread) – mit „Kurs eintragen“ werden sie exakt. Open-End-Turbos kosten täglich Finanzierung – langes Warten verteuert die Position. " : ""}TS = typische Tagesschwankungen (ATR).</div></div>
-    ${ordersHtml(g)}
-    ${ents.length ? `<details class="more-box"><summary>Einstiege im Detail</summary>${ents.map(m => `<div class="entry-d"><b>#${g.ms.indexOf(m) + 1} · ${dateDE(m.ent.date)} – <span class="th tone-${m.ent.tone}">${m.ent.label}</span></b>
-      <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</details>` : ""}
-    ${th ? `<details class="more-box"><summary>Indikatoren &amp; Marken</summary>
-      <table class="xplan ind"><thead><tr><th></th><th>heute</th><th>Tendenz 5 T.</th></tr></thead><tbody>
-        ${th.trend.map(x => `<tr><td><b>${x[0]}</b></td><td>${x[1]}</td><td class="${x[2] > 0 ? "up" : "down"}">${x[2] > 0 ? "▲ steigt" : "▼ fällt"}</td></tr>`).join("")}
-        ${a.fac.filter(f => ["fib", "div", "rs", "sector", "market"].includes(f.k)).map(f => `<tr><td><b>${esc(f.l)}</b></td><td colspan="2" class="${f.s > 0 ? "up" : f.s < 0 ? "down" : ""}">${esc(f.t)}</td></tr>`).join("")}
-      </tbody></table>
-      <ul class="facts">${a.res.map(x => `<li><b class="up">Widerstand ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}${a.sup.map(x => `<li><b class="down">Unterstützung ${fmt(x.p)}</b> – ${esc(x.src)}</li>`).join("")}</ul>
-      <div class="note" style="margin:6px 0 0">Ziele an Widerständen bzw. Fib-Extensionen, Stop knapp unter der nächsten Unterstützung (≥ 1 ATR entfernt). Chance = Ziel vor Stop, Faustregel aus Abstand, Schwankung und Trend – keine Prognose, keine Anlageberatung.</div>
-    </details>` : ""}
+    ${g.ms.some(m => m.d) ? `<div class="note" style="margin:6px 2px 0">Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag) – mit „Kurs eintragen“ werden sie exakt.</div>` : ""}</div>
+    ${g.ms.some(m => m.ent) ? `<div><div class="plan-h">Bewertung deiner Einstiege</div><div class="entries">${g.ms.map((m, j) => !m.ent ? "" : `<div class="evalbox tone-${m.ent.tone}"><div class="eh">#${j + 1} · ${dateDE(m.ent.date)} · bei ${fmt(m.ent.u)}</div><b class="et">${m.ent.label}</b>
+        <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : ""}
+    ${g.ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(g.ev.date)}</b> – ${(CAL_KIND[g.ev.kind] || [])[2] || ""}${g.ev.estimate ? " (geschätzt)" : ""}</div>` : ""}
     <div class="row-actions">${data.results.some(x => x.ticker === g.t) ? `<button class="mini-btn" data-open="${esc(g.t)}">Großer Chart</button>` : ""}<a class="mini-btn" style="text-decoration:none" href="${tvUrl(g.t)}" target="_blank" rel="noopener">TradingView</a>
       ${g.ms.map((m, j) => `<button class="mini-btn del" data-dep="del" data-i="${m.i}">#${j + 1} löschen</button>`).join("")}</div>
   </div>`;
   return `<details class="card grp" data-grp="${esc(g.t)}" ${open ? "open" : ""}>${head}${body}</details>`;
 }
-// Fertige Orders für Scalable: Stop-Loss + zwei Limit-Verkäufe je Zertifikat
-function ordersHtml(g) {
-  const a = g.a, px = v => v == null ? "–" : fmt(v, v < 1 ? 3 : 2) + " €";
-  const rows = g.ms.filter(m => !m.short).map((m, j) => {
-    const q = m.p.qty, frac = m.levNow >= 4 ? 2 / 3 : 1 / 2, q1 = Math.min(q, Math.max(1, Math.round(q * frac))), q2 = q - q1;
-    const nr = g.ms.indexOf(m) + 1, tag = m.tm && m.tm.exact ? "" : m.d ? " ≈" : "";
-    const o = [];
-    if (g.stop != null) o.push(["Stop-Loss (Stop-Order)", q, m.valAt(g.stop), g.stop, "sl"]);
-    o.push(["Limit-Verkauf · Ziel 1", q1, m.valAt(a.tp[0].p), a.tp[0].p, "tp"]);
-    if (q2 > 0) o.push(["Limit-Verkauf · Ziel 2", q2, m.valAt(a.tp[1].p), a.tp[1].p, "tp"]);
-    return o.map((x, k) => `<tr class="${x[4]}">${k === 0 ? `<td rowspan="${o.length}"><b>#${nr}</b><small>${esc(m.p.isin || m.p.t)}</small></td>` : ""}
-      <td><b>${x[0]}</b></td><td class="num">${fmt(x[1], 0)}</td><td class="num"><b>${tag}${px(x[2])}</b></td><td class="num muted">${fmt(x[3])} ${esc(g.cur)}</td></tr>`).join("");
-  }).join("");
-  if (!rows) return "";
-  const est = g.ms.some(m => m.d && !(m.tm && m.tm.exact));
-  return `<div><div class="plan-h">Order-Vorschläge für Scalable</div>
-    ${g.stop == null ? `<div class="tip tone-red" style="margin:0 0 8px"><b class="t">Kein sinnvoller Stop möglich</b>Die nächste Unterstützung liegt unter dem Knock-out (${fmt(g.ko)}) – der K.-o. wirkt hier wie ein Stop. Position klein halten.</div>` : ""}
-    <div class="table-wrap plain"><table class="xplan ord"><thead><tr><th>Zertifikat</th><th>Order</th><th class="num">Stück</th><th class="num">Preis</th><th class="num">Basiswert</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <div class="note" style="margin:6px 2px 0">${est ? "≈ = geschätzter Zertifikatskurs – mit „Kurs eintragen“ (Tabelle oben) werden die Preise exakt. " : ""}Viele Broker sperren Stücke, die schon in einer Order stehen: dann zuerst den Stop-Loss setzen (Schutz geht vor) und bei Ziel 1 von Hand verkaufen – Kairo zeigt oben „Ziel 1 erreicht“, sobald es so weit ist. Nach Ziel 1 den Stop auf deinen Einstand nachziehen.</div></div>`;
-}
 function cockpitHtml(groups, items) {
   const inv = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
   const known = groups.filter(g => g.known), val = known.reduce((s, g) => s + g.value, 0), invK = known.reduce((s, g) => s + g.invested, 0);
-  const koRisk = groups.reduce((s, g) => s + (g.koRisk ?? 0), 0);
-  const risk = groups.reduce((s, g) => s + (g.risk ?? 0), 0), big = groups.slice().sort((x, y) => y.share - x.share)[0];
-  const urgent = groups.filter(g => g.urg >= 60);
-  const m = (anaData && anaData.market) || {}, reg = m.regime;
-  const evs = (calData || []).filter(e => e.kind === "macro" && daysUntil(e.date) >= 0 && daysUntil(e.date) <= 10).slice(0, 3);
+  const koRisk = groups.reduce((s, g) => s + (g.koRisk ?? 0), 0), big = groups.slice().sort((x, y) => y.share - x.share)[0];
+  const nWerte = groups.length + items.filter(x => !(anaData && x.p.t && anaData.tickers[x.p.t])).length;
   return `<div class="cockpit">
-    <div class="fig"><span>Eingesetzt</span><b>${eur(inv)}</b><em>${items.length} Positionen in ${groups.length + items.filter(x => !(anaData && x.p.t && anaData.tickers[x.p.t])).length} Werten</em></div>
+    <div class="fig"><span>Eingesetzt</span><b>${eur(inv)}</b><em>${items.length} Positionen in ${nWerte} Werten</em></div>
     <div class="fig"><span>Wert (geschätzt)</span><b class="${val - invK >= 0 ? "up" : "down"}">${known.length ? eur(val) : "–"}</b><em>${known.length ? `${sgnEur(val - invK)} · ${sgnPct(invK ? val / invK - 1 : null, 1)}` : ""}</em></div>
-    <div class="fig"><span>${koRisk ? "Risiko ohne Stop-Loss" : "Max. Verlust bis Stops"}</span><b class="down">${koRisk ? "−" + eur(koRisk) : risk ? "−" + eur(risk) : "–"}</b><em>${koRisk ? `bei Knock-out alles weg · mit Stops nur −${eur(risk)}` : val ? pct(risk / val, 0) + " vom aktuellen Wert" : ""}</em></div>
+    <div class="fig"><span>Bei Knock-out weg</span><b class="down">${koRisk ? "−" + eur(koRisk) : "–"}</b><em>${koRisk ? "Wert aller Turbos (ohne Stop-Loss)" : ""}</em></div>
     <div class="fig"><span>Größter Klumpen</span><b class="${big && big.share > .35 ? "down" : ""}">${big ? pct(big.share, 0) : "–"}</b><em>${big ? esc(big.name) : ""}</em></div>
-  </div>
-  ${urgent.length ? `<div class="tip tone-${urgent.some(g => g.urg >= 85) ? "red" : "orange"}" style="margin:12px 0 0"><b class="t">${urgent.length} ${urgent.length === 1 ? "Position braucht" : "Positionen brauchen"} eine Entscheidung</b>${urgent.map(g => `<a href="#" class="jump" data-grpjump="${esc(g.t)}">${esc(g.name)}: ${esc(g.acts[0][2])}</a>`).join(" · ")}</div>`
-    : groups.length ? `<div class="tip tone-green" style="margin:12px 0 0"><b class="t">Alles im Plan</b>Keine Position braucht heute eine Entscheidung.</div>` : ""}
-  ${reg || evs.length ? `<div class="mline">${reg ? `<span class="th tone-${reg.tone}">Markt: ${esc(reg.label)}</span>` : ""}${evs.map(e => `<span>${dateDE(e.date)} ${esc(e.title)}</span>`).join("")}</div>` : ""}`;
+  </div>`;
 }
 // Turbo-/Knock-out-Zertifikat ohne Analyse (Basiswert nicht auf der Watchlist) (keine Zertifikatskurse), aber den Basiswert
 function turboCard(p, i, r) {
