@@ -117,15 +117,24 @@ def _p_touch(b: float, sigma: float, mu: float, days: int) -> float:
 
 
 def take_profits(df: pd.DataFrame, close: float, atr: float, sigma: float, mu: float, ath: dict | None) -> dict:
-    """Take-Profit-Zonen: nächstes Hoch (Pivot-Hoch über dem Kurs) und Allzeithoch, je mit Chance in 3 / 6 Monaten."""
-    h, dates = df["High"].to_numpy(float), df.index
+    """Take-Profit-Zonen: letztes markantes Swing-High über dem Kurs und Allzeithoch, je mit Chance in 3 / 6 Monaten.
+
+    Swing-High = Pivot-Hoch (10 Kerzen links und rechts), nach dem der Kurs deutlich gefallen ist
+    (mind. 8 % bzw. 3 ATR) und das seitdem nicht überschritten wurde – keine einzelne Tageskerze.
+    Gewählt wird das jüngste solche Hoch; es liegt damit über dem aktuellen Kurs."""
+    h, l, dates = df["High"].to_numpy(float), df["Low"].to_numpy(float), df.index
     n = len(h)
-    look = max(0, n - 250)
-    piv = [i for i in pivot_highs(df["High"], 3) if i >= look and h[i] > close + 0.5 * atr]
     nxt = None
-    if piv:
-        i = min(piv, key=lambda j: h[j])
-        nxt = {"p": float(h[i]), "date": str(dates[i].date()), "src": f"Hoch vom {dates[i]:%d.%m.%Y}"}
+    for i in sorted(pivot_highs(df["High"], 10), reverse=True):
+        if h[i] <= close + 0.25 * atr:
+            continue
+        if i + 1 >= n or (h[i + 1:] > h[i]).any():   # später überschritten → kein Widerstand mehr
+            continue
+        drop = float((h[i] - l[i + 1:].min()) / h[i])
+        if drop >= max(0.08, 3 * atr / h[i]):
+            nxt = {"p": float(h[i]), "date": str(dates[i].date()), "drop": round(drop, 4),
+                   "src": f"Swing-High vom {dates[i]:%d.%m.%Y}, danach −{drop * 100:.0f} %"}
+            break
     top = ath or {"p": float(h.max()), "date": str(dates[int(h.argmax())].date()), "full": False}
     allt = {"p": float(top["p"]), "date": top["date"], "src": "Allzeithoch" if top.get("full", True) else "2-Jahres-Hoch"}
     if nxt and nxt["p"] >= allt["p"] * 0.995:
