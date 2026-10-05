@@ -122,7 +122,7 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
     Gerechnet auf Schlusskursen (wie im Linienchart):
     1. Kandidat: höchster Schluss im Fenster ± 5 Tage (mind. 5 Tage alt), der seitdem NIE überschritten wurde.
     2. Gipfel einer eigenen Erholungswelle: mind. 15 Handelstage nach dem vorigen (älteren, höheren) relevanten
-       Hoch, und der Kurs ist vom Tief dazwischen mind. 4 % bzw. 1 Tagesschwankung (ATR) gestiegen.
+       Hoch, und der Kurs ist vom Tief dazwischen mind. 3,5 % bzw. 0,8 Tagesschwankungen (ATR) gestiegen.
     3. Hochs, die weniger als 4 % auseinanderliegen, bilden eine Zone (Doppel-/Mehrfachhoch).
     """
     # Schlusskurse wie im Linienchart – einzelne Tagesspitzen (Dochte) zählen nicht
@@ -133,7 +133,7 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
         return []
     after = np.append(np.maximum.accumulate(h[::-1])[::-1][1:], -np.inf)   # höchstes Hoch NACH Tag i
     cand = [i for i in range(n - 5) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close * 1.005]
-    min_rise = max(0.04, 1.0 * atr / close)
+    min_rise = max(0.035, 0.8 * atr / close)
     kept: list[int] = []
     for i in cand:                                   # alt → neu (Hochs fallen)
         if kept and i - kept[-1] < 15:               # noch dieselbe Bewegung wie das vorige Hoch
