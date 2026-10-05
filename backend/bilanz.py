@@ -134,9 +134,12 @@ def main(argv=None) -> int:
     ap.add_argument("--combine", nargs="*")
     a = ap.parse_args(argv)
     if a.combine is not None:
-        ev = []
+        ev, seen = [], set()
         for p in a.combine:
-            ev += json.loads(Path(p).read_text())
+            for e in json.loads(Path(p).read_text()):
+                if (e["t"], e["d"], e["k"]) not in seen:      # Aktien können in mehreren Listen stehen
+                    seen.add((e["t"], e["d"], e["k"]))
+                    ev.append(e)
         res = {"generated": time.strftime("%Y-%m-%d"), "stocks": len({e["t"] for e in ev}),
                "period": [min(e["d"] for e in ev), max(e["d"] for e in ev)], "stats": stats(ev),
                "recent": sorted([e for e in ev if e["k"] == "hit"], key=lambda e: e["d"])[-40:]}

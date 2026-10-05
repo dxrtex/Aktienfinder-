@@ -421,7 +421,7 @@
   .obar { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
   .obar i.t1 { background: var(--up); } .obar i.op { background: var(--surface-3); } .obar i.st { background: var(--red); }
   .oleg { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; font-weight: 650; margin-top: 6px; }
-  svg.rp { width: 100%; height: auto; display: block; } svg.rp text { fill: var(--muted); font-size: 11px; } svg.rp text.lb { font-weight: 700; font-size: 12px; }
+  svg.rp { width: 100%; height: auto; max-height: 260px; display: block; } svg.rp text { fill: var(--muted); font-size: 11px; } svg.rp text.lb { font-weight: 700; font-size: 12px; }
   table.bt { min-width: 640px; table-layout: auto; } table.bt td:first-child, table.bt th:first-child { width: auto; } table.bt tr.muted td { color: var(--muted); }
   .hcard + .hcard { margin-top: 14px; } .hcol > .hcard + .hcard, .hgrid .hcard + .hcard { margin-top: 0; }
   /* Einstellungen: Telegram & Backup */
@@ -2042,7 +2042,7 @@ function todayHtml() {
 // ---------- Kairo-Bilanz ----------
 const RES_TXT = { t1: ["Ziel 1 ✓", "up"], stop: ["Stop", "down"], open: ["offen (30 T.)", "muted"], running: ["läuft", "muted"] };
 function retPathSvg(groups) {
-  const W = 560, H = 170, pl = 40, pr = 70, pt = 12, pb = 24, xs = [0, 5, 10, 20];
+  const W = 560, H = 170, pl = 40, pr = 118, pt = 12, pb = 24, xs = [0, 5, 10, 20];
   const all = groups.flatMap(g => [0, g.s.r5, g.s.r10, g.s.r20]).filter(v => v != null);
   const lo = Math.min(0, ...all), hi = Math.max(0, ...all), sp = hi - lo || 1;
   const X = d => pl + (W - pl - pr) * d / 20, Y = v => pt + (H - pt - pb) * (hi - v) / sp;
@@ -2056,6 +2056,18 @@ function retPathSvg(groups) {
 function outcomeBar(s) {
   return `<div class="obar"><i class="t1" style="flex:${s.t1}"></i><i class="op" style="flex:${s.open}"></i><i class="st" style="flex:${s.stop}"></i></div>
     <div class="oleg"><span class="up">Ziel 1 zuerst ${pct(s.t1, 0)}</span><span class="muted">offen ${pct(s.open, 0)}</span><span class="down">Stop zuerst ${pct(s.stop, 0)}</span></div>`;
+}
+// Automatische Erkenntnisse: welche Teilgruppen der Treffer schneiden deutlich besser/schlechter ab?
+function bilanzInsights(S) {
+  const all = S.hit, g = [];
+  [["score", "Score "], ["crv", "CRV "], ["zone", ""], ["div", "Divergenz "]].forEach(([k, pre]) => Object.entries(S[k] || {}).forEach(([n, s]) => {
+    if (s && s.n >= 150) g.push({ l: pre + n + (k === "zone" ? "-Zone" : ""), s }); }));
+  if (!g.length) return "";
+  g.sort((a, b) => b.s.avg_r - a.s.avg_r);
+  const fmtR = r => `${r >= 0 ? "+" : ""}${fmt(r, 2)} R`;
+  const best = g.slice(0, 2).filter(x => x.s.avg_r > all.avg_r + .03), worst = g.slice(-2).reverse().filter(x => x.s.avg_r < all.avg_r - .03);
+  return `<div class="jins" style="margin-bottom:14px">${best.map(x => `<div class="tip tone-green"><b class="t">Stärker: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade (alle Treffer ${fmtR(all.avg_r)}) · ${fmt(x.s.n, 0)} Signale.</div>`).join("")}
+    ${worst.map(x => `<div class="tip tone-orange"><b class="t">Schwächer: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade · ${fmt(x.s.n, 0)} Signale – hier besonders streng prüfen.</div>`).join("")}</div>`;
 }
 function bilanzHtml() {
   const b = getJson("bilanz.json");
@@ -2071,8 +2083,9 @@ function bilanzHtml() {
       <b>${pct(h.t1, 0)}</b><em>der ${fmt(h.n, 0)} Treffer-Signale erreichten <b>Ziel 1 vor dem Stop</b> (innerhalb von 30 Handelstagen).</em></div>
       <div class="bh-r"><div class="mt"><span>Ø Ergebnis je Trade</span><b class="${h.avg_r >= 0 ? "up" : "down"}">${h.avg_r >= 0 ? "+" : ""}${fmt(h.avg_r, 2)} R</b><em>R = Risiko bis zum Stop</em></div>
         <div class="mt"><span>Ø Tage bis Ziel 1</span><b>${fmt(h.days_t1, 0)}</b><em>Handelstage</em></div>
-        <div class="mt"><span>Ziel 2 (Swing-High)</span><b>${pct(h.t2, 0)}</b><em>erreicht</em></div></div>
+        <div class="mt"><span>Ø nach 20 Tagen</span><b class="${h.r20 >= 0 ? "up" : "down"}">${sgnPct(h.r20, 1)}</b><em>alle Tage ${sgnPct(S.base.r20, 1)}</em></div></div>
       ${outcomeBar(h)}</div>
+    ${bilanzInsights(S)}
     <div class="hcard">${hHead("Kursverlauf nach dem Signal (Ø)")}${retPathSvg([{ l: "Treffer", s: h, c: "var(--up)" }, { l: "Fast", s: S.fast, c: "var(--gold)" }, { l: "alle Tage", s: S.base, c: "var(--muted)" }])}
       <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Der Abstand zeigt den Vorteil des Setups.</div></div>
     <div class="hcard">${hHead("Nach Score, CRV und Zone")}<div class="table-wrap"><table class="jt bt">${head}<tbody>

@@ -7,9 +7,6 @@ on:
         description: "Anzahl zufälliger Aktien für den Backtest"
         required: false
         default: "250"
-  push:
-    branches: ["claude/**"]
-    paths: ["backend/forecast.py", ".github/workflows/forecast.yml"]
 
 env:
   PYTHONUNBUFFERED: "1"

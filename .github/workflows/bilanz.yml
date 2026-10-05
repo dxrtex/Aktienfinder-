@@ -2,9 +2,6 @@ name: Kairo-Bilanz (Backtest)
 
 on:
   workflow_dispatch:
-  push:
-    branches: ["claude/**"]
-    paths: ["backend/bilanz.py", ".github/workflows/bilanz.yml"]
 
 env:
   PYTHONUNBUFFERED: "1"
