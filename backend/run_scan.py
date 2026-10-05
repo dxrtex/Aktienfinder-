@@ -25,6 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
+from . import company
 from .analysis import MARKET, SECTOR_ETF, add_context, analyze, finalize, market_context
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -223,6 +224,32 @@ def result_row(res, meta: dict) -> dict:
     })
 
 
+TREND_DAYS = 10
+
+
+def score_trend(df: pd.DataFrame, info: dict, ticker: str, res) -> dict:
+    """Erfüllte Kriterien (und Score) der letzten TREND_DAYS Handelstage – wohin bewegt sich die Aktie?
+
+    Richtung: steigend, wenn in den letzten 6 Tagen im Schnitt ≥ 0,25 Kriterien/Tag dazukamen oder ≥ 2 in 5 Tagen;
+    fallend entsprechend umgekehrt; sonst seitwärts."""
+    def met_of(r):
+        return sum(c.ok for c in r.criteria if c.key not in ("cap", "liquidity", "price", "history"))
+    met, score = [], []
+    for k in range(TREND_DAYS, 0, -1):
+        try:
+            r = evaluate(df.iloc[:-k], info, ticker=ticker)
+            met.append(met_of(r)); score.append(r.score)
+        except Exception:
+            met.append(None); score.append(None)
+    met.append(met_of(res)); score.append(res.score)
+    last = [m for m in met[-6:] if m is not None]
+    slope = float(np.polyfit(range(len(last)), last, 1)[0]) if len(last) >= 3 else 0.0
+    d5 = None if met[-6] is None else met[-1] - met[-6]
+    direction = "up" if slope >= 0.25 or (d5 or 0) >= 2 else "down" if slope <= -0.25 or (d5 or 0) <= -2 else "flat"
+    peak = max((m for m in met if m is not None), default=met[-1])
+    return {"met": met, "score": score, "d5": d5, "slope": round(slope, 2), "dir": direction, "peak": peak}
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--tickers", help="nur diese Ticker (kommagetrennt), sonst ganzes Universum")
@@ -243,6 +270,11 @@ def main(argv=None) -> int:
     tickers = list(meta)
     print(f"Universum: {len(tickers)} Aktien")
     # Termine der Watchlist zuerst holen: nach dem Massen-Download blockt Yahoo Einzelabfragen oft
+    # Unternehmensbeschreibungen (Watchlist + Tabelle vom letzten Scan), vor dem großen Download
+    about = company.load()
+    if not args.end:
+        n_new = company.fetch(list(watch) + list(about.get("_want", [])), about)
+        print(f"Unternehmensbeschreibungen: {n_new} neu, {len(about) - ('_want' in about)} im Cache")
     watch_dates = {}
     if not args.end:
         for t in watch:
@@ -298,11 +330,17 @@ def main(argv=None) -> int:
         m = {**m, "name": m.get("name") or i.get("name"), "sector": m.get("sector") or i.get("sector") or "",
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
+        rows[-1]["trend"] = score_trend(df, info, t, res)
+        if about.get(t):
+            rows[-1]["about"] = about[t]
         final[t] = (df, res, m)
         search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
+    if not args.end:
+        about["_want"] = [r["ticker"] for r in rows if r["ticker"] not in about]
+        company.save(about)
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))

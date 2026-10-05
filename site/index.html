@@ -296,6 +296,16 @@
   td .ampel { flex-wrap: nowrap; }
   .links { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
   /* Unterpunkte im Scanner */
+  .score-col { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; }
+  button.score { border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
+  .trend { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .trend .spark { vertical-align: middle; }
+  .ibtn { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--muted); background: none; color: var(--muted);
+          font: italic 700 12px/1 Georgia, serif; cursor: pointer; vertical-align: 3px; margin-left: 4px; padding: 0; }
+  .aboutbox, .scorebox { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; font-size: 14px; }
+  .aboutbox p { margin: 6px 0; line-height: 1.45; } .aboutbox a { color: var(--accent); font-size: 13px; }
+  .ab-h, .sb-h { font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+  .sb-trend { margin-top: 10px; }
   .kbar { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
   .kchip { border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-weight: 650; font-size: 14px; padding: 9px 14px; border-radius: 999px; cursor: pointer; }
   .kchip small { font-weight: 600; opacity: .75; margin-left: 2px; }
@@ -519,6 +529,41 @@ function openCard(t) {
 }
 function closeCard() { document.body.classList.remove("card-open"); }
 
+// Tendenz: Wie viele Kriterien waren an den letzten 10 Handelstagen erfüllt – steigt oder fällt das?
+const TREND_TXT = { up: ["▲", "up", "steigend"], down: ["▼", "down", "fallend"], flat: ["►", "muted", "seitwärts"] };
+function sparkSvg(vals, total, w = 74, h = 22) {
+  const v = vals.map(x => x == null ? null : +x), ok = v.filter(x => x != null); if (ok.length < 2) return "";
+  const lo = Math.min(...ok, total - 4), hi = total, X = i => 2 + (w - 4) * i / (v.length - 1), Y = x => 2 + (h - 4) * (hi - x) / Math.max(1, hi - lo);
+  const pts = v.map((x, i) => x == null ? null : `${X(i).toFixed(1)},${Y(x).toFixed(1)}`).filter(Boolean).join(" ");
+  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="2" x2="${w - 2}" y1="${Y(total).toFixed(1)}" y2="${Y(total).toFixed(1)}" stroke="var(--line)" stroke-dasharray="2 2"/>
+    <polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${X(v.length - 1).toFixed(1)}" cy="${Y(v[v.length - 1]).toFixed(1)}" r="2.4" fill="currentColor"/></svg>`;
+}
+function trendHtml(r, big = false) {
+  const t = r.trend; if (!t || !t.met) return "";
+  const [arrow, cls, word] = TREND_TXT[t.dir] || TREND_TXT.flat, m = t.met, old = m[m.length - 6];
+  return `<span class="trend ${cls}" title="Erfüllte Kriterien der letzten ${m.length} Handelstage: ${m.join(" → ")}">${arrow} ${big ? word + " · " : ""}${old != null ? `${old}→${m[m.length - 1]}/${r.total ?? 11} in 5 T.` : ""}${sparkSvg(m, r.total ?? 11)}</span>`;
+}
+function scoreBoxHtml(r) {
+  const t = r.trend, past = t && t.peak != null && t.peak > (r.met ?? 0) ? `<div class="note" style="margin:6px 0 0">Höchststand der letzten 10 Tage: ${t.peak}/${r.total ?? 11} Kriterien.</div>` : "";
+  const trend = t ? `<div class="sb-trend">${trendHtml(r, true)}</div>` : "";
+  if (r.passed) {
+    const sum = (r.bonuses || []).reduce((s, b) => s + b.points, 0);
+    return `<div class="sb-h">So setzt sich der Score ${r.score} zusammen</div>
+      <table class="check"><tbody>${(r.bonuses || []).map(b => `<tr><td class="${b.points >= 0 ? "ok" : "no"}">${b.points > 0 ? "+" : ""}${b.points}</td><td>${esc(b.label)}</td></tr>`).join("")}
+      <tr><td><b>${sum}</b></td><td><b>Summe${sum > 100 ? " (gedeckelt auf 100)" : ""}</b></td></tr></tbody></table>${trend}${past}`;
+  }
+  const miss = r.criteria.filter(c => !c.ok && !["cap", "liquidity", "price", "history"].includes(c.key));
+  return `<div class="sb-h">${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – Score gibt es erst, wenn alle erfüllt sind</div>
+    <table class="check"><tbody>${miss.map(c => `<tr><td class="no">✗</td><td><b>${esc(c.label)}</b><br>${esc(c.value)}</td></tr>`).join("")}</tbody></table>${trend}${past}`;
+}
+function aboutHtml(r) {
+  const a = r.about;
+  if (!a) return `<div class="note" style="margin:0">Noch keine Beschreibung – sie wird beim nächsten Scan geladen.</div>`;
+  return `<div class="ab-h">${esc([a.industry, a.country].filter(Boolean).join(" · "))}${a.employees ? ` · ${fmt(a.employees, 0)} Mitarbeiter` : ""}</div>
+    <p>${esc(a.text)}</p>${a.web ? `<a href="${esc(a.web)}" target="_blank" rel="noopener">${esc(a.web.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))}</a>` : ""}
+    <div class="note" style="margin:6px 0 0">Quelle: Yahoo Finance (englisch).</div>`;
+}
+
 // ---------- Karte ----------
 function ampel(r) {
   return `<div class="ampel" title="Pflichtkriterien">${SETUP_KEYS.map(k => {
@@ -535,15 +580,19 @@ function card(r) {
   return `<article class="card">
     <div class="card-top">
       <div class="card-title">
-        <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)}</h2>
+        <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)} <button class="ibtn" data-about aria-label="Was macht das Unternehmen?">i</button></h2>
         <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
         ${statusBadge(r)}
         <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}${r.volatility != null ? " · Vola " + pct(r.volatility, 0) : ""}</span>
         ${r.earnings_risk ? `<span class="warn">⚠ Earnings ${dateDE(r.earnings_date)}</span>` : ""}
       </div>
-      ${r.passed ? `<div class="score" style="--p:${r.score}" title="Score ${r.score} von 100"><span>${r.score}</span></div>`
-        : `<div class="score fast" style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt"><span>${r.met ?? "–"}/${r.total ?? 11}</span></div>`}
+      <div class="score-col">
+      ${r.passed ? `<button class="score" data-scoreinfo style="--p:${r.score}" title="Score ${r.score} von 100 – antippen für die Zusammensetzung"><span>${r.score}</span></button>`
+        : `<button class="score fast" data-scoreinfo style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – antippen für Details"><span>${r.met ?? "–"}/${r.total ?? 11}</span></button>`}
+      ${trendHtml(r)}</div>
     </div>
+    <div class="aboutbox" hidden>${aboutHtml(r)}</div>
+    <div class="scorebox" hidden>${scoreBoxHtml(r)}</div>
     <div class="figures">
       <div class="fig"><span>Rückgang</span><b class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown, 0)}</b></div>
       <div class="fig"><span>Kurs</span><b>${fmt(r.close)}</b></div>
@@ -597,6 +646,7 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 const COLS = [
   { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
+  { k: "trend", l: "Tendenz", g: r => r.trend ? r.trend.slope + (r.trend.d5 ?? 0) / 10 : 0, h: r => trendHtml(r) || "–" },
   { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -1315,8 +1365,8 @@ function render() {
   const col = COLS.find(c => c.k === state.tableSort) || COLS.find(c => c.k === "score");
   if (state.tableSort !== "score" || state.tableAsc) list.sort((a, b) => { const x = col.g(a), y = col.g(b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return state.tableAsc ? c : -c; });
   const onlyHits = k.size === 1 && k.has("hit");
-  const lead = ["ticker", "name", "status", "met", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
-  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "miss"].includes(c.k))];
+  const lead = ["ticker", "name", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
+  const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "trend", "miss"].includes(c.k))];
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
 }
@@ -1478,6 +1528,8 @@ document.addEventListener("click", e => {
     state.tab = sb.dataset.sub; save(); render(); return; }
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
+  const si = e.target.closest("[data-scoreinfo],[data-about]");
+  if (si) { e.preventDefault(); const box = si.closest(".card").querySelector(si.hasAttribute("data-about") ? ".aboutbox" : ".scorebox"); if (box) box.hidden = !box.hidden; return; }
   const kc = e.target.closest("[data-kind]"); if (kc) { const set = new Set(state.kinds || []); set.has(kc.dataset.kind) ? set.delete(kc.dataset.kind) : set.add(kc.dataset.kind);
     state.kinds = KIND_BTNS.map(x => x[0]).filter(x => set.has(x)); save(); render(); return; }
   const cd = e.target.closest("[data-card]"); if (cd) { e.preventDefault(); openCard(cd.dataset.card); return; }
