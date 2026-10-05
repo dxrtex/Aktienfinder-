@@ -116,36 +116,62 @@ def _p_touch(b: float, sigma: float, mu: float, days: int) -> float:
     return float(min(1.0, phi((-b + mu * days) / s) + math.exp(k) * phi((-b - mu * days) / s)))
 
 
-def take_profits(df: pd.DataFrame, close: float, atr: float, sigma: float, mu: float, ath: dict | None) -> dict:
-    """Take-Profit-Zonen: letztes markantes Swing-High über dem Kurs und Allzeithoch, je mit Chance in 3 / 6 Monaten.
+def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4) -> list[dict]:
+    """Relevante Hochs über dem Kurs („Treppe fallender Hochs“), nächstes zuerst.
 
-    Swing-High = Pivot-Hoch (10 Kerzen links und rechts), nach dem der Kurs deutlich gefallen ist
-    (mind. 8 % bzw. 3 ATR) und das seitdem nicht überschritten wurde – keine einzelne Tageskerze.
-    Gewählt wird das jüngste solche Hoch; es liegt damit über dem aktuellen Kurs."""
+    1. Kandidat: höchstes Hoch im Fenster ± 5 Kerzen (mind. 3 Kerzen alt), das seitdem NIE überschritten wurde.
+    2. Gipfel einer eigenen Erholungswelle: seit dem vorigen (älteren, höheren) relevanten Hoch ist der Kurs
+       vom Tief bis zu diesem Hoch mind. 5 % bzw. 1,5 Tagesschwankungen (ATR) gestiegen – sonst nur ein Zacken.
+    3. Hochs, die weniger als 6 % auseinanderliegen, bilden eine Zone (Doppel-/Mehrfachhoch).
+    """
     h, l, dates = df["High"].to_numpy(float), df["Low"].to_numpy(float), df.index
     n = len(h)
-    nxt = None
-    for i in sorted(pivot_highs(df["High"], 10), reverse=True):
-        if h[i] <= close + 0.25 * atr:
+    if n < 15:
+        return []
+    after = np.append(np.maximum.accumulate(h[::-1])[::-1][1:], -np.inf)   # höchstes Hoch NACH Tag i
+    cand = [i for i in range(n - 3) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close + 0.25 * atr]
+    min_rise = max(0.05, 1.5 * atr / close)
+    kept: list[int] = []
+    for i in cand:                                   # alt → neu (Hochs fallen)
+        start = kept[-1] + 1 if kept else max(0, i - 120)
+        if i - start < 2:
             continue
-        if i + 1 >= n or (h[i + 1:] > h[i]).any():   # später überschritten → kein Widerstand mehr
-            continue
-        drop = float((h[i] - l[i + 1:].min()) / h[i])
-        if drop >= max(0.08, 3 * atr / h[i]):
-            nxt = {"p": float(h[i]), "date": str(dates[i].date()), "drop": round(drop, 4),
-                   "src": f"Swing-High vom {dates[i]:%d.%m.%Y}, danach −{drop * 100:.0f} %"}
-            break
+        low = float(l[start:i].min())
+        if (h[i] - low) / h[i] >= min_rise:
+            kept.append(i)
+    zones: list[dict] = []
+    for i in reversed(kept):                         # neu → alt, nahe Hochs zu Zonen bündeln
+        if zones and h[i] <= zones[-1]["lo"] * 1.06:
+            z = zones[-1]
+            z["hi"], z["idx"] = max(z["hi"], float(h[i])), z["idx"] + [i]
+        else:
+            zones.append({"lo": float(h[i]), "hi": float(h[i]), "idx": [i]})
+    out = []
+    for z in zones[:max_levels]:
+        d = sorted(dates[j] for j in z["idx"])
+        when = f"{d[0]:%d.%m.%Y}" if len(d) == 1 else f"{d[0]:%d.%m.%Y} – {d[-1]:%d.%m.%Y}"
+        out.append({"p": z["lo"], "hi": z["hi"], "date": str(d[-1].date()),
+                    "src": ("Hoch vom " if len(d) == 1 else f"{len(d)} Hochs, ") + when})
+    return out
+
+
+def take_profits(df: pd.DataFrame, close: float, atr: float, sigma: float, mu: float, ath: dict | None) -> dict:
+    """Take-Profit-Zonen: relevante Hochs über dem Kurs (siehe swing_levels) und Allzeithoch,
+    je mit Chance, sie in 3 / 6 Monaten mindestens einmal zu erreichen."""
+    h, dates = df["High"].to_numpy(float), df.index
     top = ath or {"p": float(h.max()), "date": str(dates[int(h.argmax())].date()), "full": False}
     allt = {"p": float(top["p"]), "date": top["date"], "src": "Allzeithoch" if top.get("full", True) else "2-Jahres-Hoch"}
-    if nxt and nxt["p"] >= allt["p"] * 0.995:
-        nxt = None                                   # nächstes Hoch = Allzeithoch → nur einmal zeigen
-    out = {}
-    for key, t in (("next", nxt), ("ath", allt)):
-        if not t:
-            continue
+    levels = swing_levels(df, close, atr)
+    if levels and levels[-1]["hi"] >= allt["p"] * 0.97:      # oberste Zone = Allzeithoch → nicht doppelt zeigen
+        levels[-1]["ath"] = True
+        allt = None
+    def enrich(t):
         b = t["p"] - close
-        out[key] = {**t, "p": round(t["p"], 4), "pct": b / close,
-                    "p3m": round(_p_touch(b, sigma, mu, 63), 2), "p6m": round(_p_touch(b, sigma, mu, 126), 2)}
+        return {**t, "p": round(t["p"], 4), "hi": round(t.get("hi", t["p"]), 4), "pct": b / close,
+                "p3m": round(_p_touch(b, sigma, mu, 63), 2), "p6m": round(_p_touch(b, sigma, mu, 126), 2)}
+    out = {"levels": [enrich(t) for t in levels]}
+    if allt and allt["p"] > close:
+        out["ath"] = enrich(allt)
     return out
 
 
