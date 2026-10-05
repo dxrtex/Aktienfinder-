@@ -7,7 +7,7 @@ Vorgehen (`python -m backend.grade bilanz_part_*.json`):
    mit ≥ 120 Signalen und deutlichem Abstand (t-Wert ≥ 2) besser bzw. schlechter abschneidet → +1 / −1 Punkt.
 3. Stufen nach Punkten (Schwellen aus dem Lernteil: oberes ~30 % = A, unteres ~30 % = C).
 4. Prüfen: Im Prüfteil muss A > B > C beim Ø Ergebnis (R) gelten, sonst wird das Modell nicht übernommen.
-Maßstab: Ø R beider Ausstiegs-Pläne (Ziel 1 und Swing-High), max. 3 Monate.
+Maßstab: Ø R mit deiner Ausstiegsregel (TP 1 der Hoch-Treppe, Stop laut Plan, max. 3 Monate).
 """
 
 from __future__ import annotations
@@ -37,6 +37,8 @@ FEATURES = {
 
 
 def value(e: dict) -> float:
+    if e.get("r3") is not None:                   # Maßstab: deine Ausstiegsregel (TP 1 der Hoch-Treppe)
+        return float(e["r3"])
     vals = [v for v in (e.get("r"), e.get("r2")) if v is not None]
     return float(np.mean(vals)) if vals else 0.0
 

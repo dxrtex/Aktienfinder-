@@ -34,6 +34,13 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
         s = {"t": r["ticker"], "n": (r.get("name") or r["ticker"])[:40], "k": k, "d": d, "score": r.get("score", 0),
              "entry": p["entry"], "stop": p["stop"], "t1": p.get("target1"), "t2": p.get("target2"), "crv": p.get("crv"),
              "region": r.get("region"), "grade": (r.get("grade") or {}).get("g"), "res": "running"}
+        try:                                       # TP 1 = nächstes relevantes Hoch (Hoch-Treppe wie im Depot)
+            from .analysis import swing_levels
+            dfx = data.get(r["ticker"])
+            lv = swing_levels(dfx, float(dfx["Close"].iloc[-1]), (r.get("flags") or {}).get("atr") or 0) if dfx is not None else []
+            s["tp1"] = lv[0]["p"] if lv else None
+        except Exception:
+            s["tp1"] = None
         sig.append(s)
         new.append(s)
     # Ergebnisse nachführen
@@ -48,7 +55,7 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
         if idx < 0:
             continue
         o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))
-        oc = outcome(o, h, l, c, idx, s["entry"], s["stop"], s.get("t1"), s.get("t2"))
+        oc = outcome(o, h, l, c, idx, s["entry"], s["stop"], s.get("t1"), s.get("t2"), s.get("tp1"))
         if oc:
             s.update(oc)
             s["now"] = round(float(c[-1] / s["entry"] - 1), 4)

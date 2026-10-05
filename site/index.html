@@ -426,6 +426,7 @@
   .obar i.t1 { background: var(--up); } .obar i.op { background: var(--surface-3); } .obar i.st { background: var(--red); }
   .oleg { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 10px; font-size: 13px; font-weight: 650; margin-top: 6px; }
   svg.rp { width: 100%; height: auto; max-height: 260px; display: block; } svg.rp text { fill: var(--muted); font-size: 11px; } svg.rp text.lb { font-weight: 700; font-size: 12px; }
+  table.bt th { white-space: normal; line-height: 1.25; vertical-align: bottom; } table.bt tr.best td { background: var(--up-bg); } table.bt td small { display: block; color: var(--muted); font-size: 11.5px; font-weight: 500; }
   table.bt { min-width: 640px; table-layout: auto; } table.bt td:first-child, table.bt th:first-child { width: auto; } table.bt tr.muted td { color: var(--muted); }
   .hcard + .hcard { margin-top: 14px; } .hcol > .hcard + .hcard, .hgrid .hcard + .hcard { margin-top: 0; }
   /* Einstellungen: Telegram & Backup */
@@ -2084,6 +2085,21 @@ function bilanzInsights(S) {
   return `<div class="jins" style="margin-bottom:14px">${best.map(x => `<div class="tip tone-green"><b class="t">Stärker: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade (alle Treffer ${fmtR(all.avg_r)}) · ${fmt(x.s.n, 0)} Signale.</div>`).join("")}
     ${worst.map(x => `<div class="tip tone-orange"><b class="t">Schwächer: ${esc(x.l)}</b>Ziel 1 zuerst in ${pct(x.s.t1, 0)}, Stop in ${pct(x.s.stop, 0)} · Ø ${fmtR(x.s.avg_r)} je Trade · ${fmt(x.s.n, 0)} Signale – hier besonders streng prüfen.</div>`).join("")}</div>`;
 }
+// Ausstiegs-Pläne im Vergleich (gleicher Einstieg und Stop, max. 3 Monate)
+function plansHtml(h, base) {
+  const R = x => x == null ? "–" : `${x >= 0 ? "+" : ""}${fmt(x, 2)} R`;
+  const rows = [
+    ["Ziel 1 (EMA 50 / Fib 0,382)", "sofort an Ziel 1 verkaufen", { hit: h.t1, stop: h.stop, open: h.open, avg_r: h.avg_r, days: h.days_t1 }],
+    h.c && ["Dein TP 1 – nächstes relevantes Hoch", "wie im Depot: erste Stufe der Hoch-Treppe", h.c],
+    h.d && ["Halb / halb", "Hälfte an Ziel 1, Stop auf Einstand, Rest bis Swing-High", { hit: null, stop: h.d.stop, open: null, avg_r: h.d.avg_r, extra: `Rest am Swing-High ${pct(h.d.full, 0)}, auf Einstand raus ${pct(h.d.be, 0)}` }],
+    h.b && ["Swing-High (Ziel 2)", "alles bis zum Hoch vor der Korrektur halten", { hit: h.b.t2, stop: h.b.stop, open: h.b.open, avg_r: h.b.avg_r, days: h.b.days }]].filter(Boolean);
+  const best = Math.max(...rows.map(r => r[2].avg_r ?? -9));
+  return `<div class="hcard">${hHead("Ausstiegs-Pläne im Vergleich")}
+    <div class="table-wrap"><table class="jt bt"><thead><tr><th>Plan</th><th class="num">Ziel erreicht</th><th class="num">Stop</th><th class="num">nach 3 Mon. offen</th><th class="num">Ø Tage bis Ziel</th><th class="num">Ø Ergebnis</th></tr></thead><tbody>
+    ${rows.map(([l, sub, x]) => `<tr${x.avg_r === best ? ' class="best"' : ""}><td><b>${l}</b><small>${sub}${x.extra ? " · " + x.extra : ""}</small></td><td class="num up">${x.hit != null ? pct(x.hit, 0) : "–"}</td><td class="num down">${pct(x.stop, 0)}</td>
+      <td class="num">${x.open != null ? pct(x.open, 0) : "–"}</td><td class="num">${x.days != null ? fmt(x.days, 0) : "–"}</td><td class="num ${x.avg_r >= 0 ? "up" : "down"}"><b>${R(x.avg_r)}</b>${x.avg_r === best ? " ★" : ""}</td></tr>`).join("")}</tbody></table></div>
+    <div class="note">Gleicher Einstieg (Schluss am Signaltag) und Stop, verkauft wird am Tag, an dem Ziel oder Stop erreicht wird – höchstens 3 Monate, dann zum Kurs von dann. R = Gewinn/Verlust geteilt durch das Risiko bis zum Stop (−1 R = Stop). Ohne Gebühren und Hebel.</div></div>`;
+}
 function bilanzHtml() {
   const b = getJson("bilanz.json");
   const back = `<button class="backbtn" data-gosec="today">‹ Heute</button>`;
@@ -2092,9 +2108,9 @@ function bilanzHtml() {
   const bt = b.backtest, S = bt && bt.stats, h = S && S.hit;
   const row = (l, s, cls = "") => s && s.n ? `<tr class="${cls}"><td>${l}</td><td class="num">${fmt(s.n, 0)}</td><td class="num up">${pct(s.t1, 0)}</td><td class="num down">${pct(s.stop, 0)}</td>
     <td class="num ${s.avg_r >= 0 ? "up" : "down"}">${s.avg_r >= 0 ? "+" : ""}${fmt(s.avg_r, 2)} R</td>
-    <td class="num">${s.b ? pct(s.b.t2, 0) : "–"}</td><td class="num ${s.b && s.b.avg_r >= 0 ? "up" : "down"}">${s.b ? (s.b.avg_r >= 0 ? "+" : "") + fmt(s.b.avg_r, 2) + " R" : "–"}</td>
+    <td class="num">${s.c ? pct(s.c.hit, 0) : s.b ? pct(s.b.t2, 0) : "–"}</td><td class="num ${(s.c || s.b) && (s.c || s.b).avg_r >= 0 ? "up" : "down"}">${s.c || s.b ? ((s.c || s.b).avg_r >= 0 ? "+" : "") + fmt((s.c || s.b).avg_r, 2) + " R" : "–"}</td>
     <td class="num ${(s.r63 ?? s.r20) >= 0 ? "up" : "down"}">${sgnPct(s.r63 ?? s.r20, 1)}</td><td class="num">${pct(s.win63 ?? s.win20, 0)}</td></tr>` : "";
-  const head = `<thead><tr><th></th><th class="num">Signale</th><th class="num">Ziel 1 zuerst</th><th class="num">Stop zuerst</th><th class="num">Ø Ergebnis</th><th class="num">Swing-High erreicht</th><th class="num">Ø bis Swing-High</th><th class="num">Ø nach 3 Mon.</th><th class="num">im Plus nach 3 Mon.</th></tr></thead>`;
+  const head = `<thead><tr><th></th><th class="num">Signale</th><th class="num">Ziel 1 zuerst</th><th class="num">Stop zuerst</th><th class="num">Ø Ergebnis</th><th class="num">${S.hit.c ? "TP 1 erreicht" : "Swing-High erreicht"}</th><th class="num">${S.hit.c ? "Ø mit TP 1" : "Ø bis Swing-High"}</th><th class="num">Ø nach 3 Mon.</th><th class="num">im Plus nach 3 Mon.</th></tr></thead>`;
   const btHtml = h && h.n ? `
     <div class="hcard bhero"><div class="bh-l"><span>Backtest · ${bt.stocks} zufällige Aktien · ${dateDE(bt.period[0])} – ${dateDE(bt.period[1])}</span>
       <b>${pct(h.t1, 0)}</b><em>der ${fmt(h.n, 0)} Treffer-Signale erreichten <b>Ziel 1 vor dem Stop</b> (Haltedauer max. 3 Monate).</em></div>
@@ -2102,9 +2118,10 @@ function bilanzHtml() {
         <div class="mt"><span>Ø Tage bis Ziel 1</span><b>${fmt(h.days_t1, 0)}</b><em>Handelstage</em></div>
         <div class="mt"><span>Halten bis Swing-High</span><b class="${h.b && h.b.avg_r >= 0 ? "up" : "down"}">${h.b ? (h.b.avg_r >= 0 ? "+" : "") + fmt(h.b.avg_r, 2) + " R" : "–"}</b><em>${h.b ? `erreicht ${pct(h.b.t2, 0)}, Ø ${fmt(h.b.days, 0)} T.` : ""}</em></div></div>
       ${outcomeBar(h)}</div>
+    ${plansHtml(h, S.base)}
     ${bilanzInsights(S)}
     <div class="hcard">${hHead("Kursverlauf nach dem Signal (Ø)")}${retPathSvg([{ l: "Treffer", s: h, c: "var(--up)" }, { l: "Fast", s: S.fast, c: "var(--gold)" }, { l: "alle Tage", s: S.base, c: "var(--muted)" }])}
-      <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Der Abstand zeigt den Vorteil des Setups.</div></div>
+      <div class="note" style="margin:4px 0 0">„alle Tage“ = Vergleich: zufällige Tage derselben Aktien ohne Signal. Liegen die Linien nah beieinander, wählt das Setup nicht die stärkeren Aktien aus – sein Vorteil liegt dann im Einstiegs-Timing mit klar definiertem Stop (siehe „Ziel 1 zuerst“ und „Halten bis Swing-High“).</div></div>
     <div class="hcard">${hHead("Nach Score, CRV und Zone")}<div class="table-wrap"><table class="jt bt">${head}<tbody>
       ${row("<b>Alle Treffer</b>", h)}${Object.entries(S.score).map(([k, s]) => row("Score " + k, s)).join("")}
       ${Object.entries(S.crv).map(([k, s]) => row("CRV " + k, s)).join("")}${Object.entries(S.zone).map(([k, s]) => row(k + "-Zone", s)).join("")}

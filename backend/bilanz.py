@@ -38,9 +38,12 @@ def _race(h, l, i: int, n: int, stop: float, target: float | None):
     return None, None, None
 
 
-def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2: float | None) -> dict | None:
-    """Verlauf ab dem Tag nach dem Signal (Index i), zwei Ausstiegs-Pläne mit gleichem Stop:
-    A) Ausstieg an Ziel 1 (EMA 50 / Fib 0,382), B) Halten bis Ziel 2 (Swing-High) – jeweils max. 3 Monate."""
+def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2: float | None,
+            tp1: float | None = None) -> dict | None:
+    """Verlauf ab dem Tag nach dem Signal (Index i). Ausstiegs-Pläne mit gleichem Stop, jeweils max. 3 Monate –
+    verkauft wird an dem Tag, an dem Ziel bzw. Stop erreicht wird; nur ohne beides zählt der Kurs nach 3 Monaten:
+    A) Ziel 1 (EMA 50 / Fib 0,382)   B) Ziel 2 (Swing-High)   C) TP 1 der Hoch-Treppe (nächstes relevantes Hoch, wie im Depot)
+    D) Hälfte an Ziel 1, Stop auf Einstand, Rest bis Swing-High."""
     n = len(c)
     if i + 1 >= n or not stop or entry <= stop:
         return None
@@ -58,11 +61,34 @@ def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2:
     res2, day2, r2 = plan(t2) if t2 else (None, None, None)
     if res2 == "t1":
         res2 = "t2"
+    res3, day3, r3 = plan(tp1) if tp1 and tp1 > entry else (None, None, None)
+    # D: halb/halb
+    rd, resd = None, None
+    if t1 and t2 and t2 > t1:
+        if res == "stop":
+            rd, resd = -1.0, "stop"
+        elif res == "t1":
+            j0 = i + day
+            r_half = (t1 - entry) / risk
+            rest, rest_res = None, None
+            for j in range(j0 + 1, min(n, i + 1 + HOLD)):
+                if l[j] <= entry:
+                    rest, rest_res = 0.0, "be"
+                    break
+                if h[j] >= t2:
+                    rest, rest_res = (t2 - entry) / risk, "t2"
+                    break
+            if rest is None:
+                rest, rest_res = (c[last] - entry) / risk, ("open" if complete else "running")
+            rd, resd = round(float(0.5 * r_half + 0.5 * rest), 3), rest_res
+        else:
+            rd, resd = r, res
     ret = lambda k: float(c[i + k] / entry - 1) if i + k < n else None
     w = slice(i + 1, last + 1)
     out = {"res": res, "days": day, "r": r, "res2": res2, "days2": day2, "r2": r2,
+           "res3": res3, "days3": day3, "r3": r3, "resd": resd, "rd": rd,
            "mfe": float(h[w].max() / entry - 1), "mae": float(l[w].min() / entry - 1),
-           "final": res != "running" and (res2 in (None, "t2", "stop", "open"))}
+           "final": res != "running" and res2 != "running" and res3 != "running" and resd != "running"}
     for k in RET_DAYS:
         out[f"r{k}"] = ret(k)
     return out
@@ -70,6 +96,7 @@ def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2:
 
 def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: int = 15) -> list[dict]:
     """Alle Signale (und Vergleichstage) einer Aktie über die Historie."""
+    from .analysis import swing_levels
     from .scanner import evaluate
 
     df = df.dropna(subset=["Open", "High", "Low", "Close"])
@@ -98,12 +125,20 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                 continue
             atr = r.flags.get("atr") or 0
             p = {"entry": r.close, "stop": r.close - 2 * atr, "target1": r.close + 2 * atr, "target2": None, "crv": 1.0}
-        oc = outcome(o, h, l, c, i, p["entry"], p["stop"], p.get("target1"), p.get("target2"))
+        tp1 = None
+        if kind:
+            try:
+                lv = swing_levels(df.iloc[: i + 1], r.close, r.flags.get("atr") or 0)
+                tp1 = lv[0]["p"] if lv else None
+            except Exception:
+                tp1 = None
+        oc = outcome(o, h, l, c, i, p["entry"], p["stop"], p.get("target1"), p.get("target2"), tp1)
         if not oc:
             continue
         out.append({"t": ticker, "d": str(df.index[i].date()), "k": kind or "base", "score": r.score,
                     "crv": round(p.get("crv") or 0, 2), "stop_pct": round(1 - p["stop"] / p["entry"], 4),
                     "t1_pct": round(p["target1"] / p["entry"] - 1, 4) if p.get("target1") else None,
+                    "tp1_pct": round(tp1 / p["entry"] - 1, 4) if tp1 else None,
                     "earn": bool(r.flags.get("earnings_risk")), "zone": "Fib" if (r.zone.get("fib") or {}).get("ok") else "Support",
                     "div": (r.flags.get("divergence") or {}).get("kind"), **oc})
     return out
@@ -126,6 +161,19 @@ def _agg(ev: list[dict]) -> dict:
         out[f"r{k}"] = mean(xs)
         if k in (20, 63) and xs:
             out[f"win{k}"] = round(float(np.mean([x > 0 for x in xs])), 3)
+    e3 = [e for e in ev if e.get("res3") not in (None, "running")]
+    if e3:
+        out["c"] = {"n": len(e3), "hit": round(sum(e["res3"] == "t1" for e in e3) / len(e3), 3),
+                    "stop": round(sum(e["res3"] == "stop" for e in e3) / len(e3), 3),
+                    "open": round(sum(e["res3"] == "open" for e in e3) / len(e3), 3),
+                    "avg_r": mean([e["r3"] for e in e3]), "days": mean([e["days3"] for e in e3 if e["res3"] == "t1"]),
+                    "dist": mean([e["tp1_pct"] for e in e3 if e.get("tp1_pct") is not None])}
+    ed = [e for e in ev if e.get("resd") not in (None, "running")]
+    if ed:
+        out["d"] = {"n": len(ed), "avg_r": mean([e["rd"] for e in ed]),
+                    "full": round(sum(e["resd"] == "t2" for e in ed) / len(ed), 3),
+                    "be": round(sum(e["resd"] == "be" for e in ed) / len(ed), 3),
+                    "stop": round(sum(e["resd"] == "stop" for e in ed) / len(ed), 3)}
     e2 = [e for e in ev if e.get("res2") not in (None, "running")]
     if e2:
         out["b"] = {"n": len(e2), "t2": round(sum(e["res2"] == "t2" for e in e2) / len(e2), 3),
