@@ -9,11 +9,11 @@ env:
 jobs:
   shard:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,7 +22,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m backend.universe
-      - run: python -m backend.bilanz --shard ${{ matrix.shard }} --shards 8 --n 1600
+      - run: python -m backend.bilanz --shard ${{ matrix.shard }} --shards 12 --n 1600
       - uses: actions/upload-artifact@v4
         with:
           name: bilanz-${{ matrix.shard }}

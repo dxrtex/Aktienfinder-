@@ -2042,15 +2042,16 @@ function todayHtml() {
 // ---------- Kairo-Bilanz ----------
 const RES_TXT = { t1: ["Ziel 1 ✓", "up"], stop: ["Stop", "down"], open: ["offen (30 T.)", "muted"], running: ["läuft", "muted"] };
 function retPathSvg(groups) {
-  const W = 560, H = 170, pl = 40, pr = 118, pt = 12, pb = 24, xs = [0, 5, 10, 20];
-  const all = groups.flatMap(g => [0, g.s.r5, g.s.r10, g.s.r20]).filter(v => v != null);
+  const xs = [0, 5, 10, 20, 40, 63].filter(d => d === 0 || groups.some(g => g.s["r" + d] != null)), D = xs[xs.length - 1];
+  const W = 560, H = 170, pl = 40, pr = 118, pt = 12, pb = 24;
+  const all = groups.flatMap(g => xs.map(d => d ? g.s["r" + d] : 0)).filter(v => v != null);
   const lo = Math.min(0, ...all), hi = Math.max(0, ...all), sp = hi - lo || 1;
-  const X = d => pl + (W - pl - pr) * d / 20, Y = v => pt + (H - pt - pb) * (hi - v) / sp;
+  const X = d => pl + (W - pl - pr) * d / D, Y = v => pt + (H - pt - pb) * (hi - v) / sp;
   return `<svg class="rp" viewBox="0 0 ${W} ${H}"><line x1="${pl}" x2="${W - pr}" y1="${Y(0)}" y2="${Y(0)}" stroke="var(--line)" stroke-dasharray="4 4"/>
-    ${xs.map(d => `<text x="${X(d)}" y="${H - 6}" text-anchor="middle">${d ? d + " T." : "Signal"}</text>`).join("")}
-    ${groups.map(g => { const v = [0, g.s.r5, g.s.r10, g.s.r20]; const pts = xs.map((d, i) => v[i] == null ? null : `${X(d)},${Y(v[i])}`).filter(Boolean).join(" ");
+    ${xs.map(d => `<text x="${X(d)}" y="${H - 6}" text-anchor="middle">${d === 63 ? "3 Mon." : d ? d + " T." : "Signal"}</text>`).join("")}
+    ${groups.map(g => { const v = xs.map(d => d ? g.s["r" + d] : 0), vl = v[v.length - 1]; const pts = xs.map((d, i) => v[i] == null ? null : `${X(d)},${Y(v[i])}`).filter(Boolean).join(" ");
       return `<polyline points="${pts}" fill="none" stroke="${g.c}" stroke-width="2.4" stroke-linejoin="round"/>${xs.map((d, i) => v[i] == null ? "" : `<circle cx="${X(d)}" cy="${Y(v[i])}" r="3.2" fill="${g.c}"/>`).join("")}
-        <text x="${W - pr + 6}" y="${Y(g.s.r20) + 4}" fill="${g.c}" class="lb">${g.l} ${sgnPct(g.s.r20, 1)}</text>`; }).join("")}
+        <text x="${W - pr + 6}" y="${Y(vl) + 4}" fill="${g.c}" class="lb">${g.l} ${sgnPct(vl, 1)}</text>`; }).join("")}
     <text x="4" y="${Y(hi) + 4}">${sgnPct(hi, 0)}</text><text x="4" y="${Y(lo) + 4}">${sgnPct(lo, 0)}</text></svg>`;
 }
 function outcomeBar(s) {
@@ -2076,14 +2077,16 @@ function bilanzHtml() {
   if (!b) return back + `<div class="empty">Die Bilanz erscheint nach dem nächsten Scan.</div>`;
   const bt = b.backtest, S = bt && bt.stats, h = S && S.hit;
   const row = (l, s, cls = "") => s && s.n ? `<tr class="${cls}"><td>${l}</td><td class="num">${fmt(s.n, 0)}</td><td class="num up">${pct(s.t1, 0)}</td><td class="num down">${pct(s.stop, 0)}</td>
-    <td class="num ${s.avg_r >= 0 ? "up" : "down"}">${s.avg_r >= 0 ? "+" : ""}${fmt(s.avg_r, 2)} R</td><td class="num ${s.r20 >= 0 ? "up" : "down"}">${sgnPct(s.r20, 1)}</td><td class="num">${pct(s.win20, 0)}</td></tr>` : "";
-  const head = `<thead><tr><th></th><th class="num">Signale</th><th class="num">Ziel 1 zuerst</th><th class="num">Stop zuerst</th><th class="num">Ø Ergebnis</th><th class="num">Ø 20 T.</th><th class="num">im Plus nach 20 T.</th></tr></thead>`;
+    <td class="num ${s.avg_r >= 0 ? "up" : "down"}">${s.avg_r >= 0 ? "+" : ""}${fmt(s.avg_r, 2)} R</td>
+    <td class="num">${s.b ? pct(s.b.t2, 0) : "–"}</td><td class="num ${s.b && s.b.avg_r >= 0 ? "up" : "down"}">${s.b ? (s.b.avg_r >= 0 ? "+" : "") + fmt(s.b.avg_r, 2) + " R" : "–"}</td>
+    <td class="num ${(s.r63 ?? s.r20) >= 0 ? "up" : "down"}">${sgnPct(s.r63 ?? s.r20, 1)}</td><td class="num">${pct(s.win63 ?? s.win20, 0)}</td></tr>` : "";
+  const head = `<thead><tr><th></th><th class="num">Signale</th><th class="num">Ziel 1 zuerst</th><th class="num">Stop zuerst</th><th class="num">Ø Ergebnis</th><th class="num">Swing-High erreicht</th><th class="num">Ø bis Swing-High</th><th class="num">Ø nach 3 Mon.</th><th class="num">im Plus nach 3 Mon.</th></tr></thead>`;
   const btHtml = h && h.n ? `
     <div class="hcard bhero"><div class="bh-l"><span>Backtest · ${bt.stocks} zufällige Aktien · ${dateDE(bt.period[0])} – ${dateDE(bt.period[1])}</span>
-      <b>${pct(h.t1, 0)}</b><em>der ${fmt(h.n, 0)} Treffer-Signale erreichten <b>Ziel 1 vor dem Stop</b> (innerhalb von 30 Handelstagen).</em></div>
+      <b>${pct(h.t1, 0)}</b><em>der ${fmt(h.n, 0)} Treffer-Signale erreichten <b>Ziel 1 vor dem Stop</b> (Haltedauer max. 3 Monate).</em></div>
       <div class="bh-r"><div class="mt"><span>Ø Ergebnis je Trade</span><b class="${h.avg_r >= 0 ? "up" : "down"}">${h.avg_r >= 0 ? "+" : ""}${fmt(h.avg_r, 2)} R</b><em>R = Risiko bis zum Stop</em></div>
         <div class="mt"><span>Ø Tage bis Ziel 1</span><b>${fmt(h.days_t1, 0)}</b><em>Handelstage</em></div>
-        <div class="mt"><span>Ø nach 20 Tagen</span><b class="${h.r20 >= 0 ? "up" : "down"}">${sgnPct(h.r20, 1)}</b><em>alle Tage ${sgnPct(S.base.r20, 1)}</em></div></div>
+        <div class="mt"><span>Halten bis Swing-High</span><b class="${h.b && h.b.avg_r >= 0 ? "up" : "down"}">${h.b ? (h.b.avg_r >= 0 ? "+" : "") + fmt(h.b.avg_r, 2) + " R" : "–"}</b><em>${h.b ? `erreicht ${pct(h.b.t2, 0)}, Ø ${fmt(h.b.days, 0)} T.` : ""}</em></div></div>
       ${outcomeBar(h)}</div>
     ${bilanzInsights(S)}
     <div class="hcard">${hHead("Kursverlauf nach dem Signal (Ø)")}${retPathSvg([{ l: "Treffer", s: h, c: "var(--up)" }, { l: "Fast", s: S.fast, c: "var(--gold)" }, { l: "alle Tage", s: S.base, c: "var(--muted)" }])}
@@ -2093,7 +2096,7 @@ function bilanzHtml() {
       ${Object.entries(S.crv).map(([k, s]) => row("CRV " + k, s)).join("")}${Object.entries(S.zone).map(([k, s]) => row(k + "-Zone", s)).join("")}
       ${Object.entries(S.div).map(([k, s]) => row("Divergenz " + k, s)).join("")}
       ${row("Fast-Treffer", S.fast, "muted")}</tbody></table></div>
-      <div class="note">Ziel 1 = EMA 50 bzw. Fib 0,382, Stop laut Trade-Plan. Liegen Stop und Ziel am selben Tag, zählt der Stop (vorsichtig). Ergebnis ohne Gebühren und Hebel; mit Turbo vervielfacht sich der Ausschlag.</div></div>` : "";
+      <div class="note">Zwei Ausstiegs-Pläne mit demselben Stop, jeweils max. 3 Monate (63 Handelstage) – passend zum Swing-Trading: „Ziel 1“ = Verkauf an EMA 50 bzw. Fib 0,382, „Swing-High“ = halten bis zum letzten Hoch (Ziel 2). Was nach 3 Monaten keins von beiden erreicht hat, zählt mit dem Kurs nach 3 Monaten. Stop laut Trade-Plan. Liegen Stop und Ziel am selben Tag, zählt der Stop (vorsichtig). Ergebnis ohne Gebühren und Hebel; mit Turbo vervielfacht sich der Ausschlag.</div></div>` : "";
   const L = b.live, ls = L && L.stats && L.stats.hit;
   const sig = (b.signals || []).slice(0, 40);
   const liveHtml = `<div class="hcard">${hHead(`Live-Bilanz <small>seit ${dateDE(L && L.since)}</small>`)}

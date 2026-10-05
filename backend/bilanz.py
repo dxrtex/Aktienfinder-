@@ -23,38 +23,49 @@ import pandas as pd
 
 from .config import CONFIG, ROOT
 
-HOLD = 30           # max. Handelstage für Ziel/Stop
+HOLD = 63           # max. Haltedauer: 3 Monate (Swing-Trading)
 GAP = 5             # neue Signal-Phase erst nach ≥ 5 Tagen ohne Signal
+RET_DAYS = (5, 10, 20, 40, 63)
+
+
+def _race(h, l, i: int, n: int, stop: float, target: float | None):
+    """Was kommt zuerst innerhalb von HOLD Tagen: Ziel (Hoch ≥ Ziel) oder Stop (Tief ≤ Stop)? Gleicher Tag = Stop."""
+    for j in range(i + 1, min(n, i + 1 + HOLD)):
+        if l[j] <= stop:
+            return "stop", j - i, stop
+        if target and h[j] >= target:
+            return "t", j - i, target
+    return None, None, None
 
 
 def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2: float | None) -> dict | None:
-    """Verlauf ab dem Tag nach dem Signal (Index i). Arrays: Open/High/Low/Close."""
+    """Verlauf ab dem Tag nach dem Signal (Index i), zwei Ausstiegs-Pläne mit gleichem Stop:
+    A) Ausstieg an Ziel 1 (EMA 50 / Fib 0,382), B) Halten bis Ziel 2 (Swing-High) – jeweils max. 3 Monate."""
     n = len(c)
     if i + 1 >= n or not stop or entry <= stop:
         return None
     risk = entry - stop
-    res, day, end_px = None, None, None
-    t2_hit = False
-    for j in range(i + 1, min(n, i + 1 + HOLD)):
-        if l[j] <= stop:
-            res, day, end_px = "stop", j - i, stop
-            break
-        if t1 and h[j] >= t1:
-            res, day, end_px = "t1", j - i, t1
-            t2_hit = bool(t2 and h[i + 1:j + 1].max() >= t2)
-            break
-    done = i + HOLD < n or res is not None
-    if res is None:
-        last = min(n - 1, i + HOLD)
-        end_px = c[last]
-        res = "open" if done else "running"
+    complete = i + HOLD < n
+    last = min(n - 1, i + HOLD)
+
+    def plan(target):
+        res, day, px = _race(h, l, i, n, stop, target)
+        if res is None:
+            res, px = ("open" if complete else "running"), c[last]
+        return ("t1" if res == "t" else res), day, round(float((px - entry) / risk), 3)
+
+    res, day, r = plan(t1)
+    res2, day2, r2 = plan(t2) if t2 else (None, None, None)
+    if res2 == "t1":
+        res2 = "t2"
     ret = lambda k: float(c[i + k] / entry - 1) if i + k < n else None
-    w = slice(i + 1, min(n, i + 21))
-    return {"res": res, "days": day, "r": round(float((end_px - entry) / risk), 3),
-            "r5": ret(5), "r10": ret(10), "r20": ret(20),
-            "mfe": float(h[w].max() / entry - 1) if i + 1 < n else None,
-            "mae": float(l[w].min() / entry - 1) if i + 1 < n else None,
-            "t2": t2_hit, "final": done}
+    w = slice(i + 1, last + 1)
+    out = {"res": res, "days": day, "r": r, "res2": res2, "days2": day2, "r2": r2,
+           "mfe": float(h[w].max() / entry - 1), "mae": float(l[w].min() / entry - 1),
+           "final": res != "running" and (res2 in (None, "t2", "stop", "open"))}
+    for k in RET_DAYS:
+        out[f"r{k}"] = ret(k)
+    return out
 
 
 def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: int = 15) -> list[dict]:
@@ -107,12 +118,21 @@ def _agg(ev: list[dict]) -> dict:
     mean = lambda xs: round(float(np.mean(xs)), 4) if xs else None
     t1 = sum(e["res"] == "t1" for e in ev)
     st = sum(e["res"] == "stop" for e in ev)
-    r20 = f("r20")
-    return {"n": n, "t1": round(t1 / n, 3), "stop": round(st / n, 3), "open": round((n - t1 - st) / n, 3),
-            "t2": round(sum(e.get("t2", False) for e in ev) / n, 3),
-            "avg_r": mean(f("r")), "r5": mean(f("r5")), "r10": mean(f("r10")), "r20": mean(r20),
-            "med20": round(float(np.median(r20)), 4) if r20 else None, "win20": round(float(np.mean([x > 0 for x in r20])), 3) if r20 else None,
-            "mfe": mean(f("mfe")), "mae": mean(f("mae")), "days_t1": mean([e["days"] for e in ev if e["res"] == "t1"])}
+    out = {"n": n, "t1": round(t1 / n, 3), "stop": round(st / n, 3), "open": round((n - t1 - st) / n, 3),
+           "avg_r": mean(f("r")), "mfe": mean(f("mfe")), "mae": mean(f("mae")),
+           "days_t1": mean([e["days"] for e in ev if e["res"] == "t1"])}
+    for k in RET_DAYS:
+        xs = f(f"r{k}")
+        out[f"r{k}"] = mean(xs)
+        if k in (20, 63) and xs:
+            out[f"win{k}"] = round(float(np.mean([x > 0 for x in xs])), 3)
+    e2 = [e for e in ev if e.get("res2") not in (None, "running")]
+    if e2:
+        out["b"] = {"n": len(e2), "t2": round(sum(e["res2"] == "t2" for e in e2) / len(e2), 3),
+                    "stop": round(sum(e["res2"] == "stop" for e in e2) / len(e2), 3),
+                    "open": round(sum(e["res2"] == "open" for e in e2) / len(e2), 3),
+                    "avg_r": mean([e["r2"] for e in e2]), "days": mean([e["days2"] for e in e2 if e["res2"] == "t2"])}
+    return out
 
 
 def stats(ev: list[dict]) -> dict:
@@ -152,7 +172,7 @@ def main(argv=None) -> int:
     tickers = list(load_universe()["ticker"])
     random.Random(11).shuffle(tickers)
     mine = tickers[: a.n][a.shard::a.shards]
-    data = YFinanceProvider().history(mine, CONFIG.history.period)
+    data = YFinanceProvider().history(mine, "3y")       # 3 Jahre: genug vollständige 3-Monats-Fenster
     print(f"Shard {a.shard}: {len(data)} von {len(mine)} Aktien geladen")
     ev, t0 = [], time.time()
     for k, (t, df) in enumerate(data.items()):
