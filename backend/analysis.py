@@ -120,9 +120,9 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
     """Relevante Hochs über dem Kurs („Treppe fallender Hochs“), nächstes zuerst.
 
     Gerechnet auf Schlusskursen (wie im Linienchart):
-    1. Kandidat: höchster Schluss im Fenster ± 5 Tage (mind. 3 Tage alt), der seitdem NIE überschritten wurde.
-    2. Gipfel einer eigenen Erholungswelle: seit dem vorigen (älteren, höheren) relevanten Hoch ist der Kurs
-       vom Tief bis zu diesem Hoch mind. 5 % bzw. 1 Tagesschwankung (ATR) gestiegen – sonst nur ein Zacken.
+    1. Kandidat: höchster Schluss im Fenster ± 5 Tage (mind. 5 Tage alt), der seitdem NIE überschritten wurde.
+    2. Gipfel einer eigenen Erholungswelle: mind. 15 Handelstage nach dem vorigen (älteren, höheren) relevanten
+       Hoch, und der Kurs ist vom Tief dazwischen mind. 4 % bzw. 1 Tagesschwankung (ATR) gestiegen.
     3. Hochs, die weniger als 4 % auseinanderliegen, bilden eine Zone (Doppel-/Mehrfachhoch).
     """
     # Schlusskurse wie im Linienchart – einzelne Tagesspitzen (Dochte) zählen nicht
@@ -132,10 +132,12 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
     if n < 15:
         return []
     after = np.append(np.maximum.accumulate(h[::-1])[::-1][1:], -np.inf)   # höchstes Hoch NACH Tag i
-    cand = [i for i in range(n - 3) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close + 0.25 * atr]
-    min_rise = max(0.05, 1.0 * atr / close)
+    cand = [i for i in range(n - 5) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close * 1.005]
+    min_rise = max(0.04, 1.0 * atr / close)
     kept: list[int] = []
     for i in cand:                                   # alt → neu (Hochs fallen)
+        if kept and i - kept[-1] < 15:               # noch dieselbe Bewegung wie das vorige Hoch
+            continue
         start = kept[-1] + 1 if kept else max(0, i - 120)
         if i - start < 2:
             continue
@@ -165,7 +167,7 @@ def take_profits(df: pd.DataFrame, close: float, atr: float, sigma: float, mu: f
     top = ath or {"p": float(h.max()), "date": str(dates[int(h.argmax())].date()), "full": False}
     allt = {"p": float(top["p"]), "date": top["date"], "src": "Allzeithoch" if top.get("full", True) else "2-Jahres-Hoch"}
     levels = swing_levels(df, close, atr)
-    if levels and levels[-1]["hi"] >= allt["p"] * 0.97:      # oberste Zone = Allzeithoch → nicht doppelt zeigen
+    if levels and levels[-1]["hi"] >= allt["p"] * 0.95:      # oberste Zone = Allzeithoch → nicht doppelt zeigen
         levels[-1]["ath"] = True
         allt = None
     def enrich(t):

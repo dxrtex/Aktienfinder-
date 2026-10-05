@@ -15,7 +15,7 @@ for t in tickers:
         print(t, "keine Daten"); continue
     res = evaluate(df, {"currency": "EUR", "market_cap_usd": 5e9}, ticker=t)
     f = full.get(t)
-    ath = {"p": float(f["High"].max()), "date": str(f["High"].idxmax().date()), "full": True} if f is not None else None
+    ath = {"p": float(f["Close"].max()), "date": str(f["Close"].idxmax().date()), "full": True} if f is not None else None
     a = analyze(df, res, ath)
     print(f"\n{t}: Kurs {a['c']:.2f}, ATR {a['atr']:.2f}")
     for z in a["tps"].get("levels", []):

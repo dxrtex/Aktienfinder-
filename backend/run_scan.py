@@ -255,7 +255,7 @@ def main(argv=None) -> int:
     if not args.end:
         for t, df in yf.history(list(watch), "max").items():
             if df is not None and len(df):
-                hi = df["High"]
+                hi = df["Close"]
                 aths[t] = {"p": float(hi.max()), "date": str(hi.idxmax().date()), "full": True}
         print(f"Allzeithochs: {len(aths)} von {len(watch)} Watchlist-Aktien")
     ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)
