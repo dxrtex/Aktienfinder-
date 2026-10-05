@@ -43,6 +43,15 @@ Leiste unten: **Scanner** (eine Tabelle; oben frei kombinierbar ★ Merkliste / 
   Bezugsverhältnis aus dem Kaufkurs und rechnet Stop/Ziele in Zertifikatskurse um. Eine direkte Verbindung zu Scalable
   Capital gibt es nicht (keine offizielle Schnittstelle).
 
+## Profi-Funktionen
+- **Heute** (Startseite): Markt-Lage (Risk-on/off, S&P 500, Nasdaq, DAX, VIX), was sich seit dem letzten Scan geändert hat (neue/weggefallene Treffer, Bewegung deiner Aktien), deine Aktien mit Status und Prognose, Kairo-Bilanz, Depot-Kurzblick mit knappstem K.-o.-Abstand, Termine der nächsten Tage, beste Treffer, Journal-Kurzblick. Einstellungen über das Zahnrad oben rechts.
+- **Kairo-Bilanz:** Backtest (`backend/bilanz.py`, Workflow „Kairo-Bilanz“, 8 parallele Teile, 1.600 zufällige Aktien, 2 Jahre): für jedes Treffer-Signal, ob zuerst Ziel 1 oder der Stop erreicht wurde, Ergebnis in R, Renditen nach 5/10/20 Tagen – nach Score, CRV, Zone und Divergenz, im Vergleich zu Fast-Treffern und zufälligen Tagen. Dazu die **Live-Bilanz**: jedes neue Signal wird am Signaltag gespeichert (Branch `kairo-data`) und täglich nachverfolgt.
+- **Telegram-Abendbericht** (`backend/telegram.py`): Markt, neue Treffer, Veränderungen bei Merkliste/Watchlist/Depot, Knock-out-Warnungen (< 8 %), Termine. Einrichtung: Secret `TELEGRAM_TOKEN`, dem Bot `/start` schreiben; Merkliste und Depot über Einstellungen → „an den Bot senden“ (`/sync …`, nur Ticker und K.-o.-Schwellen).
+- **Fundament & Wochentrend** in der Übersicht: KGV im Vergleich zum Branchen-Median, Umsatzwachstum, Marge, Verschuldung (Ampel) und Trend im Wochenchart (EMA 10/30, Wochen-RSI).
+- **Journal-Notizen:** Trade antippen → Kairo-Bewertung des Einstiegs (Lage, RSI, MACD, MBI, EMA am Kauftag), Tags (nach Plan, FOMO, zu früh …) und Notiz; Auswertung „Nach Tags“.
+- **Backup:** alle lokalen Daten als Datei sichern und auf einem anderen Gerät einlesen.
+- **Komfort:** Filter-Vorlagen als Schnellwahl, Spalten ein-/ausblenden, auf dem iPad quer die Übersicht als Seitenpanel, Offline-Modus (Service Worker).
+
 ## Volatilität
 Zu jeder Aktie wird die **historische Volatilität** berechnet: Standardabweichung der Tagesrenditen der letzten 30 Tage,
 hochgerechnet aufs Jahr (× √252), dazu die Ø Tagesspanne (ATR 14 in % vom Kurs). Kein Pflichtkriterium – nur Filter
