@@ -2,7 +2,8 @@ name: Täglicher Scan
 
 on:
   schedule:
-    - cron: "30 20,21 * * 1-5"   # 22:30 Uhr Berlin (Sommer- und Winterzeit, siehe Prüfung unten)
+    - cron: "30 20 * * 1-5"      # 22:30 Uhr Berlin im Sommer (MESZ)
+    - cron: "30 21 * * 1-5"      # 22:30 Uhr Berlin im Winter (MEZ)
   workflow_dispatch:              # „Scan jetzt starten“
 
 permissions:
@@ -12,7 +13,7 @@ permissions:
 
 concurrency:
   group: scan-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false      # nichts abbrechen – ein später Lauf wartet, statt einen laufenden Scan zu beenden
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -22,11 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
-      - name: Nur um 22 Uhr Berlin (Cron läuft wegen Sommer-/Winterzeit zweimal)
+      - name: Nur der passende Cron (Sommer- oder Winterzeit) – robust gegen verspätete Starts
         id: time
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ "$(TZ=Europe/Berlin date +%H)" != "22" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"; else echo "skip=false" >> "$GITHUB_OUTPUT"; fi
+          skip=false
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            tz=$(TZ=Europe/Berlin date +%Z)
+            if [ "${{ github.event.schedule }}" = "30 20 * * 1-5" ] && [ "$tz" != "CEST" ]; then skip=true; fi
+            if [ "${{ github.event.schedule }}" = "30 21 * * 1-5" ] && [ "$tz" = "CEST" ]; then skip=true; fi
+          fi
+          echo "skip=$skip" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         if: steps.time.outputs.skip == 'false'
       - uses: actions/setup-python@v5
