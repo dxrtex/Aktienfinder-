@@ -2227,6 +2227,7 @@ function render() {
   const onlyHits = k.size === 1 && k.has("hit");
   const lead = ["ticker", "name", "grade", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
   const hid = new Set(state.hiddenCols || []);
+  if (!(data.stats && data.stats.grade)) hid.add("grade");    // Stufen nur, wenn ein geprüftes Modell aktiv ist
   const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "grade", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
@@ -2235,6 +2236,7 @@ function render() {
 const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
+  const gg = document.querySelector('.opts[data-key="grade"]'); if (gg) gg.closest(".group").hidden = !(data.stats && data.stats.grade);
   $("presetList").innerHTML = (state.presets || []).map((p, i) => `<button class="opt" data-delpreset="${i}">${esc(p.name)} ✕</button>`).join("") || `<span class="note" style="margin:0">Noch keine Vorlagen.</span>`;
   const hid = new Set(state.hiddenCols || []);
   $("colOpts").innerHTML = COLS.filter(c => c.k !== "ticker").map(c => `<button class="opt${hid.has(c.k) ? "" : " on"}" data-col="${c.k}">${esc(c.l)}</button>`).join("");
