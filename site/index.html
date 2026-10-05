@@ -880,8 +880,8 @@ function groupHtml(g) {
       <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
-    <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zeit: ＋/− oder zwei Finger, wischen · Kurs: ↕＋/↕− strecken, ▲▼ verschieben</span>
-        <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="in" aria-label="Kursachse strecken">↕＋</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="out" aria-label="Kursachse stauchen">↕−</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="up" aria-label="Kursachse nach oben">▲</button><button class="mini-btn" data-lwc-y="${esc(g.t)}" data-y="down" aria-label="Kursachse nach unten">▼</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
+    <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zwei Finger: waagerecht auseinander = Zeit, senkrecht auseinander = Kurs, gemeinsam hoch/runter = Kurs verschieben · wischen = Zeit verschieben</span>
+        <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
       <div class="lwc${depTall.has(g.t) ? " tall" : ""}" data-lwc="${esc(g.t)}"></div>
       <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;height:2px"></i>${g.ms.filter(m => m.ent).length > 1 ? "Ø Kauf · ▲ Käufe (Nr. wie Tabelle)" : "Kauf"}</span><span><i style="background:#30d158;height:2px"></i>Take Profit</span>${g.ko != null ? `<span><i style="background:#ff453a;height:2px"></i>Knock-out</span>` : ""}</div>`
       : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
@@ -919,6 +919,43 @@ function depRange(c, g) {
   return { from: Math.max(0, Math.min(n - 70, (ents.length ? Math.min(...ents) : n - 90) - 25)), to: n + 3 };
 }
 const depRanges = new Map();   // gewählter Ausschnitt je Chart (bleibt beim Neuzeichnen erhalten)
+// Kursachse (Y) per Finger: zwei Finger senkrecht auseinander/zusammen = strecken/stauchen,
+// ein Finger auf der Preisskala rechts hoch/runter ziehen = wie bei TradingView. Waagerecht macht die Bibliothek (Zeitachse).
+const clampY = f => Math.min(8, Math.max(.12, f));
+function refreshY(ch) { const cs = ch._kairoSeries; if (cs) cs.applyOptions({ autoscaleInfoProvider: cs.options().autoscaleInfoProvider }); }
+function attachYGestures(el, ch, t) {
+  let st = null;
+  const opt = { capture: true, passive: false };
+  const stop = e => { e.stopPropagation(); e.preventDefault(); };
+  el.addEventListener("touchstart", e => {
+    const rect = el.getBoundingClientRect(), f0 = depYZoom.get(t) || 1;
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      st = { mode: null, dx0: Math.abs(a.clientX - b.clientX), dy0: Math.abs(a.clientY - b.clientY), my0: (a.clientY + b.clientY) / 2, f0, s0: depYShift.get(t) || 0 };
+    } else if (e.touches.length === 1 && e.touches[0].clientX > rect.right - ch.priceScale("right").width()) {
+      st = { mode: "axis", y0: e.touches[0].clientY, f0 }; stop(e);
+    } else st = null;
+  }, opt);
+  el.addEventListener("touchmove", e => {
+    if (!st) return;
+    if (st.mode === "axis" && e.touches.length === 1) {
+      depYZoom.set(t, clampY(st.f0 * Math.exp((e.touches[0].clientY - st.y0) / 180))); refreshY(ch); stop(e); return;
+    }
+    if (e.touches.length !== 2) return;
+    const [a, b] = e.touches, dx = Math.abs(a.clientX - b.clientX), dy = Math.abs(a.clientY - b.clientY), my = (a.clientY + b.clientY) / 2;
+    if (!st.mode) {                                    // Art der Geste nach den ersten Pixeln festlegen
+      const cx = Math.abs(dx - st.dx0), cy = Math.abs(dy - st.dy0), cm = Math.abs(my - st.my0);
+      if (Math.max(cx, cy, cm) < 10) return;
+      st.mode = cm > Math.max(cx, cy) ? "pan" : cy > cx ? "y" : "x";
+    }
+    if (st.mode === "x") return;
+    const f = st.mode === "y" ? clampY(st.f0 * Math.max(24, st.dy0) / Math.max(24, dy)) : st.f0;
+    depYZoom.set(t, f);
+    depYShift.set(t, st.s0 + (my - st.my0) / el.clientHeight * f);   // zwei Finger gemeinsam hoch/runter = Kursachse verschieben
+    refreshY(ch); stop(e);
+  }, opt);
+  el.addEventListener("touchend", e => { if (!e.touches.length) st = null; }, opt);
+}
 function mountDepotCharts() {
   depCharts.forEach((ch, t) => { depRanges.set(t, ch.timeScale().getVisibleLogicalRange()); ch.remove(); }); depCharts.clear();
   if (!window.LightweightCharts) return;
@@ -942,8 +979,9 @@ function mountDepotCharts() {
         const f = depYZoom.get(t) || 1, mid = (lo + hi) / 2 + (depYShift.get(t) || 0) * (hi - lo), half = (hi - lo) / 2 * f;   // Y-Achse strecken/stauchen/verschieben
         return { ...r, priceRange: { minValue: mid - half, maxValue: mid + half } }; } });
     cs.setData(T.map((d, i) => ({ time: d, open: c.o[i], high: c.h[i], low: c.l[i], close: c.c[i] })));
-    ch.addLineSeries({ color: "#0a84ff", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e20"));
-    ch.addLineSeries({ color: "#ffd60a", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false }).setData(pts("e50"));
+    // EMAs zählen nicht zur Skalierung – sonst ließe sich die Kursachse nicht strecken
+    ch.addLineSeries({ color: "#0a84ff", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null }).setData(pts("e20"));
+    ch.addLineSeries({ color: "#ffd60a", lineWidth: 1.5, priceLineVisible: false, lastValueVisible: false, crosshairMarkerVisible: false, autoscaleInfoProvider: () => null }).setData(pts("e50"));
     const pl = (price, title, color, style = 2, width = 1) => price != null && cs.createPriceLine({ price, title, color, lineWidth: width, lineStyle: style, axisLabelVisible: true });
     g.tps.forEach(tp => pl(tp.p, tp.short + (tp.ath ? " = ATH" : ""), "#30d158", 2, 2));
     const ents = g.ms.filter(m => m.ent);
@@ -953,6 +991,8 @@ function mountDepotCharts() {
       .filter(Boolean).sort((a, b) => a.time < b.time ? -1 : 1));
     ch.timeScale().setVisibleLogicalRange(depRanges.get(t) || depRange(c, g));
     depCharts.set(t, ch);
+    ch._kairoSeries = cs;
+    attachYGestures(el, ch, t);
   });
 }
 window.addEventListener("resize", () => depCharts.forEach((ch, t) => { const el = document.querySelector(`[data-lwc="${CSS.escape(t)}"]`); if (el) ch.applyOptions({ width: el.clientWidth }); }));
@@ -1126,14 +1166,6 @@ document.addEventListener("toggle", e => {
   g.open ? depOpen.add(t) : depOpen.delete(t); render();
 }, true);
 document.addEventListener("click", e => {
-  const yb = e.target.closest("[data-lwc-y]");
-  if (yb) {
-    e.preventDefault();
-    const t = yb.dataset.lwcY, f = depYZoom.get(t) || 1, sh = depYShift.get(t) || 0, d = yb.dataset.y;
-    if (d === "in") depYZoom.set(t, Math.max(.15, f * .75)); else if (d === "out") depYZoom.set(t, Math.min(6, f * 1.33));
-    else depYShift.set(t, sh + (d === "up" ? .12 : -.12) * f);
-    render(); return;
-  }
   const zb = e.target.closest("[data-lwc-zoom],[data-lwc-reset],[data-lwc-tall]");
   if (zb) {
     e.preventDefault();
