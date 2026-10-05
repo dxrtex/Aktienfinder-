@@ -132,7 +132,7 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
     if n < 15:
         return []
     after = np.append(np.maximum.accumulate(h[::-1])[::-1][1:], -np.inf)   # höchstes Hoch NACH Tag i
-    cand = [i for i in range(n - 5) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close * 1.005]
+    cand = [i for i in range(n - 5) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close]
     min_rise = max(0.035, 0.8 * atr / close)
     kept: list[int] = []
     for i in cand:                                   # alt → neu (Hochs fallen)
