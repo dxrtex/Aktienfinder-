@@ -75,7 +75,7 @@ def fetch(tickers: list[str], cache: dict, names: dict | None = None, limit: int
 
     now = time.time()
     order = list(dict.fromkeys(tickers))
-    stale = [t for t in order if now - (cache.get(t) or {}).get("ts", 0) > max_age_days * 86400]
+    stale = [t for t in order if now - (cache.get(t) or {}).get("ts", 0) > max_age_days * 86400 or "fu" not in (cache.get(t) or {"fu": 1})]
     stale.sort(key=lambda t: (cache.get(t) or {}).get("ts", 0))       # fehlende/älteste zuerst, Watchlist vorne (stabil)
     got, start = 0, time.time()
     for t in stale[:limit]:
@@ -94,6 +94,12 @@ def fetch(tickers: list[str], cache: dict, names: dict | None = None, limit: int
                          ("currentPrice", "cp"), ("shortPercentOfFloat", "sf")):
             if info.get(k_src) is not None:
                 e[k] = info[k_src]
+        fu = {k: info.get(src) for k, src in (("pe", "trailingPE"), ("fpe", "forwardPE"), ("rg", "revenueGrowth"),
+                                               ("eg", "earningsGrowth"), ("pm", "profitMargins"), ("de", "debtToEquity"),
+                                               ("roe", "returnOnEquity"), ("dy", "dividendYield"), ("pb", "priceToBook"))
+              if isinstance(info.get(src), (int, float))}
+        if fu:
+            e["fu"] = fu
         e["news"] = _news(tk, (names or {}).get(t) or info.get("shortName") or "")
         if len(e) > 2 or e["news"]:
             cache[t] = e
@@ -129,6 +135,8 @@ def summary(e: dict | None, close: float | None, sector: dict | None, market: di
     if market:
         out["mkt"] = market
         score += {"green": 1, "red": -1}.get(market.get("tone"), 0) * 0.5
+    if e.get("fu"):
+        out["fu"] = {k: round(v, 4) for k, v in e["fu"].items()}
     if e.get("sf"):
         out["sf"] = e["sf"]
     if e.get("ts"):

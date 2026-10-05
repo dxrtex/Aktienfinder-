@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import company, forecast, sentiment
+from . import company, forecast, live, sentiment, state, telegram
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -227,6 +227,20 @@ def result_row(res, meta: dict) -> dict:
 TREND_DAYS = 10
 
 
+def weekly_trend(df: pd.DataFrame) -> dict:
+    """Wochenchart: Schluss je Woche, EMA 10/30 (≈ 50/150 Tage), Wochen-RSI → übergeordneter Trend."""
+    w = df["Close"].resample("W-FRI").last().dropna()
+    if len(w) < 35:
+        return {}
+    e10, e30 = ema(w, 10), ema(w, 30)
+    r = rsi(w, 14)
+    c = float(w.iloc[-1])
+    up = int(c > e10.iloc[-1]) + int(c > e30.iloc[-1]) + int(e30.iloc[-1] > e30.iloc[-5])
+    return {"tone": "green" if up == 3 else "red" if up == 0 else "yellow",
+            "label": {3: "Aufwärtstrend", 2: "leicht positiv", 1: "angeschlagen", 0: "Abwärtstrend"}[up],
+            "rsi": round(float(r.iloc[-1]), 1), "e30": round(float(e30.iloc[-1]), 4), "above30": bool(c > e30.iloc[-1])}
+
+
 def score_trend(df: pd.DataFrame, info: dict, ticker: str, res) -> dict:
     """Erfüllte Kriterien (und Score) der letzten TREND_DAYS Handelstage – wohin bewegt sich die Aktie?
 
@@ -372,10 +386,25 @@ def main(argv=None) -> int:
         except Exception as exc:
             print(f"{t}: Stimmungs-Fehler {exc!r}")
         final[t] = (df, res, m)
+        try:
+            rows[-1]["wk"] = weekly_trend(df)
+        except Exception:
+            pass
         search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
+    # Fundamentaldaten: KGV im Vergleich zum Median der Branche (aus allen Aktien der Tabelle)
+    pes = {}
+    for r in rows:
+        pe = ((r.get("senti") or {}).get("fu") or {}).get("pe")
+        if pe and 0 < pe < 400 and r.get("sector"):
+            pes.setdefault(r["sector"], []).append(pe)
+    med = {k: float(np.median(v)) for k, v in pes.items() if len(v) >= 5}
+    for r in rows:
+        fu = (r.get("senti") or {}).get("fu")
+        if fu and r.get("sector") in med:
+            fu["pe_sec"] = round(med[r["sector"]], 1)
     if not args.end:
         about["_want"] = [r["ticker"] for r in rows if r["ticker"] not in about]
         company.save(about)
@@ -433,6 +462,31 @@ def main(argv=None) -> int:
     with open(SITE / "calendar.json", "w", encoding="utf-8") as f:
         json.dump(cal, f, ensure_ascii=False, separators=(",", ":"))
     print(f"Kalender: {len(cal['events'])} Termine, Wechselkurse: {fx}")
+    # Veränderungen seit dem letzten Scan, Telegram-Abendbericht, Live-Bilanz (Zustand im Branch kairo-data)
+    if not args.end:
+        last = state.load("last.json", {})
+        ph, pf, pm = set(last.get("hit", [])), set(last.get("fast", [])), last.get("met", {})
+        changes = {"since": last.get("date"),
+                   "new_hit": [r["ticker"] for r in rows if r["passed"] and r["ticker"] not in ph],
+                   "lost_hit": [t for t in ph if t not in {r["ticker"] for r in rows if r["passed"]}],
+                   "new_fast": [r["ticker"] for r in rows if r["fast_hit"] and r["ticker"] not in pf and r["ticker"] not in ph],
+                   "met": {r["ticker"]: [pm.get(r["ticker"]), r.get("met")] for r in rows
+                           if pm.get(r["ticker"]) is not None and r.get("met") != pm.get(r["ticker"])}} if last else {"since": None}
+        today_iso = datetime.now().strftime("%Y-%m-%d")
+        try:
+            alerts = telegram.run(rows, market, cal["events"], search, today_iso, datetime.now().strftime("%d.%m."))
+        except Exception as exc:
+            print(f"Telegram: Fehler {exc!r}")
+            alerts = {"enabled": False, "error": True}
+        try:
+            bil = live.update(rows, data, today_iso)
+            print(f"Live-Bilanz: {bil['live']['n']} Signale seit {bil['live']['since']}, neu: {len(bil['new'])}")
+        except Exception as exc:
+            print(f"Live-Bilanz: Fehler {exc!r}")
+            bil = {"live": None, "signals": [], "backtest": None}
+        for name, obj in (("alerts.json", alerts), ("bilanz.json", bil), ("changes.json", changes)):
+            with open(SITE / name, "w", encoding="utf-8") as f:
+                json.dump(_clean(obj), f, ensure_ascii=False, separators=(",", ":"))
     print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Fehler: {stats['errors']}, "
           f"Dauer {stats['duration_s']} s")
     for r in rows[:30]:

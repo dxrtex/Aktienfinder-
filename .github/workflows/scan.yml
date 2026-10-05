@@ -4,12 +4,9 @@ on:
   schedule:
     - cron: "30 20,21 * * 1-5"   # 22:30 Uhr Berlin (Sommer- und Winterzeit, siehe Prüfung unten)
   workflow_dispatch:              # „Scan jetzt starten“
-  push:
-    branches: ["claude/**"]
-    paths: ["backend/**", "config.yaml", "site/**", ".github/workflows/scan.yml"]
 
 permissions:
-  contents: read
+  contents: write                # Zustand (Live-Bilanz, Telegram) im Branch kairo-data
   pages: write
   id-token: write
 
@@ -60,12 +57,28 @@ jobs:
           path: data/sentiment.json
           key: stimmung-${{ github.run_id }}
           restore-keys: stimmung-
+      - name: Zustand laden (Branch kairo-data)
+        if: steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
+        run: |
+          if git fetch -q origin kairo-data:kairo-data 2>/dev/null; then git worktree add -q state kairo-data;
+          else git worktree add -q --orphan -b kairo-data state; fi
+          ls state
       - name: Universum aktualisieren
         if: steps.time.outputs.skip == 'false'
         run: python -m backend.universe
       - name: Scan
         if: steps.time.outputs.skip == 'false'
         run: python -m backend.run_scan
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
+      - name: Zustand sichern
+        if: always() && steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
+        run: |
+          cd state || exit 0
+          git add -A
+          git -c user.name="kairo-bot" -c user.email="kairo-bot@users.noreply.github.com" commit -q -m "Zustand $(date +%F)" || exit 0
+          git push -q origin kairo-data
       - uses: actions/upload-pages-artifact@v3
         if: steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
         with:
