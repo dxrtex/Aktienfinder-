@@ -46,6 +46,13 @@ jobs:
           path: data/cache.sqlite
           key: kurse-${{ github.run_id }}
           restore-keys: kurse-
+      - name: Unternehmens-Cache wiederherstellen
+        if: steps.time.outputs.skip == 'false'
+        uses: actions/cache@v4
+        with:
+          path: data/company.json
+          key: firmen-${{ github.run_id }}
+          restore-keys: firmen-
       - name: Universum aktualisieren
         if: steps.time.outputs.skip == 'false'
         run: python -m backend.universe

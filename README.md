@@ -22,7 +22,7 @@ Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 Fast-Treffer = genau ein Pflichtkriterium fehlt (welches, steht dabei).
 
 ## Aufbau der App
-Leiste unten: **Scanner** (eine Tabelle; oben frei kombinierbar Treffer / Fast-Treffer / Watchlist + Filter; Name antippen öffnet die Übersichtskarte mit Mini-Chart, Kriterien und Hinweis), **Kalender**, **Depot**, **Einstellungen**.
+Leiste unten: **Scanner** (eine Tabelle; oben frei kombinierbar Treffer / Fast-Treffer / Watchlist + Filter; Name antippen öffnet die Übersichtskarte mit Mini-Chart, Kriterien und Hinweis; Score antippen = Zusammensetzung, „i“ = Kurzbeschreibung des Unternehmens; Spalte „Tendenz“ = erfüllte Kriterien der letzten 10 Handelstage mit Richtung steigend/fallend/seitwärts), **Kalender**, **Depot**, **Einstellungen**.
 
 - **Kalender:** Quartalszahlen, Ex-Dividende und Dividendenzahlung (Yahoo Finance) für Watchlist-, Depot- und
   Treffer-Aktien, dazu Fed- und EZB-Zinsentscheide, US-Inflation (CPI) und US-Arbeitsmarktbericht – automatisch von den offiziellen Seiten
