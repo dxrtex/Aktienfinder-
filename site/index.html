@@ -845,7 +845,7 @@ function groupPositions(items) {
     g.avgEntry = ent.length ? ent.reduce((s, m) => s + m.ent.u * m.p.qty, 0) / ent.reduce((s, m) => s + m.p.qty, 0) : null;
     const levs = g.ms.map(m => m.levNow);
     g.levTxt = g.ms.some(m => m.d) ? (Math.min(...levs).toFixed(1) === Math.max(...levs).toFixed(1) ? `${fmt(levs[0], 1)}×` : `${fmt(Math.min(...levs), 1)}–${fmt(Math.max(...levs), 1)}×`) : "1×";
-    g.tps = [a.tps && a.tps.next && { ...a.tps.next, l: "Nächstes Hoch" }, a.tps && a.tps.ath && { ...a.tps.ath, l: a.tps.ath.src }].filter(Boolean);
+    g.tps = [a.tps && a.tps.next && { ...a.tps.next, l: "Swing-High" }, a.tps && a.tps.ath && { ...a.tps.ath, l: a.tps.ath.src }].filter(Boolean);
     g.ev = nextEvent(g.t);
     return g;
   }).sort((x, y) => y.invested - x.invested);
@@ -860,7 +860,7 @@ function groupChartSvg(c, g) {
   const hiC = Math.max(...idx.map(k => c.h[k])), loC = Math.min(...idx.map(k => c.l[k]));
   const inView = v => v <= hiC * 1.35 && v >= loC * .65;   // sehr ferne Marken nur als Pfeil
   const lv = [];
-  g.tps.forEach((tp, j) => lv.push({ k: "tp", v: tp.p, l: tp.l === "Nächstes Hoch" ? "Nächstes Hoch" : tp.l.replace("Allzeithoch", "ATH"), far: !inView(tp.p) }));
+  g.tps.forEach((tp, j) => lv.push({ k: "tp", v: tp.p, l: tp.l === "Swing-High" ? "Swing-High" : tp.l.replace("Allzeithoch", "ATH"), far: !inView(tp.p) }));
   if (g.avgEntry) lv.push({ k: "entry", v: g.avgEntry, l: ents.length > 1 ? "Ø Kauf" : "Kauf" });
   if (g.ko != null) lv.push({ k: "ko", v: g.ko, l: "K.-o.", far: !inView(g.ko) });
   const vals = idx.flatMap(k => [c.h[k], c.l[k]]).concat(lv.filter(x => !x.far).map(x => x.v));
@@ -911,12 +911,12 @@ function groupHtml(g) {
     <div class="chartbox">${c ? groupChartSvg(c, g) : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
     ${g.tps.length ? `<div><div class="plan-h">Take-Profit-Zonen</div><div class="table-wrap plain"><table class="xplan tp-t"><thead><tr><th></th><th class="num">Kurs</th><th class="num">Abstand</th><th class="num">Chance 3 Mon.</th><th class="num">6 Mon.</th><th class="num">Deine Position dort</th></tr></thead><tbody>
       ${g.tps.map(tp => { const v = g.known ? g.atX(tp.p) : null;
-        return `<tr><td><b class="up">${esc(tp.l)}</b><small>${tp.l === "Nächstes Hoch" ? esc(tp.src) : `vom ${dateDE(tp.date)}`}</small></td><td class="num">${fmt(tp.p)}<small>${esc(g.cur)}</small></td>
+        return `<tr><td><b class="up">${esc(tp.l)}</b><small>${tp.l === "Swing-High" ? esc(tp.src) : `vom ${dateDE(tp.date)}`}</small></td><td class="num">${fmt(tp.p)}<small>${esc(g.cur)}</small></td>
           <td class="num up">${sgnPct(tp.pct, 1)}</td><td class="num"><b class="${chanceTone(tp.p3m)}">${pct(tp.p3m, 0)}</b></td><td class="num ${chanceTone(tp.p6m)}">${pct(tp.p6m, 0)}</td>
           <td class="num">${v != null ? `<b class="up">${eur(v)}</b><small class="up">${sgnPct(g.invested ? v / g.invested - 1 : null, 0)} auf den Einsatz</small>` : "–"}</td></tr>`; }).join("")}
     </tbody></table></div>
     <div class="note" style="margin:6px 2px 0">Chance = Wahrscheinlichkeit, dass der Kurs die Marke im Zeitraum mindestens einmal erreicht – aus der aktuellen Schwankung und dem Trend (Faustregel, keine Prognose).${g.ms.some(m => m.d) ? " Ein Knock-out vorher beendet die Position." : ""}</div></div>` : ""}
-    <div><div class="plan-h">Deine Positionen</div><div class="table-wrap plain"><table class="xplan pos-t"><thead><tr><th>#</th><th>Kauf</th><th class="num">Hebel</th><th class="num">Einsatz</th><th class="num">Wert</th><th class="num">G/V</th>${nx ? `<th class="num">beim nächsten Hoch</th>` : ""}<th>Einstieg</th></tr></thead><tbody>
+    <div><div class="plan-h">Deine Positionen</div><div class="table-wrap plain"><table class="xplan pos-t"><thead><tr><th>#</th><th>Kauf</th><th class="num">Hebel</th><th class="num">Einsatz</th><th class="num">Wert</th><th class="num">G/V</th>${nx ? `<th class="num">beim Swing-High</th>` : ""}<th>Einstieg</th></tr></thead><tbody>
       ${g.ms.map((m, j) => { const v1 = nx ? m.valAt(nx.p) : null;
         return `<tr><td>${j + 1}</td><td><b>${m.p.date ? dateDE(m.p.date) : "–"}</b><small>${m.held != null ? `seit ${m.held} T.` : ""}${m.ent ? ` · bei ${fmt(m.ent.u)}` : ""}</small></td>
           <td class="num">${m.d ? fmt(m.levNow, 1) + "×" : "1×"}<small>${m.d ? `K.-o. ${fmt(m.d.ko)} (${pct(m.dist, 0)})` : ""}</small></td>
