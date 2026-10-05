@@ -119,18 +119,21 @@ def _p_touch(b: float, sigma: float, mu: float, days: int) -> float:
 def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4) -> list[dict]:
     """Relevante Hochs über dem Kurs („Treppe fallender Hochs“), nächstes zuerst.
 
-    1. Kandidat: höchstes Hoch im Fenster ± 5 Kerzen (mind. 3 Kerzen alt), das seitdem NIE überschritten wurde.
+    Gerechnet auf Schlusskursen (wie im Linienchart):
+    1. Kandidat: höchster Schluss im Fenster ± 5 Tage (mind. 3 Tage alt), der seitdem NIE überschritten wurde.
     2. Gipfel einer eigenen Erholungswelle: seit dem vorigen (älteren, höheren) relevanten Hoch ist der Kurs
-       vom Tief bis zu diesem Hoch mind. 5 % bzw. 1,5 Tagesschwankungen (ATR) gestiegen – sonst nur ein Zacken.
-    3. Hochs, die weniger als 6 % auseinanderliegen, bilden eine Zone (Doppel-/Mehrfachhoch).
+       vom Tief bis zu diesem Hoch mind. 5 % bzw. 1 Tagesschwankung (ATR) gestiegen – sonst nur ein Zacken.
+    3. Hochs, die weniger als 4 % auseinanderliegen, bilden eine Zone (Doppel-/Mehrfachhoch).
     """
-    h, l, dates = df["High"].to_numpy(float), df["Low"].to_numpy(float), df.index
+    # Schlusskurse wie im Linienchart – einzelne Tagesspitzen (Dochte) zählen nicht
+    h = l = df["Close"].to_numpy(float)
+    dates = df.index
     n = len(h)
     if n < 15:
         return []
     after = np.append(np.maximum.accumulate(h[::-1])[::-1][1:], -np.inf)   # höchstes Hoch NACH Tag i
     cand = [i for i in range(n - 3) if h[i] == h[max(0, i - 5):i + 6].max() and h[i] > after[i] and h[i] > close + 0.25 * atr]
-    min_rise = max(0.05, 1.5 * atr / close)
+    min_rise = max(0.05, 1.0 * atr / close)
     kept: list[int] = []
     for i in cand:                                   # alt → neu (Hochs fallen)
         start = kept[-1] + 1 if kept else max(0, i - 120)
@@ -141,7 +144,7 @@ def swing_levels(df: pd.DataFrame, close: float, atr: float, max_levels: int = 4
             kept.append(i)
     zones: list[dict] = []
     for i in reversed(kept):                         # neu → alt, nahe Hochs zu Zonen bündeln
-        if zones and h[i] <= zones[-1]["lo"] * 1.06:
+        if zones and h[i] <= zones[-1]["lo"] * 1.04:
             z = zones[-1]
             z["hi"], z["idx"] = max(z["hi"], float(h[i])), z["idx"] + [i]
         else:
