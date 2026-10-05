@@ -6,3 +6,4 @@ data/cache.sqlite
 __pycache__/
 .env
 data/company.json
+data/sentiment.json

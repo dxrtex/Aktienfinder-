@@ -230,7 +230,7 @@
   nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(22, 22, 24, .82);
                -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line);
                padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
-  .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+  .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
   .tab { border: 0; background: none; cursor: pointer; color: var(--muted); display: flex; flex-direction: column; align-items: center;
          gap: 3px; font-size: 12px; font-weight: 600; padding: 6px 0; border-radius: 16px; position: relative; }
   .tab svg { width: 24px; height: 24px; }
@@ -256,7 +256,7 @@
   .opt.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .sheet .btn { width: 100%; margin-top: 26px; display: block; }
 
-  .tabs { max-width: 620px; grid-template-columns: repeat(4, 1fr); }
+  .tabs { max-width: 680px; grid-template-columns: repeat(5, 1fr); }
   .card h2 a { color: inherit; text-decoration: none; }
   .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
   .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--up); display: inline-block; }
@@ -299,7 +299,7 @@
   .score-col { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: none; }
   button.score { border: 0; padding: 0; cursor: pointer; font: inherit; color: inherit; }
   .trend { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; white-space: nowrap; }
-  .trend .spark { vertical-align: middle; }
+  .trend.solo { font-size: 15px; line-height: 1; }
   .ibtn { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--muted); background: none; color: var(--muted);
           font: italic 700 12px/1 Georgia, serif; cursor: pointer; vertical-align: 3px; margin-left: 4px; padding: 0; }
   .aboutbox, .scorebox { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; font-size: 14px; }
@@ -312,6 +312,31 @@
   .kchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
   .kchip.filt { margin-left: auto; color: var(--text); }
   td a.nm { color: var(--text); font-weight: 600; }
+  .tpform { margin: 12px 0 10px; }
+  table.tpt { width: 100%; min-width: 0; font-size: 14px; border-collapse: collapse; }
+  table.tpt th { font-size: 12px; color: var(--muted); font-weight: 650; text-align: left; padding: 4px 6px; background: none; }
+  table.tpt td { padding: 8px 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  table.tpt .num { text-align: right; } table.tpt td small { display: block; font-size: 11.5px; color: var(--muted); }
+  .tp-sum { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); margin-top: 10px; } .tp-sum b { color: var(--text); }
+  .senti { background: var(--surface-2); border-radius: var(--radius-s); padding: 12px 14px; }
+  .se-h { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .se-h b { font-size: 14px; } .vv { font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px; background: var(--surface-3); }
+  .vv.up { background: var(--up-bg); } .vv.down { background: var(--red-bg); }
+  .se-more { margin-left: auto; border: 0; background: none; color: var(--accent); font-weight: 650; font-size: 13px; cursor: pointer; padding: 0; }
+  .se-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 14px; }
+  .se-row span { display: block; font-size: 11.5px; color: var(--muted); font-weight: 600; }
+  .se-row b { display: block; font-size: 15px; } .se-row em { display: block; font-style: normal; font-size: 11.5px; color: var(--muted); line-height: 1.3; }
+  .se-news { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px; }
+  a.nw { display: flex; gap: 9px; padding: 7px 0; color: var(--text); text-decoration: none; font-size: 13.5px; line-height: 1.35; }
+  a.nw i { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); margin-top: 5px; }
+  a.nw i.pos { background: var(--up); } a.nw i.neg { background: var(--red); }
+  a.nw small { display: block; color: var(--muted); font-size: 11.5px; margin-top: 2px; }
+  .fav { border: 0; background: none; padding: 0 2px; margin: 0 2px 0 -2px; cursor: pointer; color: var(--faint); font-size: 18px; line-height: 1; vertical-align: -1px; }
+  .fav.on { color: var(--gold); }
+  h2 .fav { font-size: 22px; }
+  .tk { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .wl { font-size: 10px; font-weight: 800; letter-spacing: .04em; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 4px; vertical-align: 3px; margin-left: 2px; }
+  .pill.fv { color: var(--gold); }
   .st { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--muted); }
   .st.hit { background: var(--up-bg); color: var(--up); } .st.fast { background: var(--gold-bg); color: var(--gold); }
   .cmodal { position: fixed; inset: 0; z-index: 60; display: none; align-items: flex-start; justify-content: center; padding: 6vh 16px 16px; overflow-y: auto; }
@@ -325,6 +350,96 @@
   .subnav button { border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 14px; padding: 10px 4px; border-radius: 12px; cursor: pointer; }
   .subnav button.on { background: var(--accent); color: var(--accent-ink); }
   /* Kalender */
+  /* Journal */
+  .jempty { text-align: center; padding: 34px 22px; } .jempty b { font-size: 20px; } .jempty p { color: var(--muted); max-width: 520px; margin: 8px auto 18px; }
+  .jicon { font-size: 40px; margin-bottom: 6px; }
+  .jhero { display: grid; grid-template-columns: 1fr auto; gap: 14px 18px; align-items: center; margin-bottom: 12px;
+           background: linear-gradient(135deg, rgba(10,132,255,.16), rgba(255,255,255,.03) 60%) !important; }
+  .jh-main span { color: var(--muted); font-size: 14px; font-weight: 600; }
+  .jh-main b { display: block; font-size: 40px; letter-spacing: -.03em; line-height: 1.1; font-variant-numeric: tabular-nums; margin: 2px 0 4px; }
+  .jh-main em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+  .jh-ring { position: relative; width: 92px; height: 92px; } .jh-ring .ring { width: 92px; height: 92px; }
+  .jh-ring div { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; }
+  .jh-ring b { font-size: 19px; line-height: 1; } .jh-ring span { font-size: 9.5px; color: var(--muted); font-weight: 650; margin-top: 3px; }
+  .jh-wl { grid-column: 1 / -1; display: flex; gap: 8px; }
+  .jh-wl div { flex: 1; background: var(--surface-2); border-radius: 12px; padding: 8px 10px; font-size: 13px; color: var(--muted); }
+  .jh-wl i { font-style: normal; font-weight: 800; font-size: 17px; color: var(--text); margin-right: 4px; }
+  .jh-wl i.up { color: var(--up); } .jh-wl i.down { color: var(--red); }
+  .jtiles { margin-bottom: 12px; } .jtiles .fig b { font-size: 19px; }
+  .jins { display: grid; gap: 8px; margin-bottom: 12px; } .jins .tip { margin: 0; }
+  @media (min-width: 760px) { .jins { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .jcard { margin-bottom: 12px; }
+  .jc-h { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .jc-h b { font-size: 15px; } .jc-h span { font-size: 12px; color: var(--muted); }
+  svg.eq { width: 100%; height: 190px; display: block; overflow: visible; }
+  .eqlbl text { fill: var(--muted); font-size: 11px; }
+  .mbars { display: flex; gap: 6px; align-items: flex-end; overflow-x: auto; padding-bottom: 2px; }
+  .mb { flex: 1 0 40px; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+  .mb .bar { position: relative; width: 100%; height: 96px; }
+  .mb .bar::before { content: ""; position: absolute; left: 0; right: 0; top: 48px; border-top: 1px dashed var(--line); }
+  .mb .bar i { position: absolute; left: 22%; right: 22%; border-radius: 4px; }
+  .mb .bar i.pos { bottom: 48px; background: var(--up); } .mb .bar i.neg { top: 48px; background: var(--red); }
+  .mb .v { font-size: 10.5px; font-weight: 700; font-variant-numeric: tabular-nums; min-height: 14px; white-space: nowrap; }
+  .mb .m { font-size: 11px; color: var(--muted); }
+  .jgrid { display: grid; gap: 12px; } @media (min-width: 860px) { .jgrid { grid-template-columns: 1fr 1fr; } } .jgrid .jcard { margin: 0; }
+  .wlbar { display: flex; gap: 3px; height: 14px; border-radius: 7px; overflow: hidden; }
+  .wlbar i.pos { background: var(--up); } .wlbar i.neg { background: var(--red); }
+  .wlleg { display: flex; justify-content: space-between; font-size: 13px; font-weight: 650; margin: 6px 0 14px; }
+  .jbws { display: grid; gap: 8px; }
+  .jbw { display: grid; grid-template-columns: 1fr auto; gap: 0 10px; background: var(--surface-2); border-radius: 14px; padding: 10px 12px; border-left: 3px solid var(--c); }
+  .jbw.w { --c: var(--up); } .jbw.l { --c: var(--red); }
+  .jbw span { grid-column: 1 / -1; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .jbw b { font-size: 16px; } .jbw em { grid-column: 1; font-style: normal; font-size: 12px; color: var(--muted); }
+  .jbw i { grid-column: 2; grid-row: 2 / 4; align-self: center; font-style: normal; font-weight: 800; font-size: 17px; color: var(--c); text-align: right; font-variant-numeric: tabular-nums; }
+  .jbw i small { display: block; font-size: 12px; font-weight: 650; }
+  table.jt { width: 100%; min-width: 0; font-size: 14px; border-collapse: collapse; }
+  table.jt th { font-size: 12px; color: var(--muted); font-weight: 650; text-align: left; padding: 4px 6px; }
+  table.jt td { padding: 7px 6px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+  table.jt .num, table.jt th.num { text-align: right; }
+  table.jt { table-layout: fixed; } table.jt th:first-child, table.jt td:first-child { width: 46%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  table.jt thead th { background: none; }
+  i.kd { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 8px; vertical-align: 1px; }
+  .kp { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 2px 8px; border-radius: 999px; color: var(--k); background: color-mix(in srgb, var(--k) 15%, transparent); white-space: nowrap; }
+  table.jtrades td small { display: block; font-size: 11.5px; color: var(--muted); }
+  table.jtrades td b { font-weight: 650; }
+  table.jtrades tr.muted td { opacity: .5; }
+  details.jtx summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  details.jtx summary::-webkit-details-marker { display: none; }
+  details.jtx summary span { color: var(--muted); font-size: 14px; } details.jtx summary::after { content: "▾"; color: var(--muted); margin-left: 8px; }
+  details.jtx[open] summary::after { content: "▴"; }
+  @media (max-width: 560px) { .jh-main b { font-size: 32px; } .tab { font-size: 11px; } }
+  /* Monatskalender */
+  .cal-top { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 0 0 4px; }
+  .cal-top .seg { margin: 0; }
+  .vtog { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+  .vtog button { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; color: var(--muted); font-weight: 650; font-size: 14px; padding: 7px 12px; border-radius: 9px; cursor: pointer; }
+  .vtog button svg { width: 16px; height: 16px; }
+  .vtog button.on { background: var(--surface-3); color: var(--text); }
+  .mcal { margin-top: 12px; border-radius: var(--radius); border: 1px solid var(--glass-line); background: var(--glass); padding: 14px 12px 12px; }
+  .mh { display: flex; align-items: center; gap: 8px; margin: 0 2px 12px; }
+  .mh b { flex: 1; font-size: 18px; text-transform: capitalize; }
+  .mnav, .mtoday { border: 1px solid var(--line); background: var(--surface-2); color: var(--text); border-radius: 10px; height: 34px; min-width: 34px; font-size: 20px; line-height: 1; cursor: pointer; }
+  .mtoday { font-size: 13px; font-weight: 650; padding: 0 10px; color: var(--accent); }
+  .mg { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; }
+  .mg .wd { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .04em; padding-bottom: 2px; }
+  .mc { position: relative; min-height: 86px; border: 1px solid transparent; background: var(--surface); border-radius: 12px; padding: 6px 5px 5px; text-align: left; cursor: pointer;
+        display: flex; flex-direction: column; gap: 3px; overflow: hidden; color: var(--text); }
+  .mc .dn { font-size: 13px; font-weight: 700; color: var(--muted); margin: 0 0 1px 2px; }
+  .mc.out { opacity: .38; } .mc.past .dn { color: var(--faint); }
+  .mc.today .dn { color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 0 7px; align-self: flex-start; margin-left: 0; }
+  .mc.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .ct { display: flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 650; line-height: 1.25; padding: 2px 4px; border-radius: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--surface-2); }
+  .ct i { font-style: normal; font-weight: 800; font-size: 9px; opacity: .9; }
+  .ct.k-earn { color: var(--accent); } .ct.k-div { color: var(--up); } .ct.k-macro { color: var(--gold); } .ct.k-exp { color: var(--text); }
+  .ct.dep { box-shadow: inset 2px 0 0 currentColor; }
+  .mc .more { font-size: 11px; color: var(--muted); padding-left: 3px; }
+  .mc .dots { display: none; gap: 3px; margin-top: auto; }
+  .mc .dots i, .mlegend i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; background: var(--muted); }
+  .mc .dots i.k-earn, .mlegend i.k-earn { background: var(--accent); } .mc .dots i.k-div, .mlegend i.k-div { background: var(--up); }
+  .mc .dots i.k-macro, .mlegend i.k-macro { background: var(--gold); } .mc .dots i.k-exp, .mlegend i.k-exp { background: var(--muted); }
+  .mlegend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 12px 4px 0; font-size: 12px; color: var(--muted); }
+  .mlegend span { display: inline-flex; align-items: center; gap: 6px; }
+  @media (max-width: 560px) { .mc { min-height: 58px; } .mc .ct, .mc .more { display: none; } .mc .dots { display: flex; } }
   .cal-day { margin: 22px 2px 10px; display: flex; justify-content: space-between; align-items: baseline; }
   .cal-day b { font-size: 16px; } .cal-day span { color: var(--muted); font-size: 13px; }
   .cal-list { display: flex; flex-direction: column; border-radius: var(--radius-s); overflow: hidden; border: 1px solid var(--glass-line); background: var(--glass); }
@@ -401,6 +516,9 @@
     <button class="tab" data-sec="depot">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5M4 19h16M8 15l3.5-4 3 2.5L20 7"/></svg>
       Depot</button>
+    <button class="tab" data-sec="journal">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 11.5h4"/></svg>
+      Journal</button>
     <button class="tab" data-sec="settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
       Einstellungen</button>
@@ -475,7 +593,7 @@ const DEFAULTS = { minScore: "0", minCap: "0", maxCap: "0", vola: "", region: ""
 const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
 const volaIn = r => { const b = VOLA[state.vola]; return !b || (r.volatility != null && r.volatility >= b[0] && r.volatility < b[1]); };
 const volaCls = v => v == null ? "muted" : v < .3 ? "up" : v < .5 ? "" : "down";
-const state = { sec: "scanner", tab: "table", tableKind: "hit", kinds: ["hit", "fast"], calScope: "mine", calKind: "", ...DEFAULTS, tableSort: "score", tableAsc: false };
+const state = { name: "Jonny", calView: "month", budget: 400, sec: "scanner", tab: "table", tableKind: "hit", kinds: ["hit", "fast"], calScope: "mine", calKind: "", ...DEFAULTS, tableSort: "score", tableAsc: false };
 const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
 if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
@@ -517,10 +635,31 @@ function selRows() {
   const full = r => light(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector);
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
-  return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit)) ? full(r) : k.has("watch") && r.in_watchlist && light(r))
+  const fv = favs();
+  return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit)) ? full(r) : ((k.has("watch") && r.in_watchlist) || (k.has("fav") && fv.has(r.ticker))) && light(r))
     .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
 }
-const KIND_BTNS = [["hit", "Treffer", r => r.passed], ["fast", "Fast-Treffer", r => r.fast_hit], ["watch", "★ Watchlist", r => r.in_watchlist]];
+const KIND_BTNS = [["fav", "★ Merkliste", r => favs().has(r.ticker)], ["hit", "Treffer", r => r.passed], ["fast", "Fast-Treffer", r => r.fast_hit], ["watch", "Watchlist", r => r.in_watchlist]];
+// ---------- Merkliste: eigene Favoriten (Stern), nur auf diesem Gerät ----------
+const FAV_KEY = "kairo-merkliste-v1";
+let favCache = null;
+function favs() { if (!favCache) { try { favCache = new Set(JSON.parse(localStorage.getItem(FAV_KEY) || "[]")); } catch (e) { favCache = new Set(); } } return favCache; }
+function favToggle(t) {
+  const f = favs(); f.has(t) ? f.delete(t) : f.add(t);
+  try { localStorage.setItem(FAV_KEY, JSON.stringify([...f])); } catch (e) {}
+  calBadge();
+}
+const favBtn = t => `<button class="fav${favs().has(t) ? " on" : ""}" data-fav="${esc(t)}" aria-label="Merkliste" title="${favs().has(t) ? "Von der Merkliste nehmen" : "Auf die Merkliste"}">${favs().has(t) ? "★" : "☆"}</button>`;
+const wlTag = r => r.in_watchlist ? `<span class="wl" title="auf der Watchlist">WL</span>` : "";
+// Merkliste-Aktien ohne Setup-Daten (nicht in der Tabelle): kompakte Karten aus dem Suchindex
+function favExtraHtml() {
+  const inRes = new Set(data.results.map(r => r.ticker)), extra = [...favs()].filter(t => !inRes.has(t));
+  if (!extra.length) return "";
+  if (!searchIdx) { loadSearch(); return ""; }
+  const rowsX = extra.map(t => searchIdx.find(r => r.t === t)).filter(Boolean);
+  if (!rowsX.length) return "";
+  return `<div class="section-title"><span>Merkliste · ohne aktuelles Setup</span><span>${rowsX.length}</span></div><div class="sres">${rowsX.map(searchCard).join("")}</div>`;
+}
 // Übersichtskarte als Fenster (Antippen von Name/Ticker in der Tabelle)
 function openCard(t) {
   const r = data.results.find(x => x.ticker === t); if (!r) return;
@@ -533,17 +672,10 @@ function closeCard() { document.body.classList.remove("card-open"); }
 
 // Tendenz: Wie viele Kriterien waren an den letzten 10 Handelstagen erfüllt – steigt oder fällt das?
 const TREND_TXT = { up: ["▲", "up", "steigend"], down: ["▼", "down", "fallend"], flat: ["►", "muted", "seitwärts"] };
-function sparkSvg(vals, total, w = 74, h = 22) {
-  const v = vals.map(x => x == null ? null : +x), ok = v.filter(x => x != null); if (ok.length < 2) return "";
-  const lo = Math.min(...ok, total - 4), hi = total, X = i => 2 + (w - 4) * i / (v.length - 1), Y = x => 2 + (h - 4) * (hi - x) / Math.max(1, hi - lo);
-  const pts = v.map((x, i) => x == null ? null : `${X(i).toFixed(1)},${Y(x).toFixed(1)}`).filter(Boolean).join(" ");
-  return `<svg class="spark" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true"><line x1="2" x2="${w - 2}" y1="${Y(total).toFixed(1)}" y2="${Y(total).toFixed(1)}" stroke="var(--line)" stroke-dasharray="2 2"/>
-    <polyline points="${pts}" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="${X(v.length - 1).toFixed(1)}" cy="${Y(v[v.length - 1]).toFixed(1)}" r="2.4" fill="currentColor"/></svg>`;
-}
 function trendHtml(r, big = false) {
-  const t = r.trend; if (!t || !t.met) return "";
-  const [arrow, cls, word] = TREND_TXT[t.dir] || TREND_TXT.flat, m = t.met, old = m[m.length - 6];
-  return `<span class="trend ${cls}" title="Erfüllte Kriterien der letzten ${m.length} Handelstage: ${m.join(" → ")}">${arrow} ${big ? word + " · " : ""}${old != null ? `${old}→${m[m.length - 1]}/${r.total ?? 11} in 5 T.` : ""}${sparkSvg(m, r.total ?? 11)}</span>`;
+  const t = r.trend; if (!t || !t.dir) return "";
+  const [arrow, cls, word] = TREND_TXT[t.dir] || TREND_TXT.flat;
+  return `<span class="trend ${cls}${big ? "" : " solo"}" title="Tendenz der erfüllten Kriterien (letzte Handelstage): ${word}">${arrow}${big ? " Tendenz " + word : ""}</span>`;
 }
 function scoreBoxHtml(r) {
   const t = r.trend, past = t && t.peak != null && t.peak > (r.met ?? 0) ? `<div class="note" style="margin:6px 0 0">Höchststand der letzten 10 Tage: ${t.peak}/${r.total ?? 11} Kriterien.</div>` : "";
@@ -566,6 +698,25 @@ function aboutHtml(r) {
     <div class="note" style="margin:6px 0 0">Quelle: Yahoo Finance (englisch).</div>`;
 }
 
+// Marktstimmung: Analysten, Kursziel, Schlagzeilen, Branche und Gesamtmarkt – kurzer Zusatz zur Technik
+const RK = { strong_buy: ["Starker Kauf", "up"], buy: ["Kaufen", "up"], hold: ["Halten", ""], underperform: ["Untergewichten", "down"], sell: ["Verkaufen", "down"] };
+const VV = { pos: ["eher positiv", "up"], neg: ["eher negativ", "down"], mix: ["gemischt", "muted"] };
+const TONE_CLS = { green: "up", red: "down", yellow: "" };
+function sentiHtml(r) {
+  const s = r.senti; if (!s) return "";
+  const cells = [];
+  if (s.an) { const [l, c] = RK[s.an.k] || [s.an.k, ""]; cells.push(`<div><span>Analysten</span><b class="${c}">${esc(l)}</b><em>Ø ${fmt(s.an.m, 1)} (1 = Kauf, 5 = Verkauf)${s.an.n ? ` · ${s.an.n} Analysten` : ""}</em></div>`); }
+  if (s.tgt) cells.push(`<div><span>Kursziel Ø</span><b class="${s.tgt.up >= 0 ? "up" : "down"}">${sgnPct(s.tgt.up, 0)}</b><em>${fmt(s.tgt.m)}${s.tgt.l && s.tgt.h ? ` · Spanne ${fmt(s.tgt.l, 0)}–${fmt(s.tgt.h, 0)}` : ""}</em></div>`);
+  if (s.sec) cells.push(`<div><span>Branche</span><b class="${TONE_CLS[s.sec.tone] ?? ""}">${esc(s.sec.label)}</b><em>${esc(s.sec.n)}${s.sec.m1 != null ? ` · 1 Mon. ${sgnPct(s.sec.m1, 0)}` : ""}</em></div>`);
+  if (s.mkt) cells.push(`<div><span>Gesamtmarkt</span><b class="${TONE_CLS[s.mkt.tone] ?? ""}">${esc(s.mkt.label.replace(/\s*\(.*\)/, ""))}</b><em>${esc((s.mkt.label.match(/\((.*)\)/) || [])[1] || "S&P 500 & VIX")}</em></div>`);
+  const [vl, vc] = VV[s.v] || VV.mix;
+  const news = (s.news || []).map(n => `<a class="nw" href="${esc(n.u)}" target="_blank" rel="noopener"><i class="${n.s > 0 ? "pos" : n.s < 0 ? "neg" : ""}"></i><span>${esc(n.t)}<small>${esc(n.p)}${n.d ? " · " + dateDE(n.d) : ""}</small></span></a>`).join("");
+  return `<div class="senti"><div class="se-h"><b>Marktstimmung</b><span class="vv ${vc}">${vl}</span>${news ? `<button class="se-more" data-senti>Schlagzeilen ▾</button>` : ""}</div>
+    ${cells.length ? `<div class="se-row">${cells.join("")}</div>` : ""}
+    ${news ? `<div class="se-news" hidden>${news}<div class="note" style="margin:6px 0 0">Schlagzeilen englisch, grob eingeordnet (<span class="up">●</span>&nbsp;positiv, <span class="down">●</span>&nbsp;negativ). Quelle: Yahoo Finance${s.d ? `, Stand ${dateDE(s.d)}` : ""}.</div></div>` : ""}
+  </div>`;
+}
+
 // ---------- Karte ----------
 function ampel(r) {
   return `<div class="ampel" title="Pflichtkriterien">${SETUP_KEYS.map(k => {
@@ -582,7 +733,7 @@ function card(r) {
   return `<article class="card">
     <div class="card-top">
       <div class="card-title">
-        <h2 title="${esc(r.name)}">${r.in_watchlist ? "★ " : ""}${esc(r.name || r.ticker)} <button class="ibtn" data-about aria-label="Was macht das Unternehmen?">i</button></h2>
+        <h2 title="${esc(r.name)}">${favBtn(r.ticker)} ${esc(r.name || r.ticker)} ${wlTag(r)}<button class="ibtn" data-about aria-label="Was macht das Unternehmen?">i</button></h2>
         <div class="meta">${esc(r.ticker)} · ${esc(r.exchange || "")} · ${REGION[r.region] || ""}${r.sector ? " · " + esc(r.sector) : ""}</div>
         ${statusBadge(r)}
         <span class="flag">${esc(r.zone_type)}${r.divergence ? " · " + esc(r.divergence) : ""}${r.volatility != null ? " · Vola " + pct(r.volatility, 0) : ""}</span>
@@ -604,6 +755,7 @@ function card(r) {
     <div class="chart" data-mini="${esc(r.ticker)}"><svg class="candles" viewBox="0 0 600 220" preserveAspectRatio="none"></svg></div>
     <div class="chips">${chips(r)}</div>
     ${tipHtml(r.hint)}
+    ${sentiHtml(r)}
     <div class="actions">
       <button class="btn" data-open="${esc(r.ticker)}">Details &amp; Chart</button>
       <a class="btn ghost" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
@@ -646,7 +798,7 @@ const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.
 
 // ---------- Tabelle ----------
 const COLS = [
-  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${r.in_watchlist ? " ★" : ""}` },
+  { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<span class="tk">${favBtn(r.ticker)}<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${wlTag(r)}</span>` },
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "trend", l: "Tendenz", g: r => r.trend ? r.trend.slope + (r.trend.d5 ?? 0) / 10 : 0, h: r => trendHtml(r) || "–" },
   { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
@@ -683,6 +835,15 @@ function tipHtml(h) {
   const d = h.days ?? h.d, dl = h.days_label ?? h.dl;
   return `<div class="tip tone-${esc(h.tone)}">${d != null && dl ? `<span class="days">${d === 0 ? "heute<small>letzter Tag</small>" : `${d}<small>${d === 1 ? "Tag" : "Tage"} ${esc(dl)}</small>`}</span>` : ""}<b class="t">${esc(h.title)}</b>${esc(h.text)}</div>`;
 }
+function searchCard(r) {
+  return `<article class="card">
+      <div class="card-title"><h2 title="${esc(r.n)}">${favBtn(r.t)} ${esc(r.n)}</h2>
+        <div class="meta">${esc(r.t)}${r.x ? " · " + esc(r.x) : ""} · ${REGION[r.r] || ""} · Kurs ${fmt(r.c)} ${esc(r.cur || "")} · ${r.m} / 11 Kriterien</div></div>
+      ${tipHtml(r)}
+      <div class="actions">${r.detail ? `<button class="btn" data-${data.results.some(x => x.ticker === r.t) ? "card" : "open"}="${esc(r.t)}">Übersicht</button>` : ""}
+        <a class="btn ghost" href="${tvUrl(r.t)}" target="_blank" rel="noopener">TradingView</a></div>
+    </article>`;
+}
 function searchHtml() {
   const q = $("search").value.trim().toLowerCase();
   if (q.length < 2) return "";
@@ -692,13 +853,7 @@ function searchHtml() {
   const found = searchIdx.filter(r => r.t.toLowerCase().includes(qq) || r.n.toLowerCase().includes(qq))
     .sort((a, b) => rank(a) - rank(b) || (b.s === "hit") - (a.s === "hit") || (b.s === "fast") - (a.s === "fast") || a.n.localeCompare(b.n));
   const shown = found.slice(0, 12);
-  const body = shown.length ? `<div class="sres">${shown.map(r => `<article class="card">
-      <div class="card-title"><h2 title="${esc(r.n)}">${esc(r.n)}</h2>
-        <div class="meta">${esc(r.t)}${r.x ? " · " + esc(r.x) : ""} · ${REGION[r.r] || ""} · Kurs ${fmt(r.c)} ${esc(r.cur || "")} · ${r.m} / 11 Kriterien</div></div>
-      ${tipHtml(r)}
-      <div class="actions">${r.detail ? `<button class="btn" data-open="${esc(r.t)}">Details &amp; Chart</button>` : ""}
-        <a class="btn ghost" href="${tvUrl(r.t)}" target="_blank" rel="noopener">TradingView</a></div>
-    </article>`).join("")}</div>` : `<div class="empty">Keine Aktie gefunden. Gesucht wird in allen ${fmt(searchIdx.length, 0)} geprüften Aktien (ab 2 Mrd. USD).</div>`;
+  const body = shown.length ? `<div class="sres">${shown.map(searchCard).join("")}</div>` : `<div class="empty">Keine Aktie gefunden. Gesucht wird in allen ${fmt(searchIdx.length, 0)} geprüften Aktien (ab 2 Mrd. USD).</div>`;
   return `<div class="section-title"><span>Suche in allen Aktien · mit Kurz-Hinweis</span><span>${found.length > 12 ? "12 von " + found.length : found.length} Treffer</span></div>${body}
     <div class="note" style="margin:8px 2px 0">Tage sind Handelstage und grobe Schätzungen aus den Regeln (z. B. bis ein Signal sein Zeitfenster verlässt). Stand: letzter Scan.</div>`;
 }
@@ -715,7 +870,7 @@ const daysUntil = iso => Math.round((new Date(iso + "T12:00:00") - new Date(new 
 const depotTickers = () => new Set(depotLoad().map(p => p.t));
 function calRelevant(e) {   // betrifft Watchlist oder Depot?
   if (!e.ticker) return true;
-  return e.watch || depotTickers().has(e.ticker);
+  return e.watch || depotTickers().has(e.ticker) || favs().has(e.ticker);
 }
 function calBadge() {
   if (!calData) return;
@@ -724,35 +879,71 @@ function calBadge() {
 }
 const CAL_KIND = { earnings: ["Q", "k-earn", "Quartalszahlen"], exdiv: ["Div", "k-div", "Ex-Dividende"], dividend: ["Div", "k-div", "Dividendenzahlung"],
                    macro: ["%", "k-macro", "Notenbank"], expiry: ["V", "k-exp", "Großer Verfall"] };
+let calMonth = 0, calDay = null;   // Monatsansicht: Versatz zum aktuellen Monat, ausgewählter Tag
+const isoOf = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 function calendarHtml() {
   if (!calData) return `<div class="section-title"><span>Kalender</span><span>lädt …</span></div>`;
   const dep = depotTickers();
-  const watchByRegion = reg => data.results.filter(r => (r.in_watchlist || dep.has(r.ticker)) && (reg === "all" || r.region === reg)).length;
+  const watchByRegion = reg => data.results.filter(r => (r.in_watchlist || dep.has(r.ticker) || favs().has(r.ticker)) && (reg === "all" || r.region === reg)).length;
   const kinds = { "": () => true, earnings: e => e.kind === "earnings", div: e => e.kind === "exdiv" || e.kind === "dividend", macro: e => e.kind === "macro" || e.kind === "expiry" };
-  const list = calData.filter(e => daysUntil(e.date) >= 0 && (state.calScope === "all" || calRelevant(e)) && kinds[state.calKind || ""](e));
+  const month = state.calView !== "list";
+  const all = calData.filter(e => (state.calScope === "all" || calRelevant(e)) && kinds[state.calKind || ""](e));
+  const list = all.filter(e => daysUntil(e.date) >= 0);
   const seg = (key, opts) => `<div class="opts seg">${opts.map(([v, l]) => `<button class="opt${(state[key] || "") === v ? " on" : ""}" data-cal="${key}" data-v="${v}">${l}</button>`).join("")}</div>`;
-  const head = `<div class="section-title"><span>Kalender · Termine für deine Aktien</span><span>${list.length} Termine</span></div>`
-    + seg("calScope", [["mine", "★ Watchlist & Depot"], ["all", "inkl. Treffer"]])
+  const head = `<div class="section-title"><span>Kalender · Termine für deine Aktien</span><span>${list.length} Termine</span></div>
+    <div class="cal-top"><div class="vtog">${[["month", "Monat"], ["list", "Liste"]].map(([v, l]) => `<button class="${(month ? "month" : "list") === v ? "on" : ""}" data-cal="calView" data-v="${v}">${v === "month" ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M9.5 10v10M14.5 10v10"/></svg>' : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>'}${l}</button>`).join("")}</div>${seg("calScope", [["mine", "Meine Aktien"], ["all", "inkl. Treffer"]])}</div>`
     + seg("calKind", [["", "Alle"], ["earnings", "Quartalszahlen"], ["div", "Dividenden"], ["macro", "Notenbanken & Markt"]]);
-  if (!list.length) return head + `<div class="empty">Keine Termine in den nächsten Wochen.</div>`;
+  const evRow = e => {
+    const [icon, cls] = CAL_KIND[e.kind] || ["•", "k-exp", ""];
+    if (!e.ticker) {
+      const reg = e.region || "all", n2 = watchByRegion(reg);
+      return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.title)}</b><span>${reg === "us" ? "wichtig für US-Aktien" : reg === "europe" ? "wichtig für europäische Aktien" : "betrifft den ganzen Markt"} · ${n2} deiner Aktien</span></div></div>`;
+    }
+    const inRes = data.results.some(r => r.ticker === e.ticker);
+    const sub = e.kind === "earnings" ? (e.estimate ? "Quartalszahlen · Datum geschätzt" : "Quartalszahlen")
+      : e.kind === "exdiv" ? `Ex-Dividende${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}` : `Dividendenzahlung${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}`;
+    return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.name || e.ticker)}${dep.has(e.ticker) ? '<span class="pill dep">Depot</span>' : favs().has(e.ticker) ? '<span class="pill fv">★</span>' : e.watch ? '<span class="pill">WL</span>' : ""}</b><span>${esc(e.ticker)} · ${sub}</span></div>
+      ${inRes ? `<a class="btnlink" href="#" data-card="${esc(e.ticker)}">Übersicht</a>` : ""}</div>`;
+  };
+  const dayHead = d => {
+    const n = daysUntil(d), when = n === 0 ? "heute" : n === 1 ? "morgen" : n === -1 ? "gestern" : n < 0 ? `vor ${-n} Tagen` : `in ${n} Tagen`;
+    return `<div class="cal-day"><b>${new Date(d + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" })}</b><span>${when}</span></div>`;
+  };
+  const foot = `<div class="note" style="margin:16px 2px 0">Quartalszahlen und Dividenden: Yahoo Finance (Watchlist-, Depot- und Treffer-Aktien, sofern im Scan). Notenbank- und Wirtschaftstermine: automatisch von Fed, EZB und US-Arbeitsministerium (BLS), Ersatz in <code>data/macro_events.json</code>. Keine Gewähr – vor wichtigen Entscheidungen bitte gegenprüfen.</div>`;
   const byDay = {};
-  list.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
-  return head + Object.entries(byDay).map(([d, evs]) => {
-    const n = daysUntil(d), when = n === 0 ? "heute" : n === 1 ? "morgen" : `in ${n} Tagen`;
-    const wd = new Date(d + "T12:00:00").toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric" });
-    return `<div class="cal-day"><b>${wd}</b><span>${when}</span></div><div class="cal-list">${evs.map(e => {
-      const [icon, cls, label] = CAL_KIND[e.kind] || ["•", "k-exp", ""];
-      if (!e.ticker) {
-        const reg = e.region || "all", n2 = watchByRegion(reg);
-        return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.title)}</b><span>${reg === "us" ? "wichtig für US-Aktien" : reg === "europe" ? "wichtig für europäische Aktien" : "betrifft den ganzen Markt"} · ${n2} deiner Aktien</span></div></div>`;
-      }
-      const inRes = data.results.some(r => r.ticker === e.ticker);
-      const sub = e.kind === "earnings" ? (e.estimate ? "Quartalszahlen · Datum geschätzt" : "Quartalszahlen")
-        : e.kind === "exdiv" ? `Ex-Dividende${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}` : `Dividendenzahlung${e.rate ? " · " + fmt(e.rate) + " je Aktie p. a." : ""}`;
-      return `<div class="ev"><span class="k ${cls}">${icon}</span><div class="b"><b>${esc(e.name || e.ticker)}${dep.has(e.ticker) ? '<span class="pill dep">Depot</span>' : e.watch ? '<span class="pill">★</span>' : ""}</b><span>${esc(e.ticker)} · ${sub}</span></div>
-        ${inRes ? `<a class="btnlink" href="#" data-open="${esc(e.ticker)}">Chart</a>` : ""}</div>`;
-    }).join("")}</div>`;
-  }).join("") + `<div class="note" style="margin:16px 2px 0">Quartalszahlen und Dividenden: Yahoo Finance (Watchlist-, Depot- und Treffer-Aktien, sofern im Scan). Notenbank- und Wirtschaftstermine: automatisch von Fed, EZB und US-Arbeitsministerium (BLS), Ersatz in <code>data/macro_events.json</code>. Keine Gewähr – vor wichtigen Entscheidungen bitte gegenprüfen.</div>`;
+  if (!month) {
+    if (!list.length) return head + `<div class="empty">Keine Termine in den nächsten Wochen.</div>`;
+    list.forEach(e => (byDay[e.date] = byDay[e.date] || []).push(e));
+    return head + Object.entries(byDay).map(([d, evs]) => dayHead(d) + `<div class="cal-list">${evs.map(evRow).join("")}</div>`).join("") + foot;
+  }
+  // Monatsansicht Mo–Fr; Wochenend-Termine landen am folgenden Montag
+  const today = new Date(), first = new Date(today.getFullYear(), today.getMonth() + calMonth, 1);
+  const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
+  all.forEach(e => { const d = new Date(e.date + "T12:00:00"), wd = d.getDay(); if (wd === 0 || wd === 6) d.setDate(d.getDate() + (wd === 6 ? 2 : 1));
+    const k = isoOf(d); (byDay[k] = byDay[k] || []).push(e); });
+  const start = new Date(first); start.setDate(first.getDate() - ((first.getDay() + 6) % 7));   // Montag der ersten Woche
+  const todayIso = isoOf(today);
+  if (!calDay || calDay.slice(0, 7) !== isoOf(first).slice(0, 7)) {   // Vorauswahl: heute bzw. erster Tag mit Terminen
+    const days = Object.keys(byDay).filter(d => d.slice(0, 7) === isoOf(first).slice(0, 7) && d >= (calMonth === 0 ? todayIso : "")).sort();
+    calDay = calMonth === 0 && new Date().getDay() % 6 ? todayIso : days[0] || null;
+  }
+  let cells = "";
+  for (const d = new Date(start); d <= last || d.getDay() !== 1; d.setDate(d.getDate() + 1)) {
+    const wd = d.getDay(); if (wd === 0 || wd === 6) { if (d > last) break; continue; }
+    const iso = isoOf(d), inM = d.getMonth() === first.getMonth(), evs = byDay[iso] || [];
+    const tag = e => { const [icon, cls] = CAL_KIND[e.kind] || ["•", "k-exp"]; const lbl = e.ticker ? (e.name || e.ticker).replace(/,? (Inc|AG|SE|Corp|N\.V|plc)\.?$/i, "") : (e.title || "").replace(/\s*\(.*$/, "").split(":")[0].trim();
+      return `<span class="ct ${cls}${e.ticker && dep.has(e.ticker) ? " dep" : ""}"><i>${icon}</i>${esc(lbl)}</span>`; };
+    cells += `<button class="mc${inM ? "" : " out"}${iso === todayIso ? " today" : ""}${iso === calDay ? " sel" : ""}${iso < todayIso ? " past" : ""}" data-calday="${iso}">
+      <span class="dn">${d.getDate()}</span>${evs.slice(0, 3).map(tag).join("")}${evs.length > 3 ? `<span class="more">+${evs.length - 3}</span>` : ""}${evs.length ? `<span class="dots">${evs.slice(0, 4).map(e => `<i class="${(CAL_KIND[e.kind] || [])[1] || ""}"></i>`).join("")}</span>` : ""}</button>`;
+  }
+  const mname = first.toLocaleDateString("de-DE", { month: "long", year: "numeric" });
+  const sel = calDay && byDay[calDay] ? dayHead(calDay) + `<div class="cal-list">${byDay[calDay].map(evRow).join("")}</div>`
+    : calDay ? dayHead(calDay) + `<div class="empty" style="padding:22px">Keine Termine an diesem Tag.</div>` : "";
+  return head + `<div class="mcal">
+      <div class="mh"><button class="mnav" data-calmonth="-1" aria-label="Vormonat">‹</button><b>${mname}</b>${calMonth ? `<button class="mtoday" data-calmonth="0">Heute</button>` : ""}<button class="mnav" data-calmonth="1" aria-label="Nächster Monat">›</button></div>
+      <div class="mg">${["Mo", "Di", "Mi", "Do", "Fr"].map(x => `<span class="wd">${x}</span>`).join("")}${cells}</div>
+      <div class="mlegend">${[["k-earn", "Quartalszahlen"], ["k-div", "Dividende"], ["k-macro", "Notenbank / Konjunktur"], ["k-exp", "Verfall"]].map(([c, l]) => `<span><i class="${c}"></i>${l}</span>`).join("")}</div>
+    </div>` + sel + foot;
 }
 
 // ---------- Depot (bleibt nur auf diesem Gerät gespeichert) ----------
@@ -1251,6 +1442,7 @@ function importRows(rows) {
     + (noData.length ? ` Ohne Kursdaten im Scan: ${noData.map(esc).join(", ")}.` : "");
 }
 document.addEventListener("toggle", e => {
+  if (e.target.matches && e.target.matches("details.jtx")) { jShowTx = e.target.open; return; }
   const g = e.target; if (!g.matches || !g.matches("details.grp")) return;
   const t = g.dataset.grp, was = depOpen.has(t);
   if (g.open === was) return;
@@ -1275,6 +1467,14 @@ document.addEventListener("click", e => {
     const el = document.querySelector(`details.grp[data-grp="${CSS.escape(gj.dataset.grpjump)}"]`); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
   const j = e.target.closest("[data-jump]");
   if (j) { const el = document.getElementById(j.dataset.jump); if (el) el.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+  const cm = e.target.closest("[data-calmonth]");
+  if (cm) { calMonth = cm.dataset.calmonth === "0" ? 0 : calMonth + +cm.dataset.calmonth; calDay = null; render(); return; }
+  const cdy = e.target.closest("[data-calday]");
+  if (cdy) { calDay = cdy.dataset.calday; render(); const el = document.querySelector(".mcal"); if (el) { const y = el.getBoundingClientRect().bottom + scrollY - 80; if (y > scrollY) scrollTo({ top: y, behavior: "smooth" }); } return; }
+  const js = e.target.closest("[data-jsort]");
+  if (js) { const k = js.dataset.jsort; if (jSort === k) jAsc = !jAsc; else { jSort = k; jAsc = k === "under"; } render(); return; }
+  const jf = e.target.closest("[data-jfilter]"); if (jf) { jFilter = jf.dataset.jfilter; render(); return; }
+  if (e.target.closest("[data-jclear]")) { if (confirm("Alle Transaktionen aus dem Journal auf diesem Gerät löschen? (Das Depot bleibt.)")) { txSave([]); depotMsg = ""; render(); } return; }
   const b = e.target.closest("[data-cal]");
   if (b) { state[b.dataset.cal] = b.dataset.v; save(); render(); return; }
   const d = e.target.closest("[data-dep]"); if (!d) return;
@@ -1313,15 +1513,260 @@ document.addEventListener("click", e => {
   }
   render();
 });
+document.addEventListener("input", e => {
+  if (e.target.id === "cfgName") { state.name = e.target.value.trim(); save(); renderHead(); }
+});
 document.addEventListener("change", async e => {
-  if (e.target.id !== "depCsv" || !e.target.files[0]) return;
+  if (!["depCsv", "jrCsv"].includes(e.target.id) || !e.target.files[0]) return;
   if (!searchIdx) await loadSearch();
   await loadAnalysis();
   const buf = await e.target.files[0].arrayBuffer(), u = new Uint8Array(buf);
-  try { depotMsg = importRows(u[0] === 0x50 && u[1] === 0x4b ? await xlsxRows(buf) : csvRows(new TextDecoder().decode(buf))); }
+  try { const rows = u[0] === 0x50 && u[1] === 0x4b ? await xlsxRows(buf) : csvRows(new TextDecoder().decode(buf));
+    const nTx = txImport(rows), msg = importRows(rows);
+    depotMsg = e.target.id === "jrCsv" ? `${nTx} neue Transaktionen ins Journal übernommen. Depot: ${msg}` : msg + (nTx ? ` Journal: ${nTx} neue Transaktionen.` : ""); }
   catch (err) { depotMsg = "Datei konnte nicht gelesen werden (" + esc(err.message || err) + ")."; }
   e.target.value = ""; render();
 });
+
+// ---------- Journal: alle Transaktionen aus dem Scalable-Export (nur auf diesem Gerät) ----------
+const TX_KEY = "kairo-tx-v1";
+function txLoad() { try { return JSON.parse(localStorage.getItem(TX_KEY) || "[]"); } catch (e) { return []; } }
+function txSave(list) { try { localStorage.setItem(TX_KEY, JSON.stringify(list)); } catch (e) {} }
+// Export-Zeilen → einheitliche Transaktionen; neue werden über die Referenz (sonst Datum+ISIN+Typ+Stück) ergänzt
+function txImport(rows) {
+  if (rows.length < 2) return 0;
+  const head = rows[0].map(h => String(h).toLowerCase().trim());
+  const col = (...names) => { const ex = head.findIndex(h => names.includes(h)); return ex >= 0 ? ex : head.findIndex(h => names.some(n => h.includes(n))); };
+  const I = { date: col("date", "datum"), time: col("time", "zeit", "uhrzeit"), status: col("status"), ref: col("reference", "referenz"),
+    desc: col("description", "name", "wertpapier", "bezeichnung", "titel"), asset: col("assettype"), type: col("type", "typ", "transaktion", "art"),
+    isin: col("isin"), qty: col("shares", "stück", "stueck", "anzahl", "quantity", "menge"), price: col("price", "kurs", "preis"),
+    amount: col("amount", "betrag"), fee: col("fee", "gebühr", "gebuehr"), tax: col("tax", "steuer"), cur: col("currency", "währung", "waehrung") };
+  if (I.type < 0 || I.date < 0) return 0;
+  const num = v => { if (typeof v === "number") return v; v = String(v ?? "").replace(/[^\d,.\-]/g, ""); if (!v) return 0;
+    if (v.includes(",") && v.includes(".")) v = v.lastIndexOf(",") > v.lastIndexOf(".") ? v.replace(/\./g, "").replace(",", ".") : v.replace(/,/g, ""); else v = v.replace(",", "."); return parseFloat(v) || 0; };
+  const toIso = v => { v = String(v || "").trim(); if (/^\d{5}(\.\d+)?$/.test(v)) return new Date(Date.UTC(1899, 11, 30) + Math.floor(+v) * 864e5).toISOString().slice(0, 10);
+    let m = v.match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/(\d{1,2})\.(\d{1,2})\.(\d{4})/); return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : ""; };
+  const tm = v => { v = String(v ?? "").trim(); if (/^0?\.\d+$/.test(v)) { const s = Math.round(+v * 86400); return [s / 3600 | 0, (s % 3600) / 60 | 0, s % 60].map(x => String(x).padStart(2, "0")).join(":"); } return v; };
+  const fix = s => String(s || "").replace(/â‚¬/g, "€").replace(/Ã¤/g, "ä").replace(/Ã¶/g, "ö").replace(/Ã¼/g, "ü").replace(/ÃŸ/g, "ß").trim();
+  const g = (c, k) => I[k] >= 0 ? c[I[k]] : "";
+  const list = txLoad(), seen = new Set(list.map(t => t.id));
+  let added = 0;
+  rows.slice(1).filter(c => c.some(x => String(x).trim())).forEach(c => {
+    const t = { date: toIso(g(c, "date")), time: tm(g(c, "time")), status: String(g(c, "status") || "Executed"), ref: String(g(c, "ref") || ""),
+      desc: fix(g(c, "desc")), asset: String(g(c, "asset") || ""), type: String(g(c, "type") || ""), isin: String(g(c, "isin") || ""),
+      qty: Math.abs(num(g(c, "qty"))), price: Math.abs(num(g(c, "price"))), amount: num(g(c, "amount")), fee: Math.abs(num(g(c, "fee"))), tax: num(g(c, "tax")),
+      cur: String(g(c, "cur") || "EUR") };
+    if (!t.date || !t.type) return;
+    t.id = t.ref || [t.date, t.time, t.isin, t.type, t.qty, t.amount].join("|");
+    if (seen.has(t.id)) return;
+    seen.add(t.id); list.push(t); added++;
+  });
+  list.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+  txSave(list);
+  return added;
+}
+const isEtf = (name, isin) => /\b(ETF|iShares|SPDR|Xtrackers|Vanguard|Amundi|Lyxor|MSCI|S&P 500|Stoxx|Invesco|WisdomTree|UCITS)\b/i.test(name) || /^(IE|LU)/.test(isin || "") && /\(Acc\)|\(Dist\)/i.test(name);
+function txKind(desc, isin) {
+  const d = parseDerivative(desc);
+  if (d) return { k: d.dir === "long" ? "tl" : "ts", label: d.dir === "long" ? "Turbo Long" : "Turbo Short", under: d.under, d };
+  if (isEtf(desc, isin)) return { k: "etf", label: "ETF", under: desc };
+  return { k: "stock", label: "Aktie", under: desc };
+}
+const KIND_COL = { tl: "var(--up)", ts: "var(--red)", stock: "var(--accent)", etf: "var(--gold)" };
+// FIFO: Käufe als Posten, jeder Verkauf schließt die ältesten Posten. Ein „Trade“ = Eröffnung bis Bestand 0.
+function journalModel(tx) {
+  const ok = tx.filter(t => /executed|ausgeführt/i.test(t.status) || !t.status);
+  const pos = {}, trades = [], events = [];
+  let fees = 0, taxes = 0, divs = 0, interest = 0, deposits = 0, withdrawals = 0;
+  ok.forEach(t => {
+    const type = t.type.toLowerCase();
+    if (/distribution|dividend|ausschüttung/.test(type)) { divs += t.amount - Math.max(0, t.tax); taxes += Math.max(0, t.tax); return; }
+    if (/interest|zins/.test(type)) { interest += t.amount - Math.max(0, t.tax); taxes += Math.max(0, t.tax); return; }
+    if (/deposit|einzahlung/.test(type)) { deposits += Math.abs(t.amount); return; }
+    if (/withdraw|auszahlung/.test(type)) { withdrawals += Math.abs(t.amount); return; }
+    if (/^tax|steuer/.test(type)) return;   // Steuer-Verrechnung (Rückerstattung/Nachbuchung) – nicht Teil des Trading-Ergebnisses
+    const sell = /sell|verkauf/.test(type), buy = /buy|kauf|savings|spar/.test(type) && !sell;
+    if ((!buy && !sell) || !t.qty) return;
+    fees += t.fee; taxes += t.tax;
+    const key = t.isin || t.desc;
+    let p = pos[key];
+    if (buy) {
+      if (!p || p.qty <= 1e-9) {
+        const kd = txKind(t.desc, t.isin);
+        p = pos[key] = { key, isin: t.isin, name: t.desc, ...kd, qty: 0, lots: [], open: t.date, cost: 0, proceeds: 0, fees: 0, maxCost: 0, buys: 0, sells: 0, closeParts: [] };
+      }
+      const gross = t.qty * t.price || Math.abs(t.amount);
+      p.lots.push({ qty: t.qty, unit: (gross + t.fee) / t.qty, date: t.date });
+      p.qty += t.qty; p.fees += t.fee; p.buys++;
+      p.maxCost = Math.max(p.maxCost, p.lots.reduce((s, l) => s + l.qty * l.unit, 0));
+      if (!/turbo|long|short/i.test(p.name)) p.name = t.desc;
+      return;
+    }
+    if (!p || p.qty <= 1e-9) return;   // Verkauf ohne Kauf im Export (z. B. vor dem Export-Zeitraum gekauft)
+    let left = Math.min(t.qty, p.qty), cost = 0, daysW = 0;
+    const sold = left;
+    while (left > 1e-9 && p.lots.length) {
+      const l = p.lots[0], q = Math.min(l.qty, left);
+      cost += q * l.unit; daysW += q * Math.max(0, (new Date(t.date) - new Date(l.date)) / 864e5);
+      l.qty -= q; left -= q; if (l.qty <= 1e-9) p.lots.shift();
+    }
+    const gross = sold * t.price || Math.abs(t.amount) * sold / t.qty, proceeds = gross - t.fee * sold / t.qty;
+    const pnl = proceeds - cost;
+    p.qty -= sold; p.cost += cost; p.proceeds += proceeds; p.fees += t.fee; p.sells++;
+    p.closeParts.push({ date: t.date, pnl });
+    events.push({ date: t.date, pnl, key: p.key });
+    if (p.qty <= 1e-9) {
+      trades.push({ ...p, close: t.date, pnl: p.proceeds - p.cost, ret: p.cost ? (p.proceeds - p.cost) / p.cost : 0,
+        days: Math.max(0, Math.round((new Date(t.date) - new Date(p.open)) / 864e5)), holdW: daysW / sold });
+      delete pos[key];
+    }
+  });
+  const open = Object.values(pos).filter(p => p.qty > 1e-9);
+  const partial = open.filter(p => p.sells).map(p => ({ ...p, pnl: p.proceeds - p.cost }));
+  trades.sort((a, b) => b.close.localeCompare(a.close));
+  const realized = events.reduce((s, e) => s + e.pnl, 0);
+  return { trades, open, partial, events: events.sort((a, b) => a.date.localeCompare(b.date)), realized, fees, taxes, divs, interest, deposits, withdrawals, n: ok.length };
+}
+function jStats(ts) {
+  const w = ts.filter(t => t.pnl > 0), l = ts.filter(t => t.pnl <= 0);
+  const sum = a => a.reduce((s, t) => s + t.pnl, 0), avg = (a, f) => a.length ? a.reduce((s, t) => s + f(t), 0) / a.length : null;
+  const gw = sum(w), gl = -sum(l);
+  return { n: ts.length, w: w.length, l: l.length, rate: ts.length ? w.length / ts.length : null, pnl: sum(ts), gw, gl,
+    avgW: avg(w, t => t.pnl), avgL: avg(l, t => t.pnl), avgWr: avg(w, t => t.ret), avgLr: avg(l, t => t.ret),
+    pf: gl > 0 ? gw / gl : gw > 0 ? Infinity : null, exp: ts.length ? sum(ts) / ts.length : null,
+    holdW: avg(w, t => t.days), holdL: avg(l, t => t.days),
+    best: ts.slice().sort((a, b) => b.pnl - a.pnl)[0], worst: ts.slice().sort((a, b) => a.pnl - b.pnl)[0] };
+}
+let jSort = "close", jAsc = false, jFilter = "", jShowTx = false;
+const MON = ["Jan", "Feb", "Mär", "Apr", "Mai", "Jun", "Jul", "Aug", "Sep", "Okt", "Nov", "Dez"];
+const eur2 = v => v == null ? "–" : `${v < 0 ? "−" : ""}${fmt(Math.abs(v), 2)} €`;
+const sEur2 = v => v == null ? "–" : `${v >= 0 ? "+" : "−"}${fmt(Math.abs(v), 2)} €`;
+function equitySvg(events) {
+  if (events.length < 2) return "";
+  const W = 640, H = 190, pl = 8, pr = 8, pt = 14, pb = 22;
+  let cum = 0; const pts = [{ x: 0, v: 0, date: events[0].date }].concat(events.map((e, i) => ({ x: i + 1, v: (cum += e.pnl), date: e.date, p: e.pnl })));
+  const lo = Math.min(0, ...pts.map(p => p.v)), hi = Math.max(0, ...pts.map(p => p.v)), span = hi - lo || 1;
+  const X = x => pl + (W - pl - pr) * x / (pts.length - 1), Y = v => pt + (H - pt - pb) * (hi - v) / span;
+  const line = pts.map(p => `${X(p.x).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+  const last = pts[pts.length - 1], col = last.v >= 0 ? "var(--up)" : "var(--red)";
+  let peak = -Infinity, mdd = 0; pts.forEach(p => { peak = Math.max(peak, p.v); mdd = Math.max(mdd, peak - p.v); });
+  const lbl = [pts[1], pts[Math.floor(pts.length / 2)], last].map(p => `<text x="${X(p.x).toFixed(1)}" y="${H - 5}" text-anchor="${p === last ? "end" : p === pts[1] ? "start" : "middle"}">${dateDE(p.date).slice(0, 6)}</text>`).join("");
+  return { mdd, svg: `<svg class="eq" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-label="Kurve des realisierten Ergebnisses">
+    <defs><linearGradient id="eqg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".32"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    <line x1="${pl}" x2="${W - pr}" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" stroke="var(--line)" stroke-dasharray="4 4"/>
+    <polygon points="${X(0).toFixed(1)},${Y(0).toFixed(1)} ${line} ${X(last.x).toFixed(1)},${Y(0).toFixed(1)}" fill="url(#eqg)"/>
+    <polyline points="${line}" fill="none" stroke="${col}" stroke-width="2.4" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>
+    ${pts.slice(1).map(p => `<circle cx="${X(p.x).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3.2" fill="${p.p >= 0 ? "var(--up)" : "var(--red)"}" stroke="var(--bg)" stroke-width="1.2"><title>${dateDE(p.date)}: ${sEur2(p.p)} → ${sEur2(p.v)}</title></circle>`).join("")}
+    <g class="eqlbl">${lbl}</g></svg>` };
+}
+function monthBars(events) {
+  const by = {}; events.forEach(e => { const k = e.date.slice(0, 7); by[k] = (by[k] || 0) + e.pnl; });
+  const ks = Object.keys(by).sort(); if (!ks.length) return "";
+  const first = new Date(ks[0] + "-01"), lastK = ks[ks.length - 1], months = [];
+  for (const d = new Date(first); ; d.setMonth(d.getMonth() + 1)) { const k = d.toISOString().slice(0, 7); months.push(k); if (k >= lastK || months.length > 36) break; }
+  const mx = Math.max(...months.map(k => Math.abs(by[k] || 0))) || 1;
+  return `<div class="mbars">${months.map(k => { const v = by[k] || 0, h = Math.round(46 * Math.abs(v) / mx);
+    return `<div class="mb" title="${MON[+k.slice(5) - 1]} ${k.slice(0, 4)}: ${sEur2(v)}"><span class="v ${v >= 0 ? "up" : "down"}">${v ? sgnEur(v).replace(" €", "") : ""}</span>
+      <div class="bar"><i class="${v >= 0 ? "pos" : "neg"}" style="height:${Math.max(v ? 2 : 0, h)}px"></i></div><span class="m">${MON[+k.slice(5) - 1]}</span></div>`; }).join("")}</div>`;
+}
+function ringSvg(p, col) {
+  const r = 30, c = 2 * Math.PI * r;
+  return `<svg viewBox="0 0 76 76" class="ring"><circle cx="38" cy="38" r="${r}" fill="none" stroke="var(--surface-3)" stroke-width="8"/>
+    <circle cx="38" cy="38" r="${r}" fill="none" stroke="${col}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(c * (p || 0)).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 38 38)"/></svg>`;
+}
+function journalInsights(m, s, byKind) {
+  const out = [];
+  if (s.n >= 4 && s.holdW != null && s.holdL != null && s.holdL > s.holdW * 1.4)
+    out.push(["orange", "Verlierer länger gehalten als Gewinner", `Gewinner hältst du im Schnitt ${fmt(s.holdW, 0)} Tage, Verlierer ${fmt(s.holdL, 0)} Tage. Typisches Muster („Gewinne laufen lassen, Verluste begrenzen“ umgekehrt) – feste Ausstiegsregel hilft.`]);
+  if (s.n >= 4 && s.holdW != null && s.holdL != null && s.holdW > s.holdL * 1.4)
+    out.push(["green", "Verluste schnell begrenzt", `Verlierer schließt du nach Ø ${fmt(s.holdL, 0)} Tagen, Gewinner lässt du Ø ${fmt(s.holdW, 0)} Tage laufen – genau richtig.`]);
+  if (s.avgW != null && s.avgL != null && s.rate != null) {
+    const payoff = s.avgW / Math.abs(s.avgL || 1), be = 1 / (1 + payoff);
+    out.push([s.rate >= be ? "green" : "red", `Chance-Risiko je Trade ${fmt(payoff, 2)} : 1`, `Ø Gewinn ${sEur2(s.avgW)} gegen Ø Verlust ${sEur2(s.avgL)}. Damit brauchst du mindestens ${pct(be, 0)} Trefferquote – du liegst bei ${pct(s.rate, 0)}.`]);
+  }
+  const kinds = Object.entries(byKind).filter(([, x]) => x.n >= 2).sort((a, b) => b[1].pnl - a[1].pnl);
+  if (kinds.length >= 2) {
+    const [bk, bx] = kinds[0], [wk, wx] = kinds[kinds.length - 1];
+    out.push(["gray", "Deine stärkste Kategorie", `${{ tl: "Turbo Long", ts: "Turbo Short", stock: "Aktien", etf: "ETFs" }[bk]}: ${sEur2(bx.pnl)} bei ${pct(bx.rate, 0)} Trefferquote${wx.pnl < 0 ? ` · schwächste: ${{ tl: "Turbo Long", ts: "Turbo Short", stock: "Aktien", etf: "ETFs" }[wk]} ${sEur2(wx.pnl)}` : ""}.`]);
+  }
+  if (m.fees > 0 && s.gw > 0 && m.fees / s.gw > .1) out.push(["orange", "Gebühren fressen Gewinn", `${eur2(m.fees)} Ordergebühren – ${pct(m.fees / s.gw, 0)} deiner Brutto-Gewinne. Weniger, dafür größere Trades senken den Anteil.`]);
+  return out.map(([tone, t, x]) => `<div class="tip tone-${tone}"><b class="t">${esc(t)}</b>${esc(x)}</div>`).join("");
+}
+function journalHtml() {
+  const tx = txLoad();
+  const imp = `<label class="btn${tx.length ? " ghost" : ""}" style="cursor:pointer">${tx.length ? "Neuen Export einlesen" : "Scalable-Export importieren"}<input type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" id="jrCsv" hidden></label>`;
+  const head = `<div class="section-title"><span>Journal · deine Trades</span><span>${tx.length ? tx.length + " Transaktionen" : ""}</span></div>`;
+  if (!tx.length) return head + `<div class="card jempty"><div class="jicon">📒</div><b>Dein Trading-Journal</b>
+      <p>Lies deinen Transaktions-Export aus Scalable Capital ein (Web-Version → Transaktionen → Export). Kairo ordnet alle Käufe und Verkäufe zu Trades, rechnet Gewinne und Verluste nach Gebühren und zeigt deine Statistik.</p>
+      <div class="row-actions" style="justify-content:center">${imp}</div>${depotMsg ? `<div class="tip tone-gray" style="margin-top:14px;text-align:left">${depotMsg}</div>` : ""}
+      <div class="note">Die Datei bleibt auf diesem Gerät – nichts wird hochgeladen. Positionen im Depot werden dabei ebenfalls aktualisiert.</div></div>`;
+  const m = journalModel(tx), all = m.trades, s = jStats(all);
+  const byKind = {}; all.forEach(t => { const x = byKind[t.k] = byKind[t.k] || []; x.push(t); });
+  Object.keys(byKind).forEach(k => byKind[k] = jStats(byKind[k]));
+  const byUnder = {}; all.forEach(t => { const u = t.under.replace(/\s+(Co|Inc|Corp|AG|SE|Technologies|Technology|Group)\b.*$/i, "").trim(); (byUnder[u] = byUnder[u] || []).push(t); });
+  const eq = equitySvg(m.events);
+  const rcol = s.rate == null ? "var(--muted)" : s.rate >= .5 ? "var(--up)" : s.rate >= .35 ? "var(--gold)" : "var(--red)";
+  const first = tx[0].date, last = tx[tx.length - 1].date;
+  const hero = `<div class="card jhero">
+      <div class="jh-main"><span>Realisiertes Ergebnis</span><b class="${m.realized >= 0 ? "up" : "down"}">${sEur2(m.realized)}</b>
+        <em>nach Ordergebühren, vor Steuern · ${dateDE(first)} – ${dateDE(last)}</em></div>
+      <div class="jh-ring">${ringSvg(s.rate, rcol)}<div><b>${s.rate != null ? pct(s.rate, 0) : "–"}</b><span>Trefferquote</span></div></div>
+      <div class="jh-wl"><div><i class="up">${s.w}</i> Gewinner</div><div><i class="down">${s.l}</i> Verlierer</div><div><i>${m.open.length}</i> offen</div></div>
+    </div>`;
+  const tiles = `<div class="cockpit jtiles">
+      <div class="fig"><span>Profit-Faktor</span><b class="${s.pf == null ? "" : s.pf >= 1 ? "up" : "down"}">${s.pf == null ? "–" : s.pf === Infinity ? "∞" : fmt(s.pf, 2)}</b><em>Gewinne ÷ Verluste${s.pf != null && s.pf !== Infinity ? (s.pf >= 1.5 ? " · stark" : s.pf >= 1 ? " · positiv" : " · negativ") : ""}</em></div>
+      <div class="fig"><span>Ø Gewinner</span><b class="up">${s.avgW != null ? sEur2(s.avgW) : "–"}</b><em>${s.avgWr != null ? sgnPct(s.avgWr, 0) + " je Trade" : ""}</em></div>
+      <div class="fig"><span>Ø Verlierer</span><b class="down">${s.avgL != null ? sEur2(s.avgL) : "–"}</b><em>${s.avgLr != null ? sgnPct(s.avgLr, 0) + " je Trade" : ""}</em></div>
+      <div class="fig"><span>Erwartung je Trade</span><b class="${(s.exp ?? 0) >= 0 ? "up" : "down"}">${s.exp != null ? sEur2(s.exp) : "–"}</b><em>Ø Ergebnis aller ${s.n} Trades</em></div>
+      <div class="fig"><span>Haltedauer Ø</span><b>${s.holdW != null ? fmt(s.holdW, 0) : "–"} / ${s.holdL != null ? fmt(s.holdL, 0) : "–"} T.</b><em>Gewinner / Verlierer</em></div>
+      <div class="fig"><span>Max. Rückgang</span><b class="${eq && eq.mdd ? "down" : ""}">${eq ? "−" + eur2(eq.mdd) : "–"}</b><em>vom Höchststand der Kurve</em></div>
+      <div class="fig"><span>Gebühren</span><b>${eur2(m.fees)}</b><em>Steuern ${eur2(m.taxes)}</em></div>
+      <div class="fig"><span>Dividenden &amp; Zinsen</span><b class="up">${sEur2(m.divs + m.interest)}</b><em>netto nach Steuer</em></div>
+    </div>`;
+  const best = s.best && s.best.pnl > 0 ? s.best : null, worst = s.worst && s.worst.pnl < 0 ? s.worst : null;
+  const bw = (t, lbl, cls) => t ? `<div class="jbw ${cls}"><span>${lbl}</span><b>${esc(t.under)}</b><em>${t.label} · ${dateDE(t.close)}</em><i>${sEur2(t.pnl)} <small>${sgnPct(t.ret, 0)}</small></i></div>` : "";
+  const curve = `<div class="card jcard"><div class="jc-h"><b>Ergebnis-Kurve</b><span>kumuliert, je Verkauf</span></div>${eq ? eq.svg : `<div class="note">Ab zwei Verkäufen erscheint hier deine Kurve.</div>`}
+      <div class="jc-h" style="margin-top:16px"><b>Je Monat</b><span>realisiert</span></div>${monthBars(m.events)}</div>`;
+  const wlBar = s.n ? `<div class="wlbar"><i class="pos" style="flex:${s.gw || 0.0001}"></i><i class="neg" style="flex:${s.gl || 0.0001}"></i></div>
+      <div class="wlleg"><span class="up">Gewinne ${sEur2(s.gw)}</span><span class="down">Verluste ${sEur2(-s.gl)}</span></div>` : "";
+  const kindRows = Object.entries(byKind).sort((a, b) => b[1].pnl - a[1].pnl).map(([k, x]) => `<tr><td><i class="kd" style="background:${KIND_COL[k]}"></i>${{ tl: "Turbo Long", ts: "Turbo Short", stock: "Aktien", etf: "ETFs" }[k]}</td>
+      <td class="num">${x.n}</td><td class="num">${pct(x.rate, 0)}</td><td class="num ${x.pnl >= 0 ? "up" : "down"}">${sEur2(x.pnl)}</td></tr>`).join("");
+  const underRows = Object.entries(byUnder).map(([u, ts]) => [u, jStats(ts)]).sort((a, b) => b[1].pnl - a[1].pnl).map(([u, x]) => `<tr><td>${esc(u)}</td>
+      <td class="num">${x.n}</td><td class="num">${x.w}/${x.n}</td><td class="num ${x.pnl >= 0 ? "up" : "down"}">${sEur2(x.pnl)}</td></tr>`).join("");
+  const split = `<div class="jgrid">
+      <div class="card jcard"><div class="jc-h"><b>Gewinne vs. Verluste</b><span>${s.n} abgeschlossene Trades</span></div>${wlBar}
+        <div class="jbws">${bw(best, "Bester Trade", "w")}${bw(worst, "Schlechtester Trade", "l")}</div></div>
+      <div class="card jcard"><div class="jc-h"><b>Nach Art</b><span></span></div><table class="jt"><thead><tr><th>Art</th><th class="num">Trades</th><th class="num">Quote</th><th class="num">Ergebnis</th></tr></thead><tbody>${kindRows}</tbody></table>
+        <div class="jc-h" style="margin-top:14px"><b>Nach Basiswert</b><span></span></div><table class="jt"><thead><tr><th>Wert</th><th class="num">Trades</th><th class="num">Gew.</th><th class="num">Ergebnis</th></tr></thead><tbody>${underRows}</tbody></table></div>
+    </div>`;
+  const ins = journalInsights(m, s, byKind);
+  // Trade-Liste
+  const COLS_J = { close: t => t.close, under: t => t.under, days: t => t.days, cost: t => t.cost, pnl: t => t.pnl, ret: t => t.ret };
+  let list = all.filter(t => !jFilter || (jFilter === "win" ? t.pnl > 0 : jFilter === "loss" ? t.pnl <= 0 : t.k === jFilter));
+  list = list.slice().sort((a, b) => { const x = COLS_J[jSort](a), y = COLS_J[jSort](b); const c = typeof x === "string" ? x.localeCompare(y) : x - y; return jAsc ? c : -c; });
+  const th = (k, l, n) => `<th class="${n ? "num " : ""}${jSort === k ? "sorted" + (jAsc ? " asc" : "") : ""}" data-jsort="${k}">${l}</th>`;
+  const fchips = [["", "Alle"], ["win", "Gewinner"], ["loss", "Verlierer"], ...Object.keys(byKind).map(k => [k, { tl: "Turbo Long", ts: "Turbo Short", stock: "Aktien", etf: "ETFs" }[k]])];
+  const tradesTbl = `<div class="section-title" style="margin-top:26px"><span>Abgeschlossene Trades</span><span>${list.length}</span></div>
+    <div class="kbar">${fchips.map(([v, l]) => `<button class="kchip${jFilter === v ? " on" : ""}" data-jfilter="${v}">${l}</button>`).join("")}</div>
+    <div class="table-wrap"><table class="jtrades"><thead><tr>${th("close", "Geschlossen")}${th("under", "Wert")}<th>Art</th>${th("days", "Dauer", 1)}${th("cost", "Einsatz", 1)}${th("pnl", "Ergebnis", 1)}${th("ret", "in %", 1)}</tr></thead>
+    <tbody>${list.map(t => `<tr><td>${dateDE(t.close)}<small>seit ${dateDE(t.open)}</small></td><td><b>${esc(t.under)}</b><small>${esc(t.isin)}${t.buys + t.sells > 2 ? ` · ${t.buys} Käufe, ${t.sells} Verkäufe` : ""}</small></td>
+      <td><span class="kp" style="--k:${KIND_COL[t.k]}">${t.label}</span></td><td class="num">${t.days} T.</td><td class="num">${eur2(t.cost)}</td>
+      <td class="num ${t.pnl >= 0 ? "up" : "down"}"><b>${sEur2(t.pnl)}</b></td><td class="num ${t.pnl >= 0 ? "up" : "down"}">${sgnPct(t.ret, 1)}</td></tr>`).join("")}</tbody></table></div>`;
+  const openTbl = m.open.length ? `<div class="section-title" style="margin-top:26px"><span>Noch offen</span><span>${m.open.length}</span></div>
+    <div class="table-wrap"><table class="jtrades"><thead><tr><th>Seit</th><th>Wert</th><th>Art</th><th class="num">Stück</th><th class="num">Einsatz</th><th class="num">schon realisiert</th></tr></thead><tbody>
+    ${m.open.map(p => { const c = p.lots.reduce((s2, l) => s2 + l.qty * l.unit, 0); return `<tr><td>${dateDE(p.open)}</td><td><b>${esc(p.under)}</b><small>${esc(p.isin)}</small></td><td><span class="kp" style="--k:${KIND_COL[p.k]}">${p.label}</span></td>
+      <td class="num">${fmt(p.qty, p.qty % 1 ? 3 : 0)}</td><td class="num">${eur2(c)}</td><td class="num ${p.sells ? (p.proceeds - p.cost >= 0 ? "up" : "down") : "muted"}">${p.sells ? sEur2(p.proceeds - p.cost) : "–"}</td></tr>`; }).join("")}</tbody></table></div>
+    <div class="note" style="margin:8px 2px 0">Offene Positionen zählen erst mit dem Verkauf zum Ergebnis; Teilverkäufe sind oben bereits enthalten. Bewertung der offenen Positionen: Reiter Depot.</div>` : "";
+  const TYPE_DE = { buy: "Kauf", sell: "Verkauf", distribution: "Ausschüttung", interest: "Zinsen", deposit: "Einzahlung", withdrawal: "Auszahlung", taxes: "Steuern" };
+  const txTbl = `<details class="card jtx"${jShowTx ? " open" : ""}><summary><b>Alle Transaktionen</b><span>${tx.length}</span></summary>
+    <div class="table-wrap" style="margin-top:12px"><table class="jtrades"><thead><tr><th>Datum</th><th>Art</th><th>Bezeichnung</th><th class="num">Stück</th><th class="num">Kurs</th><th class="num">Betrag</th><th class="num">Gebühr</th><th class="num">Steuer</th></tr></thead><tbody>
+    ${tx.slice().reverse().map(t => `<tr class="${/executed/i.test(t.status) ? "" : "muted"}"><td>${dateDE(t.date)}<small>${esc(t.time)}</small></td><td>${esc(TYPE_DE[t.type.toLowerCase()] || t.type)}${/executed/i.test(t.status) ? "" : ` <small>${esc(t.status)}</small>`}</td>
+      <td>${esc(t.desc || "–")}<small>${esc(t.isin)}</small></td><td class="num">${t.qty ? fmt(t.qty, t.qty % 1 ? 3 : 0) : ""}</td><td class="num">${t.price ? fmt(t.price, t.price < 10 ? 3 : 2) : ""}</td>
+      <td class="num ${t.amount >= 0 ? "up" : ""}">${sEur2(t.amount)}</td><td class="num">${t.fee ? eur2(t.fee) : ""}</td><td class="num">${t.tax ? eur2(t.tax) : ""}</td></tr>`).join("")}</tbody></table></div></details>`;
+  return head + hero + tiles + (ins ? `<div class="jins">${ins}</div>` : "") + curve + split + tradesTbl + openTbl
+    + `<div class="row-actions" style="margin:22px 0 12px">${imp}<button class="btn ghost" data-jclear>Journal löschen</button></div>${depotMsg ? `<div class="tip tone-gray" style="margin-bottom:14px">${depotMsg}</div>` : ""}`
+    + txTbl + `<div class="note" style="margin:16px 2px 0">Berechnung: Käufe und Verkäufe je Wertpapier nach FIFO zugeordnet, ein Trade läuft von der Eröffnung bis der Bestand wieder 0 ist. Ergebnis = Verkaufserlös − Kaufpreis, jeweils inklusive Ordergebühren, vor Steuern. Alles bleibt nur auf diesem Gerät gespeichert.</div>`;
+}
 
 // ---------- Einstellungen ----------
 const CFG_LABELS = { universe: "Universum (2.1)", correction: "Korrektur (2.2)", fib: "Fibonacci – Variante A (2.3)",
@@ -1332,7 +1777,11 @@ function settingsHtml() {
   const groups = Object.entries(CFG_LABELS).filter(([k]) => cfg[k]).map(([k, label]) =>
     `<h4>${label}</h4><div class="table-wrap"><table><tbody>${Object.entries(cfg[k]).map(([p, v]) =>
       `<tr><td>${esc(p)}</td><td class="num">${esc(Array.isArray(v) ? v.join(" – ") : typeof v === "number" ? fmt(v, Number.isInteger(v) ? 0 : 3) : v)}</td></tr>`).join("")}</tbody></table></div>`).join("");
-  return `<div class="section-title"><span>Einstellungen</span><span>aus config.yaml</span></div>
+  return `<div class="section-title"><span>Persönlich</span><span>nur auf diesem Gerät</span></div>
+    <div class="card" style="margin-bottom:18px"><div class="form" style="margin:0">
+      <label class="full">Wie soll Kairo dich nennen?<input id="cfgName" value="${esc(state.name || "")}" placeholder="z. B. Jonny" maxlength="24" autocomplete="given-name"></label></div>
+      <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div></div>
+    <div class="section-title"><span>Scanner-Parameter</span><span>aus config.yaml</span></div>
     <div class="card cfg">
       <div>Alle Parameter stehen zentral in <b>config.yaml</b>. Zum Ändern die Datei auf GitHub bearbeiten und danach den Scan neu starten – die Website zeigt dann die Ergebnisse mit den neuen Parametern.</div>
       <div class="links">
@@ -1353,15 +1802,17 @@ function render() {
   if (state.sec === "settings") { $("main").innerHTML = settingsHtml(); return; }
   if (state.sec === "calendar") { $("main").innerHTML = calendarHtml(); return; }
   if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
+  if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
   const list = selRows(), k = new Set(state.kinds || []);
   const nFilt = ["minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
-  const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${data.results.filter(f).length}</small></button>`).join("")}
+  const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
-  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  const extra = k.has("fav") ? favExtraHtml() : "";
+  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ fav: "Merkliste", hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
   if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = searchHtml() + bar; return; }
   if (!list.length) {
-    $("main").innerHTML = head + `<div class="empty">${!k.size ? "Wähle oben Treffer, Fast-Treffer oder Watchlist." : `Keine Aktie mit dieser Auswahl${nFilt ? " und diesen Filtern" : ""}.`}</div>`;
+    $("main").innerHTML = head + (extra || `<div class="empty">${!k.size ? "Wähle oben Merkliste, Treffer, Fast-Treffer oder Watchlist." : k.size === 1 && k.has("fav") ? "Deine Merkliste ist noch leer. Tippe bei einer Aktie auf den Stern ☆ – in der Tabelle, in der Übersicht oder in der Suche." : `Keine Aktie mit dieser Auswahl${nFilt ? " und diesen Filtern" : ""}.`}</div>`);
     return;
   }
   const col = COLS.find(c => c.k === state.tableSort) || COLS.find(c => c.k === "score");
@@ -1370,12 +1821,13 @@ function render() {
   const lead = ["ticker", "name", "status", "met", "trend", "miss"].filter(x => !(onlyHits && ["status", "met", "miss"].includes(x)));
   const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "status", "met", "trend", "miss"].includes(c.k))];
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
-    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;
+    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
 }
 
 function renderHead() {
   const h = new Date().getHours();
-  $("greet").textContent = (h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + " 👋";
+  const nm = String(state.name || "").trim();
+  $("greet").textContent = (h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + nm : "") + " 👋";
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b> und <b>${s.fast_hits ?? 0} Fast-Treffer</b> · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
@@ -1410,20 +1862,8 @@ async function openDetail(t) {
         <table class="check"><tbody>${r.criteria.map(c => `<tr><td class="${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</td><td><b>${esc(c.label)}</b><br>${esc(c.value)}<div class="th">Schwelle: ${esc(c.threshold)}</div></td></tr>`).join("")}</tbody></table>
         ${r.bonuses && r.bonuses.length ? `<div class="pane-label" style="margin-top:12px">Score-Bausteine</div><table class="check"><tbody>${r.bonuses.map(b => `<tr><td class="${b.points >= 0 ? "ok" : "no"}">${b.points > 0 ? "+" : ""}${b.points}</td><td>${esc(b.label)}</td></tr>`).join("")}</tbody></table>` : ""}
       </div>
-      <div class="pane"><div class="pane-label">Trade-Plan</div>
-        ${p.entry ? `<div class="plan">
-          <div class="fig"><span>Entry (Schluss)</span><b>${fmt(p.entry)}</b></div>
-          <div class="fig"><span>alternativ Buy-Stop</span><b>${fmt(p.buy_stop)}</b></div>
-          <div class="fig"><span>Stop-Loss</span><b class="down">${fmt(p.stop)}</b></div>
-          <div class="fig"><span>Abstand zum Stop</span><b class="down">−${pct(p.stop_pct)}</b></div>
-          <div class="fig"><span>Ziel 1</span><b class="up">${fmt(p.target1)}</b></div>
-          <div class="fig"><span>Ziel 2 (Swing-High)</span><b class="up">${fmt(p.target2)}</b></div>
-          <div class="fig"><span>CRV</span><b class="${(p.crv ?? 0) >= 2 ? "up" : "down"}">${fmt(p.crv, 2)}</b></div>
-          <div class="fig"><span>Volatilität (30 T.)</span><b class="${volaCls(r.volatility)}">${pct(r.volatility, 0)}</b></div>
-          <div class="fig"><span>Ø Tagesspanne (ATR)</span><b>${pct(r.atr_pct, 1)}</b></div>
-          <div class="fig"><span>max. sinnvoller Hebel</span><b>${fmt(p.max_leverage, 1)}</b></div></div>
-          <div class="note">Hebel-Hinweis: max. sinnvoller Hebel = 1 / (Stop-Abstand × 1,5). Ziel 1 = EMA 50 bzw. Fib 0,382, Ziel 2 = Swing-High (Fib 0).</div>`
-          : `<div class="note">Kein Trade-Plan – keine gültige Unterstützungszone.</div>`}
+      <div class="pane"><div class="pane-label">Turbo-Plan · Trade-Plan &amp; Rechner</div>
+        ${turboPlanHtml(r)}
         <div class="pane-label" style="margin-top:14px">Zone</div>
         <div class="note" style="margin-top:0">${fib ? `Fibonacci: H ${fmt(r.zone.H)} (${dateDE(r.zone.H_date)}) → L ${fmt(fib.L)} (${dateDE(fib.L_date)}), Impuls ${pct(fib.impulse)}, Retracement ${fmt(fib.retracement, 3)}${fib.ok ? " ✓" : ""}<br>` : ""}
           ${sup ? `Support: Mitte ${fmt(sup.center)}, ${sup.touches} Touches (${sup.touch_dates.map(dateDE).join(", ")})` : "Kein horizontaler Mehrfachboden."}</div>
@@ -1435,6 +1875,44 @@ async function openDetail(t) {
   history.replaceState(null, "", "#" + encodeURIComponent(t));
   try { drawCharts(await loadChart(t), r); } catch (e) { $("cMain").innerHTML = `<div class="note">Chart konnte nicht geladen werden.</div>`; }
 }
+
+// Turbo-Plan: Setup-Marken (Entry, Stop = Setup ungültig, Ziele) übersetzt auf ein Knock-out-Zertifikat.
+// K.-o.-Vorschlag: eine halbe Tagesspanne (ATR) unter dem Stop – so fliegt der Turbo nicht raus, bevor das Setup kippt.
+function tpCalc(r) {
+  const p = r.plan || {}, E = p.entry, atr = (r.atr_pct || 0) * (E || 0);
+  const koIn = parseFloat(String(($("tpKo") || {}).value || "").replace(",", "."));
+  const ko = koIn > 0 && koIn < E ? koIn : +(p.stop - 0.5 * atr).toFixed(E < 10 ? 3 : 2);
+  const bud = Math.max(0, +state.budget || 0), lev = E / (E - ko), val = x => Math.max(0, (x - ko) / (E - ko));
+  const sc = [["Ziel 1", p.target1, "up"], ["Ziel 2 (Swing-High)", p.target2, "up"], ["Stop · Setup ungültig", p.stop, "down"], ["Knock-out", ko, "down"]];
+  return { ko, lev, rows: sc.filter(x => x[1] != null).map(([l, x, c]) => ({ l, x, c, und: x / E - 1, t: val(x) - 1, eur: bud * (val(x) - 1) })), bud, p };
+}
+function tpOutHtml(r) {
+  const m = tpCalc(r), z = m.rows.find(x => x.l.startsWith("Ziel 2")) || m.rows[0], st = m.rows.find(x => x.l.startsWith("Stop")), crv = z && st && st.eur < 0 ? z.eur / -st.eur : null;
+  return `<table class="tpt"><thead><tr><th>Szenario</th><th class="num">Aktie</th><th class="num">Turbo</th><th class="num">bei ${eur(m.bud)}</th></tr></thead><tbody>
+    ${m.rows.map(x => `<tr><td>${x.l}<small>${fmt(x.x)}</small></td><td class="num ${x.c}">${sgnPct(x.und, 1)}</td><td class="num ${x.c}">${sgnPct(x.t, 0)}</td><td class="num ${x.c}"><b>${sgnEur(x.eur)}</b></td></tr>`).join("")}</tbody></table>
+    <div class="tp-sum"><span>Hebel ca. <b>${fmt(m.lev, 1)}×</b></span><span>Abstand K.-o. <b>${pct(1 - m.ko / m.p.entry, 1)}</b></span>${crv ? `<span>Chance : Risiko <b class="${crv >= 2 ? "up" : ""}">${fmt(crv, 1)} : 1</b></span>` : ""}</div>`;
+}
+function turboPlanHtml(r) {
+  const p = r.plan || {};
+  if (!p.entry || !p.stop) return `<div class="note">Kein Trade-Plan – keine gültige Unterstützungszone.</div>`;
+  const m = tpCalc(r);
+  return `<div class="plan">
+      <div class="fig"><span>Entry (Schluss)</span><b>${fmt(p.entry)}</b></div>
+      <div class="fig"><span>Setup ungültig unter</span><b class="down">${fmt(p.stop)}</b><em class="sub">−${pct(p.stop_pct)} · hier aussteigen</em></div>
+      <div class="fig"><span>Ziel 1</span><b class="up">${fmt(p.target1)}</b></div>
+      <div class="fig"><span>Ziel 2 (Swing-High)</span><b class="up">${fmt(p.target2)}</b></div></div>
+    <div class="form tpform">
+      <label>Einsatz in €<input id="tpBudget" type="number" inputmode="decimal" min="0" step="50" value="${esc(state.budget ?? 400)}"></label>
+      <label>K.-o.-Schwelle (Long)<input id="tpKo" type="number" inputmode="decimal" step="any" value="${m.ko}" data-t="${esc(r.ticker)}"></label></div>
+    <div id="tpOut">${tpOutHtml(r)}</div>
+    <div class="note">Vorschlag K.-o.: ½ Tagesspanne (ATR ${pct(r.atr_pct, 1)}) unter der Setup-Grenze – darunter ist die Idee ohnehin vorbei. Tippe die Schwelle deines Turbos ein, um ihn durchzurechnen. Näherung ohne Finanzierungskosten, Spread und Bezugsverhältnis. Volatilität (30 T.) ${pct(r.volatility, 0)}${r.earnings_risk ? ` · ⚠ Quartalszahlen ${dateDE(r.earnings_date)} – Kurssprünge können den K.-o. überspringen` : ""}.</div>`;
+}
+document.addEventListener("input", e => {
+  if (e.target.id !== "tpBudget" && e.target.id !== "tpKo") return;
+  if (e.target.id === "tpBudget") { state.budget = Math.max(0, parseFloat(e.target.value) || 0); save(); }
+  const t = $("tpKo") && $("tpKo").dataset.t, r = data.results.find(x => x.ticker === t);
+  if (r && $("tpOut")) $("tpOut").innerHTML = tpOutHtml(r);
+});
 
 function drawCharts(c, r) {
   if (!window.LightweightCharts) return;
@@ -1526,10 +2004,19 @@ $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
 document.addEventListener("click", e => {
+  const fb = e.target.closest("[data-fav]");
+  if (fb) { e.preventDefault(); e.stopPropagation(); const t = fb.dataset.fav; favToggle(t);
+    document.querySelectorAll(`[data-fav="${CSS.escape(t)}"]`).forEach(b => { const on = favs().has(t); b.classList.toggle("on", on); b.textContent = on ? "★" : "☆"; b.title = on ? "Von der Merkliste nehmen" : "Auf die Merkliste"; });
+    if (state.sec === "scanner" && !(fb.closest(".cmodal"))) { const y = scrollY, tw = document.querySelector(".table-wrap"), sx = tw && tw.scrollLeft; render(); scrollTo(0, y); const tw2 = document.querySelector(".table-wrap"); if (tw2 && sx) tw2.scrollLeft = sx; }
+    else if (state.sec === "scanner") render();
+    else if (state.sec === "calendar") render();
+    return; }
   const sb = e.target.closest("[data-sub]"); if (sb) { if (sb.dataset.sub === "filter") { document.body.classList.add("filters-open"); return; }
     state.tab = sb.dataset.sub; save(); render(); return; }
   const tt = e.target.closest("[data-totable]"); if (tt) { state.tab = "table"; state.tableKind = tt.dataset.totable; syncOpts(); save(); render(); return; }
   const tk = e.target.closest("[data-tk]"); if (tk) { state.tableKind = tk.dataset.tk; save(); render(); return; }
+  const sm = e.target.closest("[data-senti]");
+  if (sm) { const box = sm.closest(".senti").querySelector(".se-news"); box.hidden = !box.hidden; sm.textContent = box.hidden ? "Schlagzeilen ▾" : "Schlagzeilen ▴"; return; }
   const si = e.target.closest("[data-scoreinfo],[data-about]");
   if (si) { e.preventDefault(); const box = si.closest(".card").querySelector(si.hasAttribute("data-about") ? ".aboutbox" : ".scorebox"); if (box) box.hidden = !box.hidden; return; }
   const kc = e.target.closest("[data-kind]"); if (kc) { const set = new Set(state.kinds || []); set.has(kc.dataset.kind) ? set.delete(kc.dataset.kind) : set.add(kc.dataset.kind);
