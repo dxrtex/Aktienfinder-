@@ -25,8 +25,8 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import company
-from .analysis import MARKET, SECTOR_ETF, add_context, analyze, finalize, market_context
+from . import company, sentiment
+from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
@@ -275,6 +275,15 @@ def main(argv=None) -> int:
     if not args.end:
         n_new = company.fetch(list(watch) + list(about.get("_want", [])), about)
         print(f"Unternehmensbeschreibungen: {n_new} neu, {len(about) - ('_want' in about)} im Cache")
+    # Marktstimmung (Analysten, Kursziel, Schlagzeilen) – ebenfalls vor dem großen Download
+    senti = sentiment.load()
+    if not args.end:
+        try:
+            n_s = sentiment.fetch(list(watch) + list(senti.get("_want", [])), senti,
+                                  names={t: (meta.get(t) or {}).get("name") for t in meta})
+            print(f"Marktstimmung: {n_s} aktualisiert, {len(senti) - ('_want' in senti)} im Cache")
+        except Exception as exc:
+            print(f"Marktstimmung: Fehler {exc!r}")
     watch_dates = {}
     if not args.end:
         for t in watch:
@@ -294,6 +303,18 @@ def main(argv=None) -> int:
     market = market_context(ctx_hist)
     lage = ", ".join(v["name"] + " " + v["label"] for k, v in market.items() if k != "regime")
     print(f"Markt: {lage}; Lage: {market.get('regime', {}).get('label', '?')}")
+    sec_cache: dict = {}
+
+    def sector_state(sector):
+        etf = SECTOR_ETF.get(sector or "")
+        if not etf:
+            return None
+        if etf not in sec_cache:
+            sh = ctx_hist.get(etf)
+            st = trend_state(sh) if sh is not None and len(sh) > 210 else None
+            sec_cache[etf] = st and {"n": SECTOR_DE.get(sector, sector), "etf": etf, "tone": st["tone"], "label": st["label"],
+                                     "m1": st["chg1m"]}
+        return sec_cache[etf]
     prov = CachedProvider(yf) if not args.end else yf
     data = prov.history(tickers, CONFIG.history.period, end=args.end)
     print(f"Kurse geladen: {len(data)}")
@@ -333,6 +354,12 @@ def main(argv=None) -> int:
         rows[-1]["trend"] = score_trend(df, info, t, res)
         if about.get(t):
             rows[-1]["about"] = about[t]
+        try:
+            st = sentiment.summary(senti.get(t), res.close, sector_state(m.get("sector")), market.get("regime"))
+            if st:
+                rows[-1]["senti"] = st
+        except Exception as exc:
+            print(f"{t}: Stimmungs-Fehler {exc!r}")
         final[t] = (df, res, m)
         search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
@@ -341,6 +368,8 @@ def main(argv=None) -> int:
     if not args.end:
         about["_want"] = [r["ticker"] for r in rows if r["ticker"] not in about]
         company.save(about)
+        senti["_want"] = [r["ticker"] for r in rows]
+        sentiment.save(senti)
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))
