@@ -30,6 +30,7 @@ from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, final
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
 from .scanner import evaluate
+from .trend import evaluate_trend
 from .universe import ASIA, load as load_universe
 
 _ASIA_SUFFIXES = {suf for sufs, _, _ in ASIA.values() for suf in sufs}
@@ -194,6 +195,19 @@ def fx_to_eur(currencies: set[str]) -> dict[str, float]:
     if "GBP" in out:
         out["GBp"] = out["GBX"] = round(out["GBP"] / 100, 8)
     return out
+
+
+TREND_ON = bool(getattr(getattr(CONFIG, "trend", None), "enabled", False))
+
+
+def trend_row(tr) -> dict:
+    """Kompakt für die Website: erfüllt?, Kriterien (Setup ohne Grundfilter), Trade-Plan."""
+    crit = [c for c in tr.criteria if c.key.startswith("t_")]
+    p = tr.plan or {}
+    return _clean({"ok": tr.passed, "met": sum(c.ok for c in crit), "total": len(crit),
+                   "criteria": [{"k": c.key, "l": c.label, "ok": c.ok, "v": c.value, "th": c.threshold} for c in crit],
+                   "missing": [c.label for c in tr.missing],
+                   "plan": {k: (round(float(v), 4) if isinstance(v, (int, float)) and v is not None else v) for k, v in p.items()}})
 
 
 def result_row(res, meta: dict) -> dict:
@@ -366,7 +380,13 @@ def main(argv=None) -> int:
             search[t] = search_row(res, m, hint(res))
         except Exception as exc:
             print(f"{t}: Hinweis-Fehler {exc!r}")
-        if res.passed or res.fast_hit or m.get("in_watchlist"):
+        tr_hit = False
+        if TREND_ON:
+            try:
+                tr_hit = evaluate_trend(df, res).passed
+            except Exception as exc:
+                print(f"{t}: Trend-Fehler {exc!r}")
+        if res.passed or res.fast_hit or m.get("in_watchlist") or tr_hit:
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
     infos = yf.infos([t for t, _, _ in results])
@@ -384,6 +404,11 @@ def main(argv=None) -> int:
              "region": m.get("region") or region_of(t), "exchange": m.get("exchange") or i.get("exchange") or ""}
         rows.append(result_row(res, m))
         rows[-1]["trend"] = score_trend(df, info, t, res)
+        if TREND_ON:                                  # zweites Setup: Rücksetzer im Aufwärtstrend
+            try:
+                rows[-1]["tr"] = trend_row(evaluate_trend(df, res))
+            except Exception as exc:
+                print(f"{t}: Trend-Fehler {exc!r}")
         if about.get(t):
             rows[-1]["about"] = about[t]
         try:
@@ -429,6 +454,7 @@ def main(argv=None) -> int:
         stats["grade"] = {"test": GRADE["test"], "split": GRADE["split"], "period": GRADE["period"]}
     if FC_MODEL:
         stats["forecast"] = {"horizon": FC_MODEL["horizon"], "fitted": FC_MODEL["fitted"], **FC_MODEL["test"]}
+    stats.update(trend_hits=sum(bool((r.get("tr") or {}).get("ok")) for r in rows), trend_on=TREND_ON)
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))
