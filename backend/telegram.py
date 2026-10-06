@@ -169,6 +169,15 @@ def report(rows: list[dict], last: dict, market: dict, events: list[dict], searc
             g = (r.get("grade") or {}).get("g")
             L.append(f"• {'🅰️ ' if g == 'A' else ''}<a href=\"{APP}#{e(r['ticker'])}\">{e((r['name'] or r['ticker'])[:32])}</a> · {('Stufe ' + g + ' · ') if g else ''}Score {r['score']} · CRV {_num(r.get('crv'))}"
                      + (" ⚠️ Earnings" if r.get("earnings_risk") else ""))
+    # Zweites Setup: neue Trend-Rücksetzer
+    prev_tr = set(last.get("trend", []))
+    new_tr = [r for r in rows if (r.get("tr") or {}).get("ok") and r["ticker"] not in prev_tr]
+    if new_tr:
+        L.append(f"\n<b>Neue Trend-Rücksetzer</b> ({len(new_tr)})")
+        for r in sorted(new_tr, key=lambda r: -(r.get("market_cap_usd") or 0))[:8]:
+            p = r["tr"].get("plan") or {}
+            L.append(f"• <a href=\"{APP}#{e(r['ticker'])}\">{e((r['name'] or r['ticker'])[:32])}</a> · Stop {_num(p.get('stop'))} · Ziel {_num(p.get('target1'))}"
+                     + (" ⚠️ Earnings" if r.get("earnings_risk") else ""))
     # Termine morgen / übermorgen für deine Aktien + Makro
     up = [ev for ev in events if ev.get("days") in (0, 1, 2) and (not ev.get("ticker") or ev["ticker"] in mine)]
     if up:

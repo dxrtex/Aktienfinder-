@@ -85,8 +85,8 @@ mbi:                         # 2.6 – Original-Port des AlgoAlpha-Pine-Scripts
   max_peak_ratio: 0.70       # seitdem rote Balken ≤ 70 % der Spitze (oder Histogramm grün)
 
 trend:                       # Zweites Setup „Trend-Rücksetzer“ (Rücksetzer im Aufwärtstrend) – nur aktiv mit enabled
-  enabled: false
-  min_above_ema200: 0.10     # Kurs ≥ 10 % über der EMA 200
+  enabled: true              # 6-Jahres-Test: Überrendite +5,2 % in 3 Monaten (Lernen +4,9 / Prüfen +5,8), Kairo −0,8 %
+  min_above_ema200: 0.15     # Kurs ≥ 15 % über der EMA 200 (stärkerer Trend = besser; +10 %: +3,2 %, +20 %: weniger Signale)
   dip_min: -0.08             # Kurs bis 8 % unter der EMA 50 …
   dip_max: 0.0               # … aber nicht darüber
   rsi_min: 35
