@@ -107,6 +107,22 @@ def search_row(res, meta: dict, h: dict) -> dict:
                    "vola": f.get("volatility")})
 
 
+def entry_fields(res, tres, meta: dict) -> dict:
+    """Für den Reiter „Einstieg“ (alle Aktien): Kairo-Plan und fehlende Kriterien, Trend-Status und -Plan, Earnings."""
+    r6 = lambda x: None if x is None else round(float(x), 4)
+    p = res.plan or {}
+    out = {"km": [c.key for c in res.missing][:4], "kp": [r6(p.get("stop")), r6(p.get("target1")), r6(p.get("target2"))] if p.get("stop") else None,
+           "sc": res.score if res.passed else None, "ed": meta.get("earnings_date"), "ap": r6(res.flags.get("atr_pct"))}
+    if tres is not None:
+        tp = tres.plan or {}
+        crit = [c for c in tres.criteria if c.key.startswith("t_")]
+        out.update(tr=2 if tres.passed and tres.flags.get("trend_top") else 1 if tres.passed else 0,
+                   tm=[int(bool(c.ok)) for c in crit], tdd=r6(tres.flags.get("trend_dd")),
+                   tp=[r6(tp.get("stop")), r6(tp.get("target1")), r6(tp.get("target2"))] if tp.get("stop") else None,
+                   tg=bool(tres.passed))
+    return _clean(out)
+
+
 def ticker_calendar(t: str) -> dict:
     """Ersatzquelle für einzelne Aktien: yfinance Ticker.calendar (Quartalszahlen, Dividenden)."""
     import yfinance as yf
@@ -377,16 +393,17 @@ def main(argv=None) -> int:
             stats["errors"] += 1
             print(f"{t}: Fehler {exc!r}")
             continue
-        try:
-            search[t] = search_row(res, m, hint(res))
-        except Exception as exc:
-            print(f"{t}: Hinweis-Fehler {exc!r}")
-        tr_hit = False
+        tres = None
         if TREND_ON:
             try:
-                tr_hit = evaluate_trend(df, res).passed
+                tres = evaluate_trend(df, res)
             except Exception as exc:
                 print(f"{t}: Trend-Fehler {exc!r}")
+        tr_hit = bool(tres and tres.passed)
+        try:
+            search[t] = {**search_row(res, m, hint(res)), **entry_fields(res, tres, m)}
+        except Exception as exc:
+            print(f"{t}: Hinweis-Fehler {exc!r}")
         if res.passed or res.fast_hit or m.get("in_watchlist") or tr_hit:
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
@@ -431,7 +448,7 @@ def main(argv=None) -> int:
             rows[-1]["wk"] = weekly_trend(df)
         except Exception:
             pass
-        search[t] = {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
+        search[t] = {**search[t], **search_row(res, m, rows[-1]["hint"]), "detail": 1} if t in search else {**search_row(res, m, rows[-1]["hint"]), "detail": 1}
         with open(SITE / "charts" / f"{t}.json", "w", encoding="utf-8") as f:
             json.dump(_clean(chart_payload(df)), f, separators=(",", ":"))
     rows.sort(key=lambda r: (r["passed"], r["score"], r["crv"] or 0), reverse=True)
