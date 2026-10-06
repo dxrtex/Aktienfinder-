@@ -19,7 +19,8 @@ import requests
 from . import state
 
 API = "https://api.telegram.org/bot{token}/{method}"
-APP = "https://dxrtex.github.io/Aktienfinder-/"
+_OWNER, _, _NAME = os.environ.get("GITHUB_REPOSITORY", "dxrtex/Kairo").partition("/")
+APP = f"https://{_OWNER.lower()}.github.io/{_NAME}/"     # folgt automatisch dem Repo-Namen
 
 
 def _call(token: str, method: str, **params):
