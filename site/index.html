@@ -1208,21 +1208,25 @@ function entryEval(c, date) {
 // Anfangs-Stop; ab +1 R Stop auf max(Einstand, 10-Tage-Tief) nachziehen; Verkauf bei Schlusskurs unter dem Stop.
 // Rücksetzer, die über dem 10-Tage-Tief bleiben, lösen nichts aus. Warnsignale (MACD, RSI, MBI, EMA 20 …) sind nur Hinweise.
 const atrAt = (c, i) => { let s = 0, k = 0; for (let j = Math.max(1, i - 13); j <= i; j++, k++) s += Math.max(c.h[j] - c.l[j], Math.abs(c.h[j] - c.c[j - 1]), Math.abs(c.l[j] - c.c[j - 1])); return k ? s / k : 0; };
-function exitStop0(p, c, ent) {
+function exitStop0(p, c, ent, a) {
   if (p.stop0 > 0 && p.stop0 < ent.u) return { s: p.stop0, src: "von dir eingetragen" };
   const b = getJson("bilanz.json"), dd = (x, y) => (new Date(y) - new Date(x)) / 864e5;
   const sig = b && (b.signals || []).find(s => s.t === p.t && s.stop < ent.u && dd(s.d, ent.date) >= 0 && dd(s.d, ent.date) <= 10);
   if (sig) return { s: sig.stop, src: `Kairo-Signal vom ${dateDE(sig.d)}` };
-  const i = ent.i, lo = Math.min(...c.l.slice(Math.max(0, i - 9), i + 1));
+  const i = ent.i, d = p.d;
+  // Turbo ohne eigenen Stop: dein K.-o. ist die eigentliche Risikogrenze → Stop 1 ATR darüber (wie im Test empfohlen)
+  if (d && d.dir === "long" && (!d.cur || !a || !a.cur || d.cur === a.cur) && d.ko < ent.u - atrAt(c, i))
+    return { s: d.ko + atrAt(c, i), src: "aus deinem K.-o. + 1 Tagesspanne" };
+ lo = Math.min(...c.l.slice(Math.max(0, i - 9), i + 1));
   return { s: Math.min(lo * .99, ent.u - atrAt(c, i)), src: "geschätzt: knapp unter dem 10-Tage-Tief vor dem Kauf" };
 }
 function exitEval(p, c, ent, a) {
   if (!c || !ent) return null;
-  const s0 = exitStop0(p, c, ent), u = ent.u, risk = u - s0.s, n = c.t.length;
+  const s0 = exitStop0(p, c, ent, a), u = ent.u, risk = u - s0.s, n = c.t.length;
   if (!(risk > 0)) return null;
   let stop = s0.s, mfe = 0, trailFrom = null, hit = null;
   for (let j = ent.i + 1; j < n; j++) {
-    if (c.c[j] < stop) { hit = { i: j, stop }; break; }       // Schluss unter dem Stop → Verkauf (kein Intraday-Ausstoß)
+    if (c.c[j] < stop) hit = hit || { i: j, stop };            // erster Schluss unter dem Stop (kein Intraday-Ausstoß)
     mfe = Math.max(mfe, (c.h[j] - u) / risk);
     if (mfe >= 1) { if (trailFrom == null) trailFrom = j; stop = Math.max(stop, u, Math.min(...c.l.slice(Math.max(0, j - 9), j + 1))); }
   }
@@ -1236,13 +1240,17 @@ function exitEval(p, c, ent, a) {
     { on: !!(nx && nx.p - px < atr), l: "Widerstand", t: nx ? `nächstes Hoch ${fmt(nx.p)} ${nx.p - px < atr ? "– weniger als 1 Tagesspanne entfernt" : `noch ${fmt((nx.p - px) / (atr || 1), 1)} Tagesspannen entfernt`}` : "kein Hoch mehr darüber" },
     { on: px - stop < atr, l: "Stop-Nähe", t: `Kurs ${fmt(Math.max(0, (px - stop) / (atr || 1)), 1)} Tagesspannen über dem Ausstiegs-Stop` }];
   const nw = warn.filter(x => x.on).length, timeUp = bars >= 63;
-  const [tone, label] = hit ? ["red", "Verkaufen – Regel ausgelöst"] : timeUp ? ["orange", "3 Monate erreicht – Verkauf einplanen"]
-    : nw >= 4 ? ["orange", "Ausstieg vorbereiten"] : nw >= 2 ? ["yellow", "Wachsam halten"] : ["green", "Halten"];
-  const short = hit ? "Verkaufen" : timeUp ? "Zeit um" : nw >= 4 ? "Vorbereiten" : nw >= 2 ? "Wachsam" : "Halten";
-  const phase = hit ? `Am ${dateDE(c.t[hit.i])} schloss der Kurs (${fmt(c.c[hit.i])}) unter dem Stop ${fmt(hit.stop)}.`
-    : trailFrom != null ? `+1 R wurde am ${dateDE(c.t[trailFrom])} erreicht – der Stop wird täglich auf das 10-Tage-Tief nachgezogen (nie unter den Einstand).`
-    : `Noch in der Anfangsphase: Nachziehen startet bei +1 R = ${fmt(u + risk)} (${sgnPct((u + risk) / px - 1, 1)} vom aktuellen Kurs).`;
-  return { tone, label, short, stop: hit ? hit.stop : stop, s0, risk, r: (px - u) / risk, trail: trailFrom != null, hit, bars, timeUp, warn, nw, phase };
+  // „Verkaufen“ nur, wenn der Kurs JETZT unter dem Stop schließt (oder es in den letzten 3 Tagen passierte);
+  // lag er früher kurz darunter und ist wieder drüber, ist das ein Hinweis, kein aktuelles Verkaufssignal.
+  const sellNow = px < stop || (hit && L - hit.i <= 2), recovered = hit && !sellNow;
+  const [tone, label] = sellNow ? ["red", "Verkaufen – Schluss unter dem Ausstiegs-Stop"] : timeUp ? ["orange", "3 Monate erreicht – Verkauf einplanen"]
+    : nw >= 4 ? ["orange", "Ausstieg vorbereiten"] : recovered ? ["yellow", "Wachsam – Stop war schon unterschritten"] : nw >= 2 ? ["yellow", "Wachsam halten"] : ["green", "Halten"];
+  const short = sellNow ? "Verkaufen" : timeUp ? "Zeit um" : nw >= 4 ? "Vorbereiten" : recovered || nw >= 2 ? "Wachsam" : "Halten";
+  const phase = (sellNow ? `Schlusskurs ${fmt(px)} liegt unter dem Ausstiegs-Stop ${fmt(stop)} – laut Regel verkaufen. `
+    : recovered ? `Hinweis: Am ${dateDE(c.t[hit.i])} schloss der Kurs schon einmal unter dem Stop (${fmt(hit.stop)}) – die Regel hätte dort verkauft. Inzwischen ist er wieder darüber. ` : "")
+    + (trailFrom != null ? `+1 R wurde am ${dateDE(c.t[trailFrom])} erreicht – der Stop wird täglich auf das 10-Tage-Tief nachgezogen (nie unter den Einstand).`
+    : `Noch in der Anfangsphase: Nachziehen startet bei +1 R = ${fmt(u + risk)} (${sgnPct((u + risk) / px - 1, 1)} vom aktuellen Kurs).`);
+  return { tone, label, short, stop, s0, risk, r: (px - u) / risk, trail: trailFrom != null, hit, bars, timeUp, warn, nw, phase };
 }
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
 function turboModel(p, a, ent) {
