@@ -472,8 +472,102 @@ def trend_part(ev_all, ev_px):
     return res
 
 
+# ---------------------------------------------------------------- D) Feinschliff Trend-Rücksetzer
+LIVE_TREND = dict(g=0.15, lo=-0.08, hi=0.0, r=(35, 50))     # Einstellung wie in config.yaml
+
+
+def _sim_turbo(px, sg, crit, k, kb, gate=True):
+    return sim(px, sg, crit, k, gate, kb)
+
+
+def _simrule_turbo(px, rule, kb):
+    """Regel aus exits.py (Schluss-Stop) mit K.-o.; Ergebnis zusätzlich als Turbo-Rendite (Einsatz = Kurs bis K.-o.)."""
+    x = simulate(px, rule, "close", kb)
+    if not x:
+        return None
+    entry, risk = px["o"][0], 1.0 - px["s"]
+    tf = risk / max(entry - (px["s"] - kb * px["atr"]), 1e-6)
+    r = net(x["r"], x["d"], x["rp"])
+    return (r, x["d"], x["x"], max(-1.0, r * tf))
+
+
+def trend2_part(ev_all, ev_trend, ev_hits):
+    """1) Welche Trend-Rücksetzer zuerst? 2) Marktfilter. 3) Beste Verkaufsregel und K.-o.-Abstand für Trend."""
+    es = _dedupe([e for e in ev_trend if _trend_ok(e.get("f"), LIVE_TREND)])
+    for e in es + ev_hits:
+        if "_sg" not in e:
+            e["_sg"] = signals(e["px"])
+    es = [e for e in es if e["_sg"]]
+    rules = {n: r for n, _, r in RULES}
+    crit5 = ["res", "rsi", "mbi", "ema", "low10"]
+    base_fn = lambda e: _sim_turbo(e["px"], e["_sg"], crit5, 3, 1.0)       # heutiger Standard
+    out = {"n": len(es)}
+    # 3) Verkauf × K.-o.-Abstand
+    grid = {}
+    for kb in (1.0, 1.5, 2.0, 3.0):
+        g = {"Halten 3 Mon.": lambda e, kb=kb: _sim_turbo(e["px"], e["_sg"], [], 1, kb)}
+        for k in (2, 3, 4):
+            g[f"Check ab {k} von 5"] = lambda e, kb=kb, k=k: _sim_turbo(e["px"], e["_sg"], crit5, k, kb)
+        g["TP 2"] = lambda e, kb=kb: _simrule_turbo(e["px"], rules["TP 2 – zweites relevantes Hoch"], kb)
+        g["Nachziehen 10-Tage-Tief ab 1 R"] = lambda e, kb=kb: _simrule_turbo(e["px"], rules["Nachziehen: 10-Tage-Tief, ab 1 R"], kb)
+        g["Nachziehen EMA 20 ab 1 R"] = lambda e, kb=kb: _simrule_turbo(e["px"], rules["Nachziehen: Schluss unter EMA 20, ab 1 R"], kb)
+        for name, fn in g.items():
+            x = evaluate_rule(es, fn)
+            grid[f"K.-o. {kb} ATR · {name}"] = {"turbo": x["all"].get("turbo"), "r": x["all"]["r"], "ko": x["all"]["ko"], "win": x["all"]["win"],
+                                                "tage": x["all"]["days"], "turbo_lernen": x["train"].get("turbo"), "turbo_pruefen": x["test"].get("turbo"),
+                                                "jahre": x["years"]}
+    out["verkauf"] = grid
+    # 1) Rangfolge: Merkmale am Signaltag → Ergebnis (Turbo-Rendite mit heutigem Standard)
+    for e in es:
+        e["_t"] = base_fn(e)
+    es_ok = [e for e in es if e["_t"]]
+    def grp(sub):
+        tr = [e["_t"][3] for e in sub if e["d"] < SPLIT]; te = [e["_t"][3] for e in sub if e["d"] >= SPLIT]
+        a = [e["_t"][3] for e in sub]
+        f = lambda v: round(float(np.mean(v)), 3) if v else None
+        return {"n": len(sub), "turbo": f(a), "lernen": f(tr), "pruefen": f(te), "ko": round(float(np.mean([e["_t"][2] == "ko" for e in sub])), 3) if sub else None}
+    feats = {"e200": [0.15, 0.2, 0.3, 0.5, 9], "vol": [0, 0.3, 0.45, 0.6, 9], "atrp": [0, 0.02, 0.03, 0.045, 9], "dd": [0, 0.08, 0.15, 0.25, 9],
+             "rsi": [35, 40, 45, 50.01], "e50": [-0.08, -0.05, -0.025, 0.0001], "breadth": [0, 0.35, 0.5, 0.65, 1.01]}
+    rank = {}
+    for fk, edges in feats.items():
+        rows = []
+        for lo, hi in zip(edges[:-1], edges[1:]):
+            sub = [e for e in es_ok if ((e["f"].get(fk) if fk != "breadth" else e.get("_br")) is not None)
+                   and lo <= (e["f"].get(fk) if fk != "breadth" else e["_br"]) < hi]
+            if len(sub) >= 40:
+                rows.append({"von": lo, "bis": hi, **grp(sub)})
+        rank[fk] = rows
+    out["rang"] = rank
+    # Top-N je Tag nach einem Merkmal (realistische Auswahl)
+    byday = defaultdict(list)
+    for e in es_ok:
+        byday[e["d"]].append(e)
+    keys = {"stärkster Trend (EMA200)": lambda e: e["f"].get("e200") or 0, "höchste Vola": lambda e: e["f"].get("vol") or 0,
+            "niedrigste Vola": lambda e: -(e["f"].get("vol") or 9), "nah am Hoch": lambda e: -(e["f"].get("dd") or 9),
+            "tiefster Rücksetzer": lambda e: -(e["f"].get("e50") or 0)}
+    top = {"alle": grp(es_ok)}
+    for name, key in keys.items():
+        for n in (3, 10):
+            sub = [x for d, v in byday.items() for x in sorted(v, key=key, reverse=True)[:n]]
+            top[f"Top {n}/Tag: {name}"] = grp(sub)
+    out["top"] = top
+    # 2) Marktfilter (Marktbreite = Anteil Aktien über EMA 200 in der Woche) – für Trend und Kairo
+    mf = {}
+    for thr in (0.0, 0.4, 0.5, 0.6):
+        t_sub = [e for e in es_ok if (e.get("_br") or 0) >= thr]
+        k_sub = [e for e in ev_hits if e["_sg"] and (e.get("_br") or 0) >= thr]
+        kx = evaluate_rule(k_sub, base_fn)
+        tx = evaluate_rule(t_sub, base_fn)
+        mf[f"Breite ≥ {int(thr * 100)} %"] = {"trend_n": len(t_sub), "trend_turbo": tx["all"].get("turbo"), "trend_jahre": tx["years"],
+                                             "kairo_n": len(k_sub), "kairo_turbo": kx["all"].get("turbo"), "kairo_jahre": kx["years"]}
+    out["marktfilter"] = mf
+    for e in es + ev_hits:
+        e.pop("_sg", None); e.pop("_t", None)
+    return out
+
+
 def main(argv=None) -> int:
-    files = argv if argv is not None else sys.argv[1:]
+    files = [x for x in (argv if argv is not None else sys.argv[1:]) if not x.startswith("--")]
     ev_all, seen = [], set()
     for p in files:
         for e in json.loads(Path(p).read_text()):
@@ -503,8 +597,14 @@ def main(argv=None) -> int:
         if e["k"] == "base" and (e.get("f") or {}).get("e200") is not None:
             wk[_week(e["d"])].append(e["f"]["e200"] > 0)
     breadth = {w: float(np.mean(v)) for w, v in wk.items() if len(v) >= 20}
-    for e in ev_px:
+    for e in ev_px + ev_trend:
         e["_br"] = breadth.get(_week(e["d"]))
+    if "--trend2" in sys.argv:                     # nur der Feinschliff des Trend-Setups (schnell, kurze Ausgabe)
+        t2 = trend2_part(ev_all, ev_trend, [e for e in ev_px if e["k"] == "hit"])
+        (ROOT / "data" / "optimize.json").write_text(json.dumps(t2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+        for k in ("verkauf", "rang", "top", "marktfilter"):
+            print(f"T2_{k} " + json.dumps(t2.get(k), ensure_ascii=False, separators=(",", ":")))
+        return 0
     res["entry"] = entry_part(ev_all, ev_px)
     if any((e.get("f") or {}).get("raw") for e in ev_px):
         res["sweep"] = sweep_part(ev_px)
