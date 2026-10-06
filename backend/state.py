@@ -25,4 +25,16 @@ def load(name: str, default):
 def save(name: str, obj) -> None:
     if not DIR.exists():
         return                                    # lokal/ohne Zustands-Branch: nichts speichern
-    (DIR / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (DIR / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":"), default=_py), encoding="utf-8")
+
+
+def _py(v):
+    """numpy-Zahlen (z. B. int64 aus Index-Rechnungen) → JSON-taugliche Python-Werte."""
+    import numpy as np
+    if isinstance(v, np.integer):
+        return int(v)
+    if isinstance(v, np.floating):
+        return float(v)
+    if isinstance(v, np.bool_):
+        return bool(v)
+    raise TypeError(f"nicht speicherbar: {type(v).__name__}")
