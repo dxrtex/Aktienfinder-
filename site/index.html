@@ -588,7 +588,7 @@
   .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
   /* Klassisches Design: Fokus-Karte gibt es nur im neuen Design */
-  .focus { display: none; } em.s { font-style: normal; }
+  .focus, .verdict, .mlist, .clab { display: none; } em.s { font-style: normal; } .cgrid, [class^="cl-"] { display: none; }
 </style>
 <style id="themeNew">
   /* ================= Kairo – Design-System (Equinox-Stil) =================
@@ -692,6 +692,51 @@
   .focus .feats span:last-child { border-right: 0; }
   .focus .feats svg { width: 26px; height: 26px; padding: 5px; border-radius: 8px; border: 1px solid var(--glass-line); background: rgba(15, 22, 70, .5); color: #9fb6ff; }
 
+
+  /* Urteil in der Aktienkarte */
+  .verdict { display: flex; align-items: center; gap: 12px; margin: 14px 0 4px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--glass-line); background: rgba(15, 22, 70, .45); }
+  .verdict > i { flex: 0 0 10px; height: 10px; border-radius: 50%; background: var(--faint); }
+  .verdict.ok > i { background: var(--up); box-shadow: 0 0 12px var(--up); } .verdict.warn > i { background: var(--gold); box-shadow: 0 0 10px var(--gold); }
+  .verdict.ok { border-color: rgba(61, 220, 151, .35); background: linear-gradient(90deg, rgba(61, 220, 151, .12), rgba(15, 22, 70, .4) 70%); }
+  .verdict.warn { border-color: rgba(255, 209, 102, .3); }
+  .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 15px; } .verdict span { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
+  .verdict .btn { flex: 0 0 auto; padding: 10px 16px; }
+  @media (max-width: 520px) { .verdict { flex-wrap: wrap; } .verdict .btn { flex: 1 1 100%; } }
+
+  /* Chart: Raster, Linien, Beschriftung rechts */
+  .chart[data-mini] { position: relative; border-radius: 14px; background: linear-gradient(180deg, rgba(37, 82, 255, .08), rgba(0, 0, 0, .15)) !important; }
+  .cgrid { display: inline; stroke: rgba(120, 150, 255, .09); stroke-width: 1; }
+  .chart line[class^="cl-"] { display: inline; stroke-width: 1; stroke-dasharray: 4 4; }
+  .chart line.cl-last { stroke: rgba(200, 215, 255, .55); } .chart line.cl-stop { stroke: var(--red); opacity: .8; } .chart line.cl-tgt { stroke: var(--up); opacity: .8; }
+  .chart .zone { fill: rgba(56, 120, 255, .14) !important; }
+  .clab { display: block; position: absolute; right: 6px; transform: translateY(-50%); font-size: 10.5px; font-weight: 600; padding: 2px 6px; border-radius: 6px; white-space: nowrap; pointer-events: none; }
+  .clab.cl-last { background: #e8eeff; color: #05070f; } .clab.cl-stop { background: rgba(255, 90, 106, .2); color: #ff9aa4; } .clab.cl-tgt { background: rgba(61, 220, 151, .18); color: #8ff0c3; }
+
+  /* Einheitliche Status-Abzeichen */
+  .status, .st { border-radius: 999px; font-weight: 600; letter-spacing: .01em; }
+  .status.st-bereit, .st.hit { background: rgba(61, 220, 151, .13) !important; color: #6ff0b4 !important; box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .3); }
+  .status.st-abwarten, .st.fast { background: rgba(255, 209, 102, .1) !important; color: #ffd98a !important; box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .28); }
+  .status.st-kein_setup { box-shadow: inset 0 0 0 1px var(--glass-line); }
+
+  /* iPhone: Liste statt Tabelle */
+  @media (max-width: 640px) {
+    .table-wrap:has(> table > thead th[data-k]) { display: none; }
+    .mlist { display: grid; gap: 8px; }
+    .kbar { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 4px 16px 8px; }
+    .kbar::-webkit-scrollbar { display: none; } .kbar .kchip { flex: 0 0 auto; }
+    .msort { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 12.5px; color: var(--muted); }
+    .msort select { background: rgba(15, 22, 70, .5); color: var(--text); border: 1px solid var(--glass-line); border-radius: 10px; padding: 6px 10px; font: inherit; }
+    .mrow { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; border: 1px solid var(--glass-line); background: var(--glass); box-shadow: var(--shadow); }
+    .mrow > a { flex: 1; min-width: 0; color: var(--text); text-decoration: none; }
+    .mrow > a b { display: block; font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .mrow > a span { color: var(--muted); font-size: 12.5px; }
+    .mrow .mr { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .mrow .mr em { font-style: normal; font-family: var(--display); font-weight: 600; font-size: 15px; }
+    .mp { font-size: 11.5px; font-weight: 600; padding: 3px 9px; border-radius: 999px; color: var(--muted); box-shadow: inset 0 0 0 1px var(--glass-line); }
+    .mp.ok { color: #6ff0b4; background: rgba(61, 220, 151, .13); box-shadow: inset 0 0 0 1px rgba(61, 220, 151, .3); }
+    .mp.tr { color: #b8c8ff; background: rgba(37, 82, 255, .2); box-shadow: inset 0 0 0 1px rgba(100, 140, 255, .4); }
+    .mp.warn { color: #ffd98a; background: rgba(255, 209, 102, .1); box-shadow: inset 0 0 0 1px rgba(255, 209, 102, .28); }
+  }
   @media (prefers-reduced-motion: no-preference) {
     #main > *, .hcol > * { animation: k-in .5s cubic-bezier(.2, .7, .2, 1) both; }
     .hcol > *:nth-child(2) { animation-delay: .05s; } .hcol > *:nth-child(3) { animation-delay: .1s; } .hcol > *:nth-child(4) { animation-delay: .15s; }
@@ -913,7 +958,7 @@ function openCard(t) {
   $("cardModalBody").innerHTML = card(r);
   document.body.classList.add("card-open");
   const el = $("cardModalBody").querySelector("[data-mini]");
-  if (el) loadChart(t).then(c => { el.querySelector("svg").innerHTML = miniSvg(c, r); }).catch(() => {});
+  if (el) loadChart(t).then(c => paintChart(el, c, r)).catch(() => {});
 }
 function closeCard() { document.body.classList.remove("card-open"); }
 
@@ -1017,6 +1062,16 @@ function trendBoxHtml(r) {
     ${t.ok && p.stop ? `<div class="exrow" style="margin-top:6px"><span>Stop (unter 10-Tage-Tief)</span><b>${fmt(p.stop)}</b><span>Ziel 1 / Ziel 2</span><b>${fmt(p.target1)} / ${fmt(p.target2)}</b><span>K.-o.-Vorschlag (1–1,5 ATR unter Stop)</span><b>${r.atr_pct ? `${fmt(p.stop - 1.5 * r.atr_pct * r.close)} – ${fmt(p.stop - r.atr_pct * r.close)}` : "–"}</b></div>` : ""}
     <div class="note" style="margin:6px 0 0">Zweites Setup: Aktie im klaren Aufwärtstrend macht eine kurze Verschnaufpause an der EMA 50 – Wette auf die Fortsetzung (Kairo: Wende nach einer Korrektur).</div></div>`;
 }
+// Urteil: die Antwort zuerst – Einstieg ja/nein, warum, und der nächste Schritt (nur im neuen Design sichtbar)
+function verdictHtml(r) {
+  const ein = t => `<button class="btn" data-ein="${esc(r.ticker)}">${t}</button>`;
+  if (r.passed) return `<div class="verdict ok"><i></i><div><b>Einstieg möglich · Kairo-Treffer</b><span>Score ${r.score ?? "–"} · CRV ${fmt(r.crv, 1)}${r.plan && r.plan.stop ? ` · Setup ungültig unter ${fmt(r.plan.stop)}` : ""}</span></div>${ein("Einstieg planen")}</div>`;
+  if (isTrend(r)) return `<div class="verdict ok"><i></i><div><b>Einstieg möglich · Trend-Rücksetzer${r.tr.top ? " Top" : ""}</b><span>${r.tr.top ? "Stärkste Stufe im 6-Jahres-Test" : "Gültig, aber nicht Top – im Test schwächer"}${r.tr.plan && r.tr.plan.stop ? ` · Stop ${fmt(r.tr.plan.stop)}` : ""}</span></div>${ein("Einstieg planen")}</div>`;
+  const fm = filterMiss(r);
+  if (fm) return `<div class="verdict warn"><i></i><div><b>Kein Einstieg · Grundfilter nicht erfüllt</b><span>Alle ${r.total} Setup-Kriterien erfüllt, aber: ${esc(fm)}</span></div></div>`;
+  if (r.fast_hit) return `<div class="verdict warn"><i></i><div><b>Noch kein Einstieg · fast so weit</b><span>Es fehlt: ${esc((r.missing || []).slice(0, 2).join(", "))}</span></div></div>`;
+  return `<div class="verdict"><i></i><div><b>Kein Einstieg · beobachten</b><span>${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt</span></div></div>`;
+}
 function card(r) {
   return `<article class="card">
     <div class="card-top">
@@ -1034,6 +1089,7 @@ function card(r) {
         : `<button class="score fast" data-scoreinfo style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – antippen für Details"><span>${r.met ?? "–"}/${r.total ?? 11}</span></button>`}
       ${trendHtml(r)}</div>
     </div>
+    ${verdictHtml(r)}
     <div class="aboutbox" hidden>${aboutHtml(r)}</div>
     <div class="scorebox" hidden>${scoreBoxHtml(r)}</div>
     <div class="figures">
@@ -1061,20 +1117,40 @@ async function loadChart(t) {
   if (!chartCache[t]) chartCache[t] = fetch(`data/charts/${encodeURIComponent(t)}.json`).then(r => r.json());
   return chartCache[t];
 }
+const chartPlan = r => r.passed ? r.plan : isTrend(r) ? r.tr.plan : null;
 function miniSvg(c, r) {
-  const n = c.t.length, from = Math.max(0, n - 60), W = 600, H = 220, pad = 10;
+  const nu = state.design !== "classic";
+  const n = c.t.length, from = Math.max(0, n - 60), W = 600, H = 220, pad = nu ? 14 : 10;
   const idx = [...Array(n - from).keys()].map(i => i + from);
   let lo = Math.min(...idx.map(i => c.l[i])), hi = Math.max(...idx.map(i => c.h[i]));
-  const band = zoneBand(r);
+  const band = zoneBand(r), pl = nu ? chartPlan(r) : null;
   if (band) { lo = Math.min(lo, band[0]); hi = Math.max(hi, band[1]); }
-  const y = v => pad + (1 - (v - lo) / (hi - lo || 1)) * (H - 2 * pad), step = (W - 16) / idx.length, bw = Math.max(1.5, step * .62);
+  const lines = [];
+  if (pl) {   // Stop und Ziel 1 nur einzeichnen, wenn sie den Chart nicht zu stark stauchen
+    const span = hi - lo;
+    if (pl.stop && pl.stop > lo - span * .6) { lo = Math.min(lo, pl.stop); lines.push(["stop", pl.stop, "Stop"]); }
+    if (pl.target1 && pl.target1 < hi + span * .6) { hi = Math.max(hi, pl.target1); lines.push(["tgt", pl.target1, "Ziel 1"]); }
+  }
+  const y = v => pad + (1 - (v - lo) / (hi - lo || 1)) * (H - 2 * pad), step = (W - (nu ? 70 : 16)) / idx.length, bw = Math.max(1.5, step * .62);
   let s = band ? `<rect class="zone" x="0" width="${W}" y="${y(band[1]).toFixed(1)}" height="${(y(band[0]) - y(band[1])).toFixed(1)}"/>` : "";
+  if (nu) {
+    for (let g = 1; g < 4; g++) s += `<line class="cgrid" x1="0" x2="${W}" y1="${(H * g / 4).toFixed(1)}" y2="${(H * g / 4).toFixed(1)}"/>`;
+    const last = c.c[n - 1];
+    lines.push(["last", last, fmt(last)]);
+    lines.forEach(([k, v]) => { s += `<line class="cl-${k}" x1="0" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" vector-effect="non-scaling-stroke"/>`; });
+    miniSvg.labels = lines.map(([k, v, l]) => `<span class="clab cl-${k}" style="top:${(100 * y(v) / H).toFixed(1)}%">${k === "last" ? "" : l + " "}${fmt(v)}</span>`).join("");
+  } else miniSvg.labels = "";
   idx.forEach((i, k) => {
     const x = 8 + k * step + step / 2, col = c.c[i] >= c.o[i] ? "var(--candle-up)" : "var(--candle-down)";
     s += `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${y(c.h[i]).toFixed(1)}" y2="${y(c.l[i]).toFixed(1)}" stroke="${col}" stroke-width="1.2"/>`
        + `<rect x="${(x - bw / 2).toFixed(1)}" y="${y(Math.max(c.o[i], c.c[i])).toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, Math.abs(y(c.o[i]) - y(c.c[i]))).toFixed(1)}" fill="${col}" rx="1"/>`;
   });
   return s;
+}
+function paintChart(el, c, r) {
+  el.querySelector("svg").innerHTML = miniSvg(c, r);
+  el.querySelectorAll(".clab").forEach(x => x.remove());
+  if (miniSvg.labels) el.insertAdjacentHTML("beforeend", miniSvg.labels);
 }
 function zoneBand(r) {
   const f = r.zone && r.zone.fib, s = r.zone && r.zone.support;
@@ -1085,7 +1161,7 @@ function zoneBand(r) {
 const io = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(async e => {
   if (!e.isIntersecting) return; io.unobserve(e.target);
   const t = e.target.dataset.mini, r = data.results.find(x => x.ticker === t);
-  try { e.target.querySelector("svg").innerHTML = miniSvg(await loadChart(t), r); } catch (err) {}
+  try { paintChart(e.target, await loadChart(t), r); } catch (err) {}
 }), { rootMargin: "200px" }) : null;
 
 // ---------- Tabelle ----------
@@ -2507,7 +2583,8 @@ document.addEventListener("input", e => {
   if (e.target.id === "einQ") { state.einQ = e.target.value; if (!state.einQ) state.einT = null; $("einList").innerHTML = einListHtml(); }
   if (e.target.id === "einBudget") { state.budget = Math.max(0, parseFloat(e.target.value) || 0); save(); }
 });
-document.addEventListener("change", e => { if (e.target.id === "einBudget") render(); });
+document.addEventListener("change", e => { if (e.target.id === "einBudget") render();
+  if (e.target.id === "mSort") { state.tableSort = e.target.value; state.tableAsc = false; save(); render(); } });
 document.addEventListener("keydown", e => {
   if (e.target.id === "einQ" && e.key === "Enter") { const m = einMatches(e.target.value); if (m[0]) { state.einT = m[0].t; state.einQ = m[0].n; save(); render(); } }
 });
@@ -2548,9 +2625,20 @@ function render() {
   if (!(data.stats && data.stats.grade)) hid.add("grade");    // Stufen nur, wenn ein geprüftes Modell aktiv ist
   const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "grade", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
-    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
+    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + mListHtml(list, col) + extra;
 }
 
+// Kompakte Liste fürs iPhone (nur im neuen Design, nur schmale Bildschirme – sonst bleibt die Tabelle)
+function mListHtml(list, col) {
+  const sortable = COLS.filter(c => ["score", "met", "status", "name", "cap", "close", "tgt", "trend", "grade"].includes(c.k));
+  const pill = r => r.passed ? `<span class="mp ok">Treffer${r.score ? " " + r.score : ""}</span>` : isTrend(r) ? `<span class="mp tr">${r.tr.top ? "Trend Top" : "Trend"}</span>`
+    : filterMiss(r) ? `<span class="mp warn">Filter ✗</span>` : r.fast_hit ? `<span class="mp warn">Fast</span>` : `<span class="mp">Watchlist</span>`;
+  const big = r => isTrend(r) && !r.passed ? `${r.tr.met}/${r.tr.total}` : `${r.met ?? "–"}/${r.total ?? 11}`;
+  return `<div class="mlist"><label class="msort">Sortieren<select id="mSort">${sortable.map(c => `<option value="${c.k}"${c.k === col.k ? " selected" : ""}>${esc(c.l)}</option>`).join("")}</select></label>
+    ${list.map(r => `<div class="mrow">${favBtn(r.ticker)}<a href="#" data-card="${esc(r.ticker)}"><b>${esc((r.name || r.ticker).slice(0, 30))}</b>
+      <span>${esc(r.ticker)} · ${fmt(r.close)} ${esc(r.currency || "")}${r.senti && r.senti.tgt ? ` · Ziel ${sgnPct(r.senti.tgt.up, 0)}` : ""}</span></a>
+      <div class="mr">${pill(r)}<em>${big(r)}</em></div></div>`).join("")}</div>`;
+}
 const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
