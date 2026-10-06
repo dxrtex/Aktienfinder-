@@ -260,6 +260,7 @@ def stats(ev: list[dict]) -> dict:
     hits = [e for e in ev if e["k"] == "hit"]
     bucket = lambda s: "80+" if s >= 80 else "70–79" if s >= 70 else "60–69" if s >= 60 else "< 60"
     out = {"hit": _agg(hits), "fast": _agg([e for e in ev if e["k"] == "fast"]), "base": _agg([e for e in ev if e["k"] == "base"]),
+           "trend": _agg([e for e in ev if e["k"] == "trend"]),
            "score": {b: _agg([e for e in hits if bucket(e["score"]) == b]) for b in ("80+", "70–79", "60–69", "< 60")},
            "crv": {b: _agg([e for e in hits if (e["crv"] >= 3) == (b == "≥ 3")]) for b in ("≥ 3", "2–3")},
            "zone": {b: _agg([e for e in hits if e["zone"] == b]) for b in ("Fib", "Support")},

@@ -14,15 +14,15 @@ from .config import ROOT
 def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
     sig = state.load("signals.json", [])
     last = state.load("last.json", {})
-    prev = {"hit": set(last.get("hit", [])), "fast": set(last.get("fast", []))}
+    prev = {"hit": set(last.get("hit", [])), "fast": set(last.get("fast", [])), "trend": set(last.get("trend", []))}
     known = {(s["t"], s["k"], s["d"]) for s in sig}
     recent = {}
     for s in sig:                                  # letztes Signal je Aktie/Art
         recent[(s["t"], s["k"])] = max(recent.get((s["t"], s["k"]), ""), s["d"])
     new = []
-    for r in rows:
-        k = "hit" if r["passed"] else "fast" if r.get("fast_hit") else None
-        p = r.get("plan") or {}
+    cand = [(r, "hit" if r["passed"] else "fast" if r.get("fast_hit") else None, r.get("plan") or {}) for r in rows]
+    cand += [(r, "trend", r["tr"].get("plan") or {}) for r in rows if (r.get("tr") or {}).get("ok")]   # zweites Setup
+    for r, k, p in cand:
         if not k or not p.get("stop") or not p.get("entry"):
             continue
         d = r.get("date") or today
@@ -62,6 +62,7 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
     state.save("signals.json", sig)
     state.save("last.json", {"date": today, "hit": [r["ticker"] for r in rows if r["passed"]],
                              "fast": [r["ticker"] for r in rows if r.get("fast_hit")],
+                             "trend": [r["ticker"] for r in rows if (r.get("tr") or {}).get("ok")],
                              "met": {r["ticker"]: r.get("met") for r in rows}})
     try:
         bt = json.loads((ROOT / "data" / "bilanz_backtest.json").read_text(encoding="utf-8"))

@@ -98,6 +98,9 @@
   .score::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #18181a; }
   .score.fast { background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--surface-3) 0); }
   .score.fast span { font-size: 14px; color: var(--gold); }
+  .score.trend { background: conic-gradient(var(--accent) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.trend span { line-height: 1; font-size: 14px; } .score.trend small { position: relative; font-size: 9px; color: var(--accent); font-weight: 700; line-height: 1; }
+  .trendbox { background: var(--surface-2, rgba(255,255,255,.04)); border-radius: var(--radius-s); padding: 10px 12px; margin: 8px 0; } .trendbox.ok { outline: 1px solid var(--accent); }
+  .status.st-trend { background: rgba(10,132,255,.15); color: var(--accent); } .st.trend { background: rgba(10,132,255,.15); color: var(--accent); margin-left: 4px; }
   .score.flt { background: conic-gradient(var(--red) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.flt span { line-height: 1; } .score.flt small { position: relative; font-size: 9px; color: var(--red); font-weight: 700; line-height: 1; }
   .score span { position: relative; font-weight: 700; font-size: 18px; }
   .card { container-type: inline-size; }
@@ -676,7 +679,9 @@ const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter
   zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
   mbi: "MBI-Signal", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
 const gradeBadge = (r, big) => r.grade ? `<span class="grd g-${r.grade.g}${big ? " big" : ""}" title="Qualitätsstufe ${r.grade.g} – aus dem Backtest, siehe Score antippen">${r.grade.g}</span>` : "";
-const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>${gradeBadge(r, true)}`
+const trendBadge = r => isTrend(r) ? `<span class="status st-trend">Trend-Rücksetzer</span>` : "";
+const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>${gradeBadge(r, true)}${trendBadge(r)}`
+  : isTrend(r) ? trendBadge(r) + (r.fast_hit ? `<span class="status st-abwarten">Kairo: Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>` : "")
   : r.fast_hit ? `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`
   : `<span class="status st-kein_setup">Kein Setup · ${r.missing.length} Kriterien fehlen</span>`;
 const SETUP_KEYS = ["drawdown", "no_crash", "structure", "flattening", "zone", "rsi_div", "rsi_range", "macd_below0", "macd_turn", "mbi", "crv"];
@@ -747,10 +752,14 @@ function selRows() {
     && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector);
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
   const fv = favs();
-  return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit)) ? full(r) : ((k.has("watch") && r.in_watchlist) || (k.has("fav") && fv.has(r.ticker))) && light(r))
-    .sort((a, b) => b.passed - a.passed || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
+  return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit) || (k.has("trend") && isTrend(r))) ? full(r) : ((k.has("watch") && r.in_watchlist) || (k.has("fav") && fv.has(r.ticker))) && light(r))
+    .sort((a, b) => b.passed - a.passed || isTrend(b) - isTrend(a) || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
 }
-const KIND_BTNS = [["fav", "★ Merkliste", r => favs().has(r.ticker)], ["hit", "Treffer", r => r.passed], ["fast", "Fast-Treffer", r => r.fast_hit], ["watch", "Watchlist", r => r.in_watchlist]];
+// Zweites Setup „Trend-Rücksetzer“ (Rücksetzer im Aufwärtstrend) – erscheint nur, wenn der Scan es liefert
+const isTrend = r => !!(r.tr && r.tr.ok);
+const trendOn = () => !!(data && data.stats && data.stats.trend_on);
+const KIND_BTNS_ALL = [["fav", "★ Merkliste", r => favs().has(r.ticker)], ["hit", "Treffer", r => r.passed], ["fast", "Fast-Treffer", r => r.fast_hit], ["trend", "Trend-Rücksetzer", isTrend], ["watch", "Watchlist", r => r.in_watchlist]];
+let KIND_BTNS = KIND_BTNS_ALL.filter(x => x[0] !== "trend");
 // ---------- Merkliste: eigene Favoriten (Stern), nur auf diesem Gerät ----------
 const FAV_KEY = "kairo-merkliste-v1";
 let favCache = null;
@@ -872,6 +881,14 @@ function chips(r) {
     return `<span class="chip ${c.ok ? "ok" : "miss"}"><i>${c.ok ? "✓" : "✗"}</i> ${esc(SHORT[k])}</span>`;
   }).join("");
 }
+function trendBoxHtml(r) {
+  const t = r.tr; if (!t) return "";
+  const p = t.plan || {};
+  return `<div class="trendbox${t.ok ? " ok" : ""}"><div class="plan-h">Trend-Rücksetzer · ${t.met}/${t.total} erfüllt${t.ok ? " ✓" : ""}</div>
+    <ul class="checks">${t.criteria.map(c => `<li><i class="${c.ok ? "up" : "down"}">${c.ok ? "✓" : "✗"}</i><b>${esc(c.l)}:</b> ${esc(c.v)}</li>`).join("")}</ul>
+    ${t.ok && p.stop ? `<div class="exrow" style="margin-top:6px"><span>Stop (unter 10-Tage-Tief)</span><b>${fmt(p.stop)}</b><span>Ziel 1 / Ziel 2</span><b>${fmt(p.target1)} / ${fmt(p.target2)}</b><span>K.-o.-Vorschlag (1–1,5 ATR unter Stop)</span><b>${r.atr_pct ? `${fmt(p.stop - 1.5 * r.atr_pct * r.close)} – ${fmt(p.stop - r.atr_pct * r.close)}` : "–"}</b></div>` : ""}
+    <div class="note" style="margin:6px 0 0">Zweites Setup: Aktie im klaren Aufwärtstrend macht eine kurze Verschnaufpause an der EMA 50 – Wette auf die Fortsetzung (Kairo: Wende nach einer Korrektur).</div></div>`;
+}
 function card(r) {
   return `<article class="card">
     <div class="card-top">
@@ -884,6 +901,7 @@ function card(r) {
       </div>
       <div class="score-col">
       ${r.passed ? `<button class="score" data-scoreinfo style="--p:${r.score}" title="Score ${r.score} von 100 – antippen für die Zusammensetzung"><span>${r.score}</span></button>`
+        : isTrend(r) ? `<button class="score trend" data-scoreinfo style="--p:100" title="Trend-Rücksetzer: alle ${r.tr.total} Kriterien erfüllt"><span>${r.tr.met}/${r.tr.total}</span><small>Trend</small></button>`
         : filterMiss(r) ? `<button class="score fast flt" data-scoreinfo style="--p:100" title="Alle ${r.total} Setup-Kriterien erfüllt, aber Grundfilter nicht: ${esc(filterMiss(r))} – darum kein Treffer"><span>${r.met}/${r.total}</span><small>Filter ✗</small></button>`
         : `<button class="score fast" data-scoreinfo style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – antippen für Details"><span>${r.met ?? "–"}/${r.total ?? 11}</span></button>`}
       ${trendHtml(r)}</div>
@@ -898,6 +916,7 @@ function card(r) {
     </div>
     <div class="chart" data-mini="${esc(r.ticker)}"><svg class="candles" viewBox="0 0 600 220" preserveAspectRatio="none"></svg></div>
     <div class="chips">${chips(r)}</div>
+    ${trendBoxHtml(r)}
     ${tipHtml(r.hint)}
     ${sentiHtml(r)}
     ${fundHtml(r)}
@@ -946,7 +965,7 @@ const COLS = [
   { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<span class="tk">${favBtn(r.ticker)}<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${wlTag(r)}</span>` },
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "trend", l: "Prognose", g: r => r.trend ? (r.trend.fc ? r.trend.fc.d : r.trend.slope + (r.trend.d5 ?? 0) / 10) : 0, h: r => trendHtml(r) || "–" },
-  { k: "status", l: "Status", g: r => r.passed ? 2 : r.fast_hit ? 1 : 0, h: r => r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">Watchlist</span>` },
+  { k: "status", l: "Status", g: r => r.passed ? 3 : isTrend(r) ? 2 : r.fast_hit ? 1 : 0, h: r => (r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit && !isTrend(r) ? `<span class="st fast">Fast</span>` : isTrend(r) ? "" : `<span class="st">Watchlist</span>`) + (isTrend(r) ? `<span class="st trend">Trend</span>` : "") },
   { k: "grade", l: "Stufe", g: r => r.grade ? { A: 3, B: 2, C: 1 }[r.grade.g] : 0, h: r => gradeBadge(r) || `<span class="muted">–</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -964,8 +983,9 @@ const COLS = [
   { k: "score", l: "Score", n: 1, g: r => r.score, h: r => `<b>${r.score}</b>` },
   { k: "earn", l: "Earnings", g: r => r.earnings_date || "9", h: r => `<span class="${r.earnings_risk ? "down" : ""}">${dateDE(r.earnings_date)}</span>` },
   { k: "amp", l: "Kriterien", g: r => -r.missing.length, h: r => ampel(r) },
-  { k: "met", l: "Erfüllt", n: 1, watch: 1, g: r => r.met ?? 0, h: r => `<b class="${r.passed ? "up" : r.fast_hit ? "" : "muted"}">${r.met ?? "–"} / ${r.total ?? 11}</b>${filterMiss(r) ? `<small class="down" style="display:block">Filter ✗</small>` : ""}` },
+  { k: "met", l: "Erfüllt", n: 1, watch: 1, g: r => r.met ?? 0, h: r => !r.passed && !r.fast_hit && isTrend(r) ? `<b class="up">${r.tr.met} / ${r.tr.total}</b><small class="muted" style="display:block">Trend · Kairo ${r.met}/${r.total}</small>` : `<b class="${r.passed ? "up" : r.fast_hit ? "" : "muted"}">${r.met ?? "–"} / ${r.total ?? 11}</b>${filterMiss(r) ? `<small class="down" style="display:block">Filter ✗</small>` : ""}` },
   { k: "miss", l: "Fehlt", fast: 1, g: r => r.missing[0] || "", h: r => { if (r.passed) return `<span class="up">– (Treffer)</span>`;
+    if (isTrend(r) && !r.fast_hit) return `<span class="up">– (Trend-Rücksetzer)</span>`;
     const miss = r.criteria.filter(x => !x.ok && SETUP_KEYS.includes(x.key)).map(x => SHORT[x.key]);
     const text = miss.length <= 2 ? miss.join(", ") : `${miss.slice(0, 2).join(", ")} +${miss.length - 2}`;
     return `<span class="down" title="${esc(r.missing.join(" · "))}">${esc(text || r.missing[0] || "–")}</span>`; } },
@@ -2256,13 +2276,15 @@ function render() {
   if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
+  KIND_BTNS = trendOn() ? KIND_BTNS_ALL : KIND_BTNS_ALL.filter(x => x[0] !== "trend");
+  if (trendOn() && !state.trendSeen) { state.trendSeen = 1; state.kinds = [...new Set([...(state.kinds || []), "trend"])]; save(); }
   const list = selRows(), k = new Set(state.kinds || []);
   const nFilt = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
       ${(state.presets || []).map((p, i) => `<button class="kchip pre${presetActive(p) ? " on" : ""}" data-preset="${i}">${esc(p.name)}</button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
   const extra = k.has("fav") ? favExtraHtml() : "";
-  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ fav: "Merkliste", hit: "Treffer", fast: "Fast-Treffer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
+  const head = searchHtml() + bar + `<div class="section-title"><span>${[...k].map(x => ({ fav: "Merkliste", hit: "Treffer", fast: "Fast-Treffer", trend: "Trend-Rücksetzer", watch: "Watchlist" })[x]).join(" + ") || "–"} · Name antippen für die Übersicht</span><span>${list.length} ${list.length === 1 ? "Aktie" : "Aktien"}</span></div>`;
   if (!list.length && $("search").value.trim().length >= 2) { $("main").innerHTML = searchHtml() + bar; return; }
   if (!list.length) {
     $("main").innerHTML = head + (extra || `<div class="empty">${!k.size ? "Wähle oben Merkliste, Treffer, Fast-Treffer oder Watchlist." : k.size === 1 && k.has("fav") ? "Deine Merkliste ist noch leer. Tippe bei einer Aktie auf den Stern ☆ – in der Tabelle, in der Übersicht oder in der Suche." : `Keine Aktie mit dieser Auswahl${nFilt ? " und diesen Filtern" : ""}.`}</div>`);
@@ -2292,7 +2314,7 @@ function renderHead() {
   const nm = String(state.name || "").trim();
   $("greet").textContent = (h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + nm : "") + " 👋";
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b> und <b>${s.fast_hits ?? 0} Fast-Treffer</b> · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
+  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
   $("sectorOpts").innerHTML = `<button class="opt" data-v="">alle</button>` + sectors.map(x => `<button class="opt" data-v="${esc(x)}">${esc(x)}</button>`).join("");
 }
@@ -2511,7 +2533,7 @@ document.addEventListener("click", e => {
   const si = e.target.closest("[data-scoreinfo],[data-about]");
   if (si) { e.preventDefault(); const box = si.closest(".card").querySelector(si.hasAttribute("data-about") ? ".aboutbox" : ".scorebox"); if (box) box.hidden = !box.hidden; return; }
   const kc = e.target.closest("[data-kind]"); if (kc) { const set = new Set(state.kinds || []); set.has(kc.dataset.kind) ? set.delete(kc.dataset.kind) : set.add(kc.dataset.kind);
-    state.kinds = KIND_BTNS.map(x => x[0]).filter(x => set.has(x)); save(); render(); return; }
+    state.kinds = KIND_BTNS_ALL.map(x => x[0]).filter(x => set.has(x)); save(); render(); return; }
   const cd = e.target.closest("[data-card]"); if (cd) { e.preventDefault(); openCard(cd.dataset.card); return; }
   if (e.target.closest("[data-closecard]")) { closeCard(); return; }
   const o = e.target.closest("[data-open]"); if (o) { e.preventDefault(); closeCard(); openDetail(o.dataset.open); return; }
