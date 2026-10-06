@@ -12,7 +12,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kairo">
-<meta name="theme-color" content="#0b0b0c">
+<meta name="theme-color" content="#05060c">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
   /* Graphit mono + Kairo-Blau: Blau = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
   :root {
@@ -585,6 +587,106 @@
   .sres .card { gap: 12px; padding: 18px; }
   .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
+  /* ================= Kairo Nova – Design-System =================
+     Tiefes Nachtblau, Indigo→Violett als Marke, Glas mit Lichtkante, Display-Schrift für Kennzahlen.
+     Grün/Rot/Gelb bleiben ausschließlich Bedeutung (Gewinn/Verlust/Warnung). */
+  :root {
+    --bg: #05060c; --surface: #0d0f1a; --surface-2: #141729; --surface-3: #1e2238; --line: rgba(140, 150, 255, .12);
+    --glass: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02)); --glass-line: rgba(160, 170, 255, .14);
+    --text: #eef0ff; --muted: #9aa0c3; --faint: #5f6488;
+    --accent: #7c83ff; --accent-2: #a46bff; --accent-ink: #fff; --accent-bg: rgba(124, 131, 255, .16);
+    --grad: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 55%, #c057ff 100%);
+    --grad-soft: linear-gradient(135deg, rgba(91,108,255,.22), rgba(192,87,255,.12));
+    --up: #3ee08f; --up-bg: rgba(62, 224, 143, .12); --red: #ff5d6c; --red-bg: rgba(255, 93, 108, .12);
+    --gold: #ffcf5a; --gold-bg: rgba(255, 207, 90, .12); --zone: rgba(124, 131, 255, .16);
+    --candle-up: #3ee08f; --candle-down: #ff5d6c;
+    --radius: 22px; --radius-s: 14px;
+    --display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 20px 50px -24px rgba(0,0,0,.8);
+  }
+  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-feature-settings: "cv11", "ss01", "tnum"; background: var(--bg); letter-spacing: -.005em; }
+  /* Aurora-Hintergrund: Lichtbogen oben, Glühen rechts – ruhig, nicht verspielt */
+  body::before { background:
+      radial-gradient(900px 420px at 50% -220px, rgba(124,131,255,.33), transparent 70%),
+      radial-gradient(520px 520px at 105% 18%, rgba(164,107,255,.13), transparent 70%),
+      radial-gradient(620px 620px at -10% 85%, rgba(59,130,246,.10), transparent 70%); }
+  body::after { content: ""; position: fixed; left: 50%; top: -420px; width: 1400px; height: 600px; transform: translateX(-50%); z-index: -1; pointer-events: none;
+      border-radius: 50%; border-bottom: 1px solid rgba(180,170,255,.28); box-shadow: 0 30px 80px -40px rgba(140,120,255,.35); opacity: .7; }
+
+  /* Kopf */
+  .brand b { font-family: var(--display); font-weight: 700; letter-spacing: .22em; font-size: 18px; }
+  .brand svg { box-shadow: 0 0 0 1px var(--glass-line), 0 8px 24px -8px rgba(124,131,255,.6); }
+  .hello h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4.4vw, 46px); letter-spacing: -.035em; line-height: 1.05;
+      background: linear-gradient(180deg, #ffffff 30%, #b9bcff 120%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hello p { color: var(--muted); } .hello p b { color: #fff; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .gear { background: rgba(255,255,255,.04) !important; border: 1px solid var(--glass-line) !important; }
+
+  /* Abschnitts-Überschriften wie Editorial-Labels */
+  .section-title { font-size: 11.5px; letter-spacing: .22em; color: var(--muted); font-weight: 600; }
+  .section-title span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--grad); margin: 0 10px 1px 0; box-shadow: 0 0 10px rgba(140,120,255,.9); }
+  .plan-h { letter-spacing: .18em !important; font-size: 11px !important; color: var(--muted) !important; }
+
+  /* Glas-Karten mit Lichtkante */
+  .card, .pane, .hcard, .table-wrap:not(.plain) { background: var(--glass) !important; border: 1px solid var(--glass-line) !important; box-shadow: var(--shadow); position: relative; }
+  .card::before, .hcard::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
+      background: linear-gradient(160deg, rgba(190,180,255,.45), rgba(120,130,255,.08) 35%, transparent 60%, rgba(164,107,255,.18));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  .hcard { border-radius: var(--radius); padding: 18px 18px 16px; }
+  .hcard h3, .hcard .hh b { font-family: var(--display); letter-spacing: -.01em; }
+  @media (hover: hover) { .card:hover, button.hcard:hover { transform: translateY(-2px); box-shadow: var(--shadow), 0 24px 60px -30px rgba(124,131,255,.55); } }
+  .card, .hcard { transition: transform .25s ease, box-shadow .25s ease; }
+
+  /* Kennzahlen in Display-Schrift */
+  .fig b, .mt b, .cockpit .fig b, .jh-main b, .score span, .plan .fig b { font-family: var(--display); letter-spacing: -.02em; }
+
+  /* Buttons */
+  .btn { background: var(--grad); color: #fff; border: 0; box-shadow: 0 10px 30px -12px rgba(124,110,255,.85), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn.ghost { background: rgba(255,255,255,.04); color: var(--text); border: 1px solid var(--glass-line); box-shadow: none; }
+  .mini-btn { border: 1px solid var(--glass-line) !important; background: rgba(255,255,255,.035) !important; }
+  .kchip.on, .opt.on { background: var(--grad) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 8px 22px -10px rgba(124,110,255,.9); }
+  .kchip, .opt { border: 1px solid var(--glass-line) !important; background: rgba(255,255,255,.03); }
+
+  /* Suche */
+  .search input, .ein-search input { background: rgba(255,255,255,.035) !important; border: 1px solid var(--glass-line) !important; }
+  .search input:focus, .ein-search input:focus { border-color: rgba(140,130,255,.7) !important; box-shadow: 0 0 0 4px rgba(124,131,255,.18) !important; outline: none; }
+
+  /* Navigation: schwebende Glas-Kapsel */
+  nav.tabbar { left: 50%; right: auto; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(760px, calc(100% - 20px));
+      border-radius: 26px; border: 1px solid var(--glass-line); background: rgba(14, 16, 30, .72) !important; padding: 6px 6px !important;
+      box-shadow: 0 20px 60px -20px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.06); }
+  nav.tabbar .tabs { max-width: none !important; }
+  .tab { border-radius: 20px; padding-top: 8px !important; padding-bottom: 6px !important; transition: background .2s, color .2s; }
+  .tab.on { color: #fff !important; background: var(--grad-soft); box-shadow: inset 0 0 0 1px rgba(150,140,255,.35); }
+  .tab.on svg { filter: drop-shadow(0 0 8px rgba(150,130,255,.9)); }
+  body { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 40px); }
+
+  /* Score-Ringe & Status */
+  .score { background: conic-gradient(from 210deg, #5b6cff, #a46bff calc(var(--p) * 1%), rgba(255,255,255,.07) 0) !important; }
+  .score::before { background: #0b0d1a !important; }
+  .st.trend, .status.st-trend { background: var(--grad-soft) !important; color: #c9c6ff !important; box-shadow: inset 0 0 0 1px rgba(150,140,255,.35); }
+
+  /* Tabellen */
+  table thead th { color: var(--faint); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 11px; }
+  tbody tr { transition: background .15s; } @media (hover: hover) { tbody tr:hover { background: rgba(124,131,255,.06); } }
+
+  /* Fokus-Karte auf „Heute“ */
+  .focus { position: relative; overflow: hidden; border-radius: 26px; padding: 22px 22px 20px; margin: 4px 0 18px; border: 1px solid rgba(160,150,255,.28);
+      background: radial-gradient(600px 220px at 85% -40%, rgba(164,107,255,.35), transparent 70%), radial-gradient(500px 240px at 0% 120%, rgba(59,130,246,.22), transparent 70%), linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
+      box-shadow: var(--shadow), 0 30px 80px -40px rgba(124,110,255,.7); }
+  .focus .fk { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: #b9b6ff; font-weight: 600; }
+  .focus h2 { font-family: var(--display); font-size: clamp(24px, 3.2vw, 34px); letter-spacing: -.03em; margin: 6px 0 4px; line-height: 1.1; }
+  .focus p { margin: 0 0 14px; color: var(--muted); max-width: 640px; }
+  .focus .fl { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 14px; }
+  .focus .fl button { text-align: left; padding: 11px 13px; border-radius: 14px; border: 1px solid var(--glass-line); background: rgba(5,6,12,.45); color: var(--text); cursor: pointer; }
+  .focus .fl b { display: block; font-size: 15px; } .focus .fl span { color: var(--muted); font-size: 12.5px; }
+  .focus .row-actions { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; } .focus .btn { flex: 1 1 180px; max-width: 260px; padding: 12px 18px; }
+
+  /* Sanftes Einblenden */
+  @media (prefers-reduced-motion: no-preference) {
+    #main > *, .hcol > * { animation: nova-in .5s cubic-bezier(.2,.7,.2,1) both; }
+    .hcol > *:nth-child(2) { animation-delay: .05s; } .hcol > *:nth-child(3) { animation-delay: .1s; } .hcol > *:nth-child(4) { animation-delay: .15s; }
+    @keyframes nova-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  }
 </style>
 <link rel="stylesheet" href="splash.css">
 </head>
@@ -592,7 +694,7 @@
 <script src="splash.js" data-autoplay></script>
 <div class="wrap">
   <header class="hello">
-    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b6cff"/><stop offset="1" stop-color="#c057ff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="#0b0d1a"/><rect x="161" y="128" width="16" height="256" rx="8" fill="url(#kg)"/><rect x="137" y="186" width="64" height="140" rx="10" fill="url(#kg)"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
     <h1 id="greet">Hallo 👋</h1>
     <p id="sub">Lade den heutigen Scan …</p>
   </header>
@@ -2125,10 +2227,21 @@ function journalTeaserHtml() {
       <div class="mt"><span>Trefferquote</span><b>${pct(s.rate, 0)}</b><em>${s.w} / ${s.n}</em></div>
       <div class="mt"><span>Profit-Faktor</span><b>${s.pf == null ? "–" : s.pf === Infinity ? "∞" : fmt(s.pf, 2)}</b></div></div></button>`;
 }
+// Fokus: die besten Einstiege des Tages (Trend Top zuerst) – direkt in den Reiter „Einstieg“
+function focusHtml() {
+  const tr = data.results.filter(isTrend), top = tr.filter(r => r.tr.top);
+  const pick = (top.length ? top : tr).slice().sort((a, b) => (b.market_cap_usd ?? 0) - (a.market_cap_usd ?? 0)).slice(0, 4);
+  if (!pick.length) return "";
+  return `<section class="focus"><div class="fk">Heute im Fokus</div>
+    <h2>${top.length ? `${top.length} Top-Einstieg${top.length === 1 ? "" : "e"} im Aufwärtstrend` : `${tr.length} Trend-Rücksetzer`}</h2>
+    <p>Rücksetzer in Aktien, die klar steigen – im 6-Jahres-Test das stärkste Setup. Antippen für Trade-Plan, K.-o. und Hebel.</p>
+    <div class="fl">${pick.map(r => `<button data-ein="${esc(r.ticker)}"><b>${esc((r.name || r.ticker).slice(0, 26))}</b><span>${esc(r.ticker)} · ${fmt(r.close)} ${esc(r.currency || "")}${r.tr.top ? " · Top" : ""}</span></button>`).join("")}</div>
+    <div class="row-actions"><button class="btn" data-gokinds="trend">Alle Trend-Rücksetzer</button><button class="btn ghost" data-gosec="entry">Einstieg planen</button></div></section>`;
+}
 function todayHtml() {
   const al = getJson("alerts.json");
   const tgHint = al && !al.connected ? `<button class="hcard tg" ${SEC_LINK("settings")}><b>📲 Abendbericht aufs Handy</b><span>Neue Treffer, deine Aktien und Knock-out-Warnungen jeden Abend per Telegram – in 3 Minuten eingerichtet.</span><span class="hlink">Einrichten ›</span></button>` : "";
-  return `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
+  return focusHtml() + `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
     <div class="hcol">${bilanzTeaserHtml()}${depotSnapHtml()}${soonHtml()}${topHitsHtml()}${journalTeaserHtml()}${tgHint}</div></div>`;
 }
 
