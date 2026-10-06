@@ -98,7 +98,7 @@
   .score::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #18181a; }
   .score.fast { background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--surface-3) 0); }
   .score.fast span { font-size: 14px; color: var(--gold); }
-  .score.trend { background: conic-gradient(var(--accent) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.trend span { line-height: 1; font-size: 14px; } .score.trend small { position: relative; font-size: 9px; color: var(--accent); font-weight: 700; line-height: 1; }
+  .score.trend { display: grid; background: conic-gradient(var(--accent) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.trend span { line-height: 1; font-size: 14px; } .score.trend small { position: relative; font-size: 9px; color: var(--accent); font-weight: 700; line-height: 1; }
   .ein-search { position: relative; margin: 0 0 12px; } .ein-search input { width: 100%; font-size: 17px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2, #1c1c1e); color: var(--text); }
   .ein-list { display: grid; gap: 6px; margin-top: 8px; } .ein-opt { display: grid; grid-template-columns: 1fr auto; text-align: left; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2, #1c1c1e); color: var(--text); cursor: pointer; }
   .ein-opt span { color: var(--muted); font-size: 13px; grid-column: 1; } .ein-opt i { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-style: normal; }
@@ -589,9 +589,34 @@
   .kpis, .verdict, .mlist, .clab { display: none; } em.s { font-style: normal; } .cgrid, [class^="cl-"] { display: none; }
   .adate, .abar, .alist, .atools, .apx, .aseg, .sb-brand, .sb-only { display: none; }
 </style>
+<style id="ds-graphit" media="not all">
+
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
+:root{--bg:#0b0b0c;--surface:#151516;--surface-2:#1d1d1f;--surface-3:#2a2a2d;--line:#26262a;--glass:#151516;--glass-line:#26262a;
+--text:#f5f5f7;--muted:#a1a1a6;--faint:#6e6e73;--accent:#0a84ff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#0a84ff 16%,transparent);
+--up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
+--zone:color-mix(in srgb,#0a84ff 14%,transparent);--candle-up:#30d158;--candle-down:#ff453a;--radius:24px;--radius-s:16px;color-scheme:dark}
+body{background:#0b0b0c;color:#f5f5f7}
+.score::before{background:#151516!important} nav.tabbar{background:color-mix(in srgb,#151516 88%,transparent)!important}
+.cm-box{background:#151516}
+body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.card,.hcard,.table-wrap{border:.5px solid var(--line)!important}th,td{border-bottom:.5px solid var(--line)}
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
+
+</style>
 <style id="ds-oled" media="not all">
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
 :root{--bg:#000;--surface:#1c1c1e;--surface-2:#2c2c2e;--surface-3:#3a3a3c;--line:#38383a;--glass:#1c1c1e;--glass-line:#38383a;
 --text:#fff;--muted:#98989f;--faint:#636366;--accent:#0a84ff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#0a84ff 16%,transparent);
 --up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
@@ -599,12 +624,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 body{background:#000;color:#fff}
 .score::before{background:#1c1c1e!important} nav.tabbar{background:color-mix(in srgb,#1c1c1e 88%,transparent)!important}
 .cm-box{background:#1c1c1e}
-body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.card,.hcard,.table-wrap{border:.5px solid var(--line)!important}th,td{border-bottom:.5px solid var(--line)}
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
+
 </style>
 <style id="ds-ioslight" media="not all">
-.flag{color:var(--muted)!important;background:var(--surface-2)!important}
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
 :root{--bg:#f2f2f7;--surface:#fff;--surface-2:#f2f2f7;--surface-3:#e5e5ea;--line:#e1e1e6;--glass:#fff;--glass-line:#e1e1e6;
 --text:#000;--muted:#6e6e73;--faint:#aeaeb2;--accent:#007aff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#007aff 16%,transparent);
 --up:#248a3d;--up-bg:color-mix(in srgb,#248a3d 15%,transparent);--red:#d70015;--red-bg:color-mix(in srgb,#d70015 14%,transparent);--gold:#b25000;--gold-bg:color-mix(in srgb,#b25000 14%,transparent);
@@ -613,11 +649,69 @@ body{background:#f2f2f7;color:#000}
 .score::before{background:#fff!important} nav.tabbar{background:color-mix(in srgb,#fff 88%,transparent)!important}
 .cm-box{background:#fff}
 body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.chip.ok,.wl{color:var(--text)!important}.st-kein_setup{background:var(--surface-2)}.score::before{box-shadow:none}
-.cm-back{background:rgba(0,0,0,.25)!important}
+.cm-back{background:rgba(0,0,0,.25)!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.section-title{text-transform:uppercase;font-size:12.5px;font-weight:500;letter-spacing:.02em;margin:24px 16px 7px}
+.card,.hcard,.table-wrap{border:0!important;border-radius:12px!important}/* Korrekturen für helle Designs */
+.grd.g-A{color:#fff}.candles{background:var(--surface-2)}
+.cockpit .fig,.dep-sum .fig{background:var(--surface)}
+
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
+
+</style>
+<style id="ds-auto" media="not all">
+
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
+@media (prefers-color-scheme: light) {
+:root{--bg:#f2f2f7;--surface:#fff;--surface-2:#f2f2f7;--surface-3:#e5e5ea;--line:#e1e1e6;--glass:#fff;--glass-line:#e1e1e6;
+--text:#000;--muted:#6e6e73;--faint:#aeaeb2;--accent:#007aff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#007aff 16%,transparent);
+--up:#248a3d;--up-bg:color-mix(in srgb,#248a3d 15%,transparent);--red:#d70015;--red-bg:color-mix(in srgb,#d70015 14%,transparent);--gold:#b25000;--gold-bg:color-mix(in srgb,#b25000 14%,transparent);
+--zone:color-mix(in srgb,#007aff 14%,transparent);--candle-up:#248a3d;--candle-down:#d70015;--radius:24px;--radius-s:16px;color-scheme:light}
+body{background:#f2f2f7;color:#000}
+.score::before{background:#fff!important} nav.tabbar{background:color-mix(in srgb,#fff 88%,transparent)!important}
+.cm-box{background:#fff}
+body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.chip.ok,.wl{color:var(--text)!important}.st-kein_setup{background:var(--surface-2)}.score::before{box-shadow:none}
+.cm-back{background:rgba(0,0,0,.25)!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.section-title{text-transform:uppercase;font-size:12.5px;font-weight:500;letter-spacing:.02em;margin:24px 16px 7px}
+.card,.hcard,.table-wrap{border:0!important;border-radius:12px!important}/* Korrekturen für helle Designs */
+.grd.g-A{color:#fff}.candles{background:var(--surface-2)}
+.cockpit .fig,.dep-sum .fig{background:var(--surface)}
+
+}
+@media (prefers-color-scheme: dark) {
+:root{--bg:#000;--surface:#1c1c1e;--surface-2:#2c2c2e;--surface-3:#3a3a3c;--line:#38383a;--glass:#1c1c1e;--glass-line:#38383a;
+--text:#fff;--muted:#98989f;--faint:#636366;--accent:#0a84ff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#0a84ff 16%,transparent);
+--up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
+--zone:color-mix(in srgb,#0a84ff 14%,transparent);--candle-up:#30d158;--candle-down:#ff453a;--radius:24px;--radius-s:16px;color-scheme:dark}
+body{background:#000;color:#fff}
+.score::before{background:#1c1c1e!important} nav.tabbar{background:color-mix(in srgb,#1c1c1e 88%,transparent)!important}
+.cm-box{background:#1c1c1e}
+body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.card,.hcard,.table-wrap{border:.5px solid var(--line)!important}th,td{border-bottom:.5px solid var(--line)}
+}
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
+
 </style>
 <style id="ds-aktien" media="not all">
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
 :root{--bg:#000;--surface:#121212;--surface-2:#1c1c1e;--surface-3:#2c2c2e;--line:#2c2c2e;--glass:#121212;--glass-line:#2c2c2e;
 --text:#fff;--muted:#8e8e93;--faint:#5a5a5e;--accent:#30d158;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#30d158 16%,transparent);
 --up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
@@ -625,12 +719,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
 body{background:#000;color:#fff}
 .score::before{background:#121212!important} nav.tabbar{background:color-mix(in srgb,#121212 88%,transparent)!important}
 .cm-box{background:#121212}
-body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.fig b,.hcard h3{font-weight:700}.hello h1{font-weight:800}
+body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.fig b,.hcard h3,.hcard .hh b{font-weight:700}.hello h1{font-weight:800}td.num{font-weight:600}.btn,.kchip.on,.opt.on{color:#000!important}
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
+
 </style>
 <style id="ds-postfach" media="not all">
-.flag{color:var(--muted)!important;background:var(--surface-2)!important}
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
+
 :root{--bg:#f2f2f7;--surface:#fff;--surface-2:#f2f2f7;--surface-3:#e5e5ea;--line:#e1e1e6;--glass:#fff;--glass-line:#e1e1e6;
 --text:#000;--muted:#6e6e73;--faint:#aeaeb2;--accent:#007aff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#007aff 16%,transparent);
 --up:#248a3d;--up-bg:color-mix(in srgb,#248a3d 15%,transparent);--red:#d70015;--red-bg:color-mix(in srgb,#d70015 14%,transparent);--gold:#b25000;--gold-bg:color-mix(in srgb,#b25000 14%,transparent);
@@ -639,7 +744,12 @@ body{background:#f2f2f7;color:#000}
 .score::before{background:#fff!important} nav.tabbar{background:color-mix(in srgb,#fff 88%,transparent)!important}
 .cm-box{background:#fff}
 body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.chip.ok,.wl{color:var(--text)!important}.st-kein_setup{background:var(--surface-2)}.score::before{box-shadow:none}
-.cm-back{background:rgba(0,0,0,.25)!important}  /* Aufgaben-Postfach: Seitenleiste auf dem iPad, „Heute“ als Postfach mit Detail daneben */
+.cm-back{background:rgba(0,0,0,.25)!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
+.flag{color:var(--muted)!important;background:var(--surface-2)!important}.section-title{text-transform:uppercase;font-size:12.5px;font-weight:500;letter-spacing:.02em;margin:24px 16px 7px}
+.card,.hcard,.table-wrap{border:0!important;border-radius:12px!important}/* Korrekturen für helle Designs */
+.grd.g-A{color:#fff}.candles{background:var(--surface-2)}
+.cockpit .fig,.dep-sum .fig{background:var(--surface)}
+  /* Aufgaben-Postfach: Seitenleiste auf dem iPad, „Heute“ als Postfach mit Detail daneben */
   .sb-brand, .sb-only { display: none; }
   @media (min-width: 1024px) {
     nav.tabbar { top: 0; bottom: 0; right: auto; width: 240px; padding: calc(env(safe-area-inset-top) + 18px) 12px 18px; border-top: 0; border-right: 1px solid var(--line);
@@ -678,6 +788,16 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
   .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
   .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
   .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
+
+/* gemeinsame Korrekturen für alle wählbaren Designs */
+.chip.ok{color:var(--text)}.wl{color:var(--muted)}
+/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
+.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
+/* Auswahlfelder in Formularen */
+.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
+  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
+/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
+@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
 
 </style>
 <link rel="stylesheet" href="splash.css">
@@ -827,17 +947,18 @@ if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 state.sec = "today";   // App startet immer auf „Heute“
 // Design: "new" (Standard) oder "classic" (ursprüngliches Design) – Umschalten in den Einstellungen
 const isApple = () => state.design === "apple";
-const isLight = () => isApple() && matchMedia("(prefers-color-scheme: light)").matches;
+const isLight = () => ["ioslight", "postfach"].includes(state.design) || (state.design === "auto" && matchMedia("(prefers-color-scheme: light)").matches);
 const LC = () => isLight() ? { t: "#6e6e73", g: "#ececf0", b: "#d1d1d6", k: "#3a3a3c" } : { t: "#9a9a9f", g: "#1d1d1f", b: "#2a2a2d", k: "#e5e5ea" };
 // Designs: Klassisch (Standard) oder eines der wählbaren Designs – jedes ist ein eigenes Stylesheet
-const DESIGNS = [["classic", "Klassisch (Standard)"], ["ioslight", "iOS Hell"], ["oled", "OLED Schwarz"], ["aktien", "Apple Aktien"], ["postfach", "Aufgaben-Postfach"]];
+const DESIGNS = [["classic", "Klassisch (Standard)"], ["graphit", "Graphit Präzision"], ["oled", "OLED Schwarz"], ["ioslight", "iOS Hell"], ["auto", "Automatisch (tagsüber hell, abends dunkel)"], ["aktien", "Apple Aktien"], ["postfach", "Aufgaben-Postfach"]];
 if (!DESIGNS.some(([k]) => k === state.design)) state.design = "classic";   // frühere Test-Designs (Apple-Look, Pro) → Klassisch
 const isPostfach = () => state.design === "postfach";
 const applyDesign = () => {
   DESIGNS.forEach(([k]) => { const el = document.getElementById("ds-" + k); if (el) el.media = k === state.design ? "all" : "not all"; });
-  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = state.design === "ioslight" || isPostfach() ? "#f2f2f7" : state.design === "classic" ? "#0b0b0c" : "#000";
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = isLight() ? "#f2f2f7" : state.design === "classic" || state.design === "graphit" ? "#0b0b0c" : "#000";
 };
 applyDesign();
+try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (state.design === "auto") { applyDesign(); render(); } }); } catch (e) {}
 if ("IntersectionObserver" in window) new IntersectionObserver(es => document.body.classList.toggle("scrolled", !es[0].isIntersecting), { rootMargin: "-50px 0px 0px 0px" }).observe(document.getElementById("greet"));
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
