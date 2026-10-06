@@ -825,7 +825,7 @@ try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } ca
 if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 state.sec = "today";   // App startet immer auf „Heute“
 // Design: "new" (Standard) oder "classic" (ursprüngliches Design) – Umschalten in den Einstellungen
-const applyDesign = () => { const el = document.getElementById("themeNew"); if (el) el.disabled = state.design === "classic"; };
+const applyDesign = () => { const el = document.getElementById("themeNew"); if (el) el.disabled = state.design !== "pro"; };
 applyDesign();
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
@@ -1063,7 +1063,7 @@ async function loadChart(t) {
 }
 const chartPlan = r => r.passed ? r.plan : isTrend(r) ? r.tr.plan : null;
 function miniSvg(c, r) {
-  const nu = state.design !== "classic";
+  const nu = state.design === "pro";
   const n = c.t.length, from = Math.max(0, n - 60), W = 600, H = 220, pad = nu ? 14 : 10;
   const idx = [...Array(n - from).keys()].map(i => i + from);
   let lo = Math.min(...idx.map(i => c.l[i])), hi = Math.max(...idx.map(i => c.h[i]));
@@ -2413,8 +2413,8 @@ function settingsHtml() {
       <label class="full">Wie soll Kairo dich nennen?<input id="cfgName" value="${esc(state.name || "")}" placeholder="z. B. Jonny" maxlength="24" autocomplete="given-name"></label></div>
       <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div>
       <div class="form" style="margin:14px 0 0"><label class="full">Design<select id="cfgDesign">
-        <option value="pro"${state.design !== "classic" ? " selected" : ""}>Kairo Pro (Standard)</option>
-        <option value="classic"${state.design === "classic" ? " selected" : ""}>Klassisch (ursprüngliches Design)</option></select></label></div>
+        <option value="classic"${state.design !== "pro" ? " selected" : ""}>Klassisch (Standard)</option>
+        <option value="pro"${state.design === "pro" ? " selected" : ""}>Kairo Pro (Vorschau)</option></select></label></div>
       <div class="note">Wechselt sofort, alle Funktionen und Daten bleiben gleich.</div></div>
     ${telegramHtml()}${backupHtml()}
     <div class="section-title"><span>Scanner-Parameter</span><span>aus config.yaml</span></div>
