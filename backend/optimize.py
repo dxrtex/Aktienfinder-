@@ -561,6 +561,22 @@ def trend2_part(ev_all, ev_trend, ev_hits):
         mf[f"Breite ≥ {int(thr * 100)} %"] = {"trend_n": len(t_sub), "trend_turbo": tx["all"].get("turbo"), "trend_jahre": tx["years"],
                                              "kairo_n": len(k_sub), "kairo_turbo": kx["all"].get("turbo"), "kairo_jahre": kx["years"]}
     out["marktfilter"] = mf
+    # Qualitätsstufe (aus den Merkmalen oben) und Verkaufsschwelle ab 4 für beide Setups
+    fn4 = lambda e: _sim_turbo(e["px"], e["_sg"], crit5, 4, 1.0)
+    tiers = {"Trend alle": es_ok,
+             "Trend Top (Abstand Hoch < 15 %, ATR < 4,5 %, EMA200 < +30 %)": [e for e in es_ok if (e["f"].get("dd") or 0) < 0.15 and (e["f"].get("atrp") or 1) < 0.045 and (e["f"].get("e200") or 9) < 0.30],
+             "Trend Top locker (Abstand Hoch < 15 %, ATR < 4,5 %)": [e for e in es_ok if (e["f"].get("dd") or 0) < 0.15 and (e["f"].get("atrp") or 1) < 0.045],
+             "Trend Rest": [e for e in es_ok if not ((e["f"].get("dd") or 0) < 0.15 and (e["f"].get("atrp") or 1) < 0.045 and (e["f"].get("e200") or 9) < 0.30)]}
+    q = {}
+    for name, sub in tiers.items():
+        for lab, f_ in (("ab3", base_fn), ("ab4", fn4)):
+            x = evaluate_rule(sub, f_)
+            q[f"{name} · Check {lab}"] = {"n": x["all"]["n"], "turbo": x["all"].get("turbo"), "lernen": x["train"].get("turbo"), "pruefen": x["test"].get("turbo"),
+                                          "ko": x["all"]["ko"], "jahre": x["years"]}
+    for lab, f_ in (("ab3", base_fn), ("ab4", fn4), ("Halten", lambda e: _sim_turbo(e["px"], e["_sg"], [], 1, 1.0))):
+        x = evaluate_rule([e for e in ev_hits if e["_sg"]], f_)
+        q[f"Kairo · {lab}"] = {"n": x["all"]["n"], "turbo": x["all"].get("turbo"), "lernen": x["train"].get("turbo"), "pruefen": x["test"].get("turbo"), "ko": x["all"]["ko"]}
+    out["stufe"] = q
     for e in es + ev_hits:
         e.pop("_sg", None); e.pop("_t", None)
     return out
@@ -602,7 +618,7 @@ def main(argv=None) -> int:
     if "--trend2" in sys.argv:                     # nur der Feinschliff des Trend-Setups (schnell, kurze Ausgabe)
         t2 = trend2_part(ev_all, ev_trend, [e for e in ev_px if e["k"] == "hit"])
         (ROOT / "data" / "optimize.json").write_text(json.dumps(t2, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-        for k in ("verkauf", "rang", "top", "marktfilter"):
+        for k in ("verkauf", "rang", "top", "marktfilter", "stufe"):
             print(f"T2_{k} " + json.dumps(t2.get(k), ensure_ascii=False, separators=(",", ":")))
         return 0
     res["entry"] = entry_part(ev_all, ev_px)
