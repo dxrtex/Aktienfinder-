@@ -587,6 +587,10 @@
   .sres .card { gap: 12px; padding: 18px; }
   .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
+  /* Klassisches Design: Fokus-Karte gibt es nur im neuen Design */
+  .focus { display: none; } em.s { font-style: normal; }
+</style>
+<style id="themeNew">
   /* ================= Kairo – Design-System (Equinox-Stil) =================
      Fast-Schwarz mit tiefem Elektroblau, weiße Primär-Buttons, kursive Serif-Akzente in Überschriften,
      Karten mit blauem Innenglühen. Grün/Rot/Gelb bleiben ausschließlich Bedeutung (Gewinn/Verlust/Warnung). */
@@ -667,7 +671,7 @@
   tbody tr { transition: background .15s; } @media (hover: hover) { tbody tr:hover { background: rgba(37, 82, 255, .08); } }
 
   /* Fokus-Karte („Hero“) mit Licht-Band */
-  .focus { position: relative; overflow: hidden; border-radius: 22px; padding: 22px 22px 18px; margin: 6px 0 18px; border: 1px solid rgba(90, 125, 255, .3);
+  .focus { display: block; position: relative; overflow: hidden; border-radius: 22px; padding: 22px 22px 18px; margin: 6px 0 18px; border: 1px solid rgba(90, 125, 255, .3);
       background: radial-gradient(700px 260px at 50% -30%, rgba(37, 82, 255, .45), transparent 70%), linear-gradient(180deg, #060a26, #03050f);
       box-shadow: inset 0 1px 0 rgba(150, 180, 255, .2), 0 40px 90px -50px rgba(37, 82, 255, .9); }
   .focus > *:not(.ribbon) { position: relative; z-index: 1; }
@@ -831,6 +835,9 @@ const PREF = "reversal-finder-v1";
 try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } catch (e) {}
 if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 state.sec = "today";   // App startet immer auf „Heute“
+// Design: "new" (Standard) oder "classic" (ursprüngliches Design) – Umschalten in den Einstellungen
+const applyDesign = () => { const el = document.getElementById("themeNew"); if (el) el.disabled = state.design === "classic"; };
+applyDesign();
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
 const SORTS = {
@@ -1844,6 +1851,7 @@ document.addEventListener("click", e => {
 document.addEventListener("input", e => {
   if (e.target.dataset && e.target.dataset.jnote) { const o = jnLoad(), k = e.target.dataset.jnote; (o[k] = o[k] || {}).note = e.target.value; jnSave(o); return; }
   if (e.target.id === "cfgName") { state.name = e.target.value.trim(); save(); renderHead(); }
+  if (e.target.id === "cfgDesign") { state.design = e.target.value; save(); applyDesign(); renderHead(); }
 });
 document.addEventListener("change", async e => {
   if (e.target.id === "restoreFile" && e.target.files[0]) {
@@ -2393,7 +2401,11 @@ function settingsHtml() {
   return `<div class="section-title"><span>Persönlich</span><span>nur auf diesem Gerät</span></div>
     <div class="card" style="margin-bottom:18px"><div class="form" style="margin:0">
       <label class="full">Wie soll Kairo dich nennen?<input id="cfgName" value="${esc(state.name || "")}" placeholder="z. B. Jonny" maxlength="24" autocomplete="given-name"></label></div>
-      <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div></div>
+      <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div>
+      <div class="form" style="margin:14px 0 0"><label class="full">Design<select id="cfgDesign">
+        <option value="new"${state.design === "classic" ? "" : " selected"}>Neu (Kairo Blau)</option>
+        <option value="classic"${state.design === "classic" ? " selected" : ""}>Klassisch (ursprüngliches Design)</option></select></label></div>
+      <div class="note">Wechselt sofort, alle Funktionen und Daten bleiben gleich.</div></div>
     ${telegramHtml()}${backupHtml()}
     <div class="section-title"><span>Scanner-Parameter</span><span>aus config.yaml</span></div>
     <div class="card cfg">
@@ -2550,7 +2562,7 @@ function sheetExtras() {
 function renderHead() {
   const h = new Date().getHours();
   const nm = String(state.name || "").trim();
-  $("greet").innerHTML = esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <em class="s">${esc(nm)}</em>` : "");
+  $("greet").innerHTML = esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <em class="s">${esc(nm)}</em>` : "") + (state.design === "classic" ? " 👋" : "");
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
