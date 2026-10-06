@@ -635,6 +635,8 @@
     <div class="opts" data-key="maxCap"><button class="opt" data-v="0">egal</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Volatilität (30 Tage, annualisiert)</div>
     <div class="opts" data-key="vola"><button class="opt" data-v="">alle</button><button class="opt" data-v="low">niedrig &lt; 30 %</button><button class="opt" data-v="mid">mittel 30–50 %</button><button class="opt" data-v="high">hoch 50–80 %</button><button class="opt" data-v="xhigh">sehr hoch &gt; 80 %</button></div></div>
+  <div class="group"><div class="group-label">Analysten-Ziel (Ø Kursziel über dem Kurs)</div>
+    <div class="opts" data-key="minTgt"><button class="opt" data-v="">alle</button><button class="opt" data-v="0.1">ab +10 %</button><button class="opt" data-v="0.25">ab +25 %</button><button class="opt" data-v="0.5">ab +50 %</button></div></div>
   <div class="group"><div class="group-label">Region</div>
     <div class="opts" data-key="region"><button class="opt" data-v="">alle</button><button class="opt" data-v="us">Nordamerika</button><button class="opt" data-v="europe">Europa</button><button class="opt" data-v="asia">Asien/Pazifik</button></div></div>
   <div class="group"><div class="group-label">Zonen-Typ</div>
@@ -644,7 +646,7 @@
   <div class="group"><div class="group-label">Sektor</div>
     <div class="opts" data-key="sector" id="sectorOpts"><button class="opt" data-v="">alle</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button><button class="opt" data-v="vola">Volatilität ↓</button><button class="opt" data-v="vola_asc">Volatilität ↑</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button><button class="opt" data-v="vola">Volatilität ↓</button><button class="opt" data-v="vola_asc">Volatilität ↑</button><button class="opt" data-v="tgt">Analysten-Ziel</button></div></div>
   <div class="group"><div class="group-label">Export der angezeigten Liste</div>
     <div class="links"><button class="btn ghost" id="csv">CSV</button><button class="btn ghost" id="xlsx">Excel</button></div></div>
   <button class="btn" id="done">Fertig</button>
@@ -692,8 +694,11 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { grade: "", minScore: "0", minCap: "0", maxCap: "0", vola: "", region: "", zone: "", div: "", sector: "", sort: "score" };
+const DEFAULTS = { grade: "", minScore: "0", minCap: "0", maxCap: "0", vola: "", minTgt: "", region: "", zone: "", div: "", sector: "", sort: "score" };
 const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
+// Analysten: Ø Kursziel und Abstand zum aktuellen Kurs (aus der Marktstimmung)
+const tgtUp = r => { const t = r.senti && r.senti.tgt; return t && t.m && r.close ? t.m / r.close - 1 : null; };
+const tgtIn = r => !state.minTgt || (tgtUp(r) ?? -1) >= +state.minTgt;
 const volaIn = r => { const b = VOLA[state.vola]; return !b || (r.volatility != null && r.volatility >= b[0] && r.volatility < b[1]); };
 const volaCls = v => v == null ? "muted" : v < .3 ? "up" : v < .5 ? "" : "down";
 const state = { name: "Jonny", calView: "month", budget: 400, sec: "scanner", tab: "table", tableKind: "hit", kinds: ["hit", "fast"], calScope: "mine", calKind: "", ...DEFAULTS, tableSort: "score", tableAsc: false };
@@ -710,6 +715,7 @@ const SORTS = {
   cap: (a, b) => (b.market_cap_usd ?? 0) - (a.market_cap_usd ?? 0),
   vola: (a, b) => (b.volatility ?? -1) - (a.volatility ?? -1),
   vola_asc: (a, b) => (a.volatility ?? 9) - (b.volatility ?? 9),
+  tgt: (a, b) => (tgtUp(b) ?? -9) - (tgtUp(a) ?? -9),
 };
 
 function rows(kind) {
@@ -723,7 +729,7 @@ function rows(kind) {
     && (r.score >= +state.minScore || !r.passed)
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9)
     && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9)
-    && volaIn(r)
+    && volaIn(r) && tgtIn(r)
     && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone))
     && (!state.div || r.divergence === state.div)
@@ -737,7 +743,7 @@ function selRows() {
   const light = r => (!q || r.ticker.toLowerCase().includes(q) || (r.name || "").toLowerCase().includes(q))
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9) && volaIn(r);
   const gOk = r => !r.passed || !state.grade || (r.grade && (state.grade === "A" ? r.grade.g === "A" : r.grade.g !== "C"));
-  const full = r => light(r) && gOk(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
+  const full = r => light(r) && gOk(r) && tgtIn(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector);
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
   const fv = favs();
@@ -945,6 +951,8 @@ const COLS = [
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
   { k: "close", l: "Kurs", n: 1, g: r => r.close, h: r => fmt(r.close) },
+  { k: "tgt", l: "Analysten-Ziel", n: 1, g: r => tgtUp(r) ?? -9, h: r => { const t = r.senti && r.senti.tgt, u = tgtUp(r);
+    return u == null ? `<span class="muted">–</span>` : `<b class="${u >= 0 ? "up" : "down"}">${u >= 0 ? "+" : ""}${pct(u, 0)}</b><small style="display:block" class="muted">Ø ${fmt(t.m)}${r.senti.an && r.senti.an.n ? ` · ${r.senti.an.n} Anal.` : ""}</small>`; } },
   { k: "dd", l: "Rückgang", n: 1, g: r => r.drawdown ?? 0, h: r => `<span class="${(r.drawdown ?? 0) >= 0 ? "down" : "up"}">${ddFmt(r.drawdown)}</span>` },
   { k: "zone", l: "Zone", g: r => r.zone_type, h: r => esc(r.zone_type) },
   { k: "vola", l: "Volatilität", n: 1, g: r => r.volatility ?? -1, h: r => `<span class="${volaCls(r.volatility)}" title="Ø Tagesspanne (ATR) ${pct(r.atr_pct)}">${pct(r.volatility, 0)}</span>` },
@@ -2249,7 +2257,7 @@ function render() {
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
   const list = selRows(), k = new Set(state.kinds || []);
-  const nFilt = ["grade", "minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
+  const nFilt = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
       ${(state.presets || []).map((p, i) => `<button class="kchip pre${presetActive(p) ? " on" : ""}" data-preset="${i}">${esc(p.name)}</button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
@@ -2271,7 +2279,7 @@ function render() {
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + extra;
 }
 
-const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "region", "zone", "div", "sector"];
+const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
   const gg = document.querySelector('.opts[data-key="grade"]'); if (gg) gg.closest(".group").hidden = !(data.stats && data.stats.grade);
