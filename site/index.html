@@ -12,9 +12,9 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kairo">
-<meta name="theme-color" content="#05060c">
+<meta name="theme-color" content="#02030b">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Inter+Tight:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
 <style>
   /* Graphit mono + Kairo-Blau: Blau = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
   :root {
@@ -587,105 +587,113 @@
   .sres .card { gap: 12px; padding: 18px; }
   .sres .actions .btn { padding: 10px 14px; font-size: 15px; }
   .links .btn { flex: 1 1 220px; }
-  /* ================= Kairo Nova – Design-System =================
-     Tiefes Nachtblau, Indigo→Violett als Marke, Glas mit Lichtkante, Display-Schrift für Kennzahlen.
-     Grün/Rot/Gelb bleiben ausschließlich Bedeutung (Gewinn/Verlust/Warnung). */
+  /* ================= Kairo – Design-System (Equinox-Stil) =================
+     Fast-Schwarz mit tiefem Elektroblau, weiße Primär-Buttons, kursive Serif-Akzente in Überschriften,
+     Karten mit blauem Innenglühen. Grün/Rot/Gelb bleiben ausschließlich Bedeutung (Gewinn/Verlust/Warnung). */
   :root {
-    --bg: #05060c; --surface: #0d0f1a; --surface-2: #141729; --surface-3: #1e2238; --line: rgba(140, 150, 255, .12);
-    --glass: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.02)); --glass-line: rgba(160, 170, 255, .14);
-    --text: #eef0ff; --muted: #9aa0c3; --faint: #5f6488;
-    --accent: #7c83ff; --accent-2: #a46bff; --accent-ink: #fff; --accent-bg: rgba(124, 131, 255, .16);
-    --grad: linear-gradient(135deg, #5b6cff 0%, #8b5cf6 55%, #c057ff 100%);
-    --grad-soft: linear-gradient(135deg, rgba(91,108,255,.22), rgba(192,87,255,.12));
-    --up: #3ee08f; --up-bg: rgba(62, 224, 143, .12); --red: #ff5d6c; --red-bg: rgba(255, 93, 108, .12);
-    --gold: #ffcf5a; --gold-bg: rgba(255, 207, 90, .12); --zone: rgba(124, 131, 255, .16);
-    --candle-up: #3ee08f; --candle-down: #ff5d6c;
-    --radius: 22px; --radius-s: 14px;
-    --display: "Space Grotesk", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
-    --shadow: 0 1px 0 rgba(255,255,255,.06) inset, 0 20px 50px -24px rgba(0,0,0,.8);
+    --bg: #02030b; --surface: #070a1c; --surface-2: #0b1030; --surface-3: #141a44; --line: rgba(90, 120, 255, .16);
+    --glass: linear-gradient(180deg, rgba(40, 70, 255, .13), rgba(12, 18, 60, .28) 45%, rgba(6, 9, 30, .5)); --glass-line: rgba(90, 125, 255, .22);
+    --text: #f4f6ff; --muted: #9ba3c9; --faint: #5d6590;
+    --accent: #4d7bff; --accent-2: #38bdf8; --accent-ink: #fff; --accent-bg: rgba(60, 100, 255, .16);
+    --blue: #2552ff; --grad: linear-gradient(135deg, #1f3dff 0%, #2f6bff 55%, #38bdf8 120%);
+    --up: #3ddc97; --up-bg: rgba(61, 220, 151, .12); --red: #ff5a6a; --red-bg: rgba(255, 90, 106, .12);
+    --gold: #ffd166; --gold-bg: rgba(255, 209, 102, .12); --zone: rgba(70, 110, 255, .16);
+    --candle-up: #3ddc97; --candle-down: #ff5a6a;
+    --radius: 18px; --radius-s: 12px;
+    --display: "Inter Tight", "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+    --shadow: inset 0 1px 0 rgba(140, 170, 255, .14), inset 0 24px 48px -30px rgba(50, 90, 255, .45), 0 24px 60px -30px rgba(0, 0, 0, .9);
   }
-  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-feature-settings: "cv11", "ss01", "tnum"; background: var(--bg); letter-spacing: -.005em; }
-  /* Aurora-Hintergrund: Lichtbogen oben, Glühen rechts – ruhig, nicht verspielt */
+  body { font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-feature-settings: "cv11", "tnum"; background: var(--bg); }
   body::before { background:
-      radial-gradient(900px 420px at 50% -220px, rgba(124,131,255,.33), transparent 70%),
-      radial-gradient(520px 520px at 105% 18%, rgba(164,107,255,.13), transparent 70%),
-      radial-gradient(620px 620px at -10% 85%, rgba(59,130,246,.10), transparent 70%); }
-  body::after { content: ""; position: fixed; left: 50%; top: -420px; width: 1400px; height: 600px; transform: translateX(-50%); z-index: -1; pointer-events: none;
-      border-radius: 50%; border-bottom: 1px solid rgba(180,170,255,.28); box-shadow: 0 30px 80px -40px rgba(140,120,255,.35); opacity: .7; }
+      radial-gradient(800px 380px at 50% -160px, rgba(37, 82, 255, .38), transparent 72%),
+      radial-gradient(700px 420px at 100% 40%, rgba(20, 60, 255, .10), transparent 70%),
+      radial-gradient(600px 500px at 0% 95%, rgba(56, 189, 248, .07), transparent 70%); }
+  em.s, .serif { font-family: var(--serif); font-style: italic; font-weight: 400; letter-spacing: 0; }
 
   /* Kopf */
-  .brand b { font-family: var(--display); font-weight: 700; letter-spacing: .22em; font-size: 18px; }
-  .brand svg { box-shadow: 0 0 0 1px var(--glass-line), 0 8px 24px -8px rgba(124,131,255,.6); }
-  .hello h1 { font-family: var(--display); font-weight: 700; font-size: clamp(30px, 4.4vw, 46px); letter-spacing: -.035em; line-height: 1.05;
-      background: linear-gradient(180deg, #ffffff 30%, #b9bcff 120%); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .hello p { color: var(--muted); } .hello p b { color: #fff; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  .gear { background: rgba(255,255,255,.04) !important; border: 1px solid var(--glass-line) !important; }
+  .brand b { font-family: var(--display); font-weight: 600; letter-spacing: -.01em; font-size: 19px; text-transform: none; }
+  .brand svg { border-radius: 9px; box-shadow: 0 0 0 1px rgba(110, 140, 255, .35), 0 6px 22px -6px rgba(37, 82, 255, .9); }
+  .hello h1 { font-family: var(--display); font-weight: 500; font-size: clamp(32px, 4.6vw, 50px); letter-spacing: -.035em; line-height: 1.06; }
+  .hello h1 em.s { font-size: 1.08em; color: #dfe6ff; }
+  .hello p { color: var(--muted); } .hello p b { color: #8fb0ff; }
+  .gear { background: rgba(255, 255, 255, .03) !important; border: 1px solid var(--glass-line) !important; }
 
-  /* Abschnitts-Überschriften wie Editorial-Labels */
-  .section-title { font-size: 11.5px; letter-spacing: .22em; color: var(--muted); font-weight: 600; }
-  .section-title span:first-child::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--grad); margin: 0 10px 1px 0; box-shadow: 0 0 10px rgba(140,120,255,.9); }
-  .plan-h { letter-spacing: .18em !important; font-size: 11px !important; color: var(--muted) !important; }
+  /* Abschnitts-Titel als kleine Pille („Why choose …“) */
+  .section-title { align-items: center; font-size: 12px; letter-spacing: .02em; text-transform: none; color: var(--muted); font-weight: 500; }
+  .section-title span:first-child { display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgba(20, 30, 90, .35); color: #cdd6ff; }
+  .section-title span:first-child::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #3ddc97; box-shadow: 0 0 8px #3ddc97; }
+  .plan-h { letter-spacing: .14em !important; font-size: 11px !important; color: var(--muted) !important; }
 
-  /* Glas-Karten mit Lichtkante */
-  .card, .pane, .hcard, .table-wrap:not(.plain) { background: var(--glass) !important; border: 1px solid var(--glass-line) !important; box-shadow: var(--shadow); position: relative; }
-  .card::before, .hcard::before { content: ""; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none;
-      background: linear-gradient(160deg, rgba(190,180,255,.45), rgba(120,130,255,.08) 35%, transparent 60%, rgba(164,107,255,.18));
-      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; }
+  /* Karten: tiefblaues Glas mit Innenglühen oben */
+  .card, .pane, .hcard, .table-wrap:not(.plain) { background: var(--glass) !important; border: 1px solid var(--glass-line) !important; box-shadow: var(--shadow); }
   .hcard { border-radius: var(--radius); padding: 18px 18px 16px; }
-  .hcard h3, .hcard .hh b { font-family: var(--display); letter-spacing: -.01em; }
-  @media (hover: hover) { .card:hover, button.hcard:hover { transform: translateY(-2px); box-shadow: var(--shadow), 0 24px 60px -30px rgba(124,131,255,.55); } }
-  .card, .hcard { transition: transform .25s ease, box-shadow .25s ease; }
+  .hcard h3, .hcard .hh b { font-family: var(--display); font-weight: 500; letter-spacing: -.01em; font-size: 17px; }
+  .card, .hcard { transition: transform .25s ease, box-shadow .25s ease, border-color .25s; }
+  @media (hover: hover) { .card:hover, button.hcard:hover { transform: translateY(-2px); border-color: rgba(110, 145, 255, .45) !important; } }
 
-  /* Kennzahlen in Display-Schrift */
-  .fig b, .mt b, .cockpit .fig b, .jh-main b, .score span, .plan .fig b { font-family: var(--display); letter-spacing: -.02em; }
+  /* Kennzahlen */
+  .fig b, .mt b, .cockpit .fig b, .jh-main b, .score span, .plan .fig b { font-family: var(--display); font-weight: 600; letter-spacing: -.02em; }
 
-  /* Buttons */
-  .btn { background: var(--grad); color: #fff; border: 0; box-shadow: 0 10px 30px -12px rgba(124,110,255,.85), inset 0 1px 0 rgba(255,255,255,.25); }
-  .btn.ghost { background: rgba(255,255,255,.04); color: var(--text); border: 1px solid var(--glass-line); box-shadow: none; }
-  .mini-btn { border: 1px solid var(--glass-line) !important; background: rgba(255,255,255,.035) !important; }
-  .kchip.on, .opt.on { background: var(--grad) !important; color: #fff !important; border-color: transparent !important; box-shadow: 0 8px 22px -10px rgba(124,110,255,.9); }
-  .kchip, .opt { border: 1px solid var(--glass-line) !important; background: rgba(255,255,255,.03); }
+  /* Buttons: weiß = Hauptaktion, Text-Link mit Pfeil = Nebenaktion, Blau = Auswahl */
+  .btn { background: #fff; color: #05070f; border: 0; border-radius: 10px; font-weight: 600; box-shadow: 0 8px 30px -10px rgba(120, 150, 255, .55); }
+  .btn.ghost { background: transparent; color: var(--text); border: 0; box-shadow: none; }
+  .btn.ghost::after { content: " →"; }
+  .mini-btn { border: 1px solid var(--glass-line) !important; background: rgba(20, 30, 90, .3) !important; }
+  .kchip, .opt { border: 1px solid var(--glass-line) !important; background: rgba(15, 22, 70, .35); }
+  .kchip.on, .opt.on { background: var(--blue) !important; color: #fff !important; border-color: rgba(140, 170, 255, .6) !important; box-shadow: 0 6px 22px -8px rgba(37, 82, 255, .95); }
 
   /* Suche */
-  .search input, .ein-search input { background: rgba(255,255,255,.035) !important; border: 1px solid var(--glass-line) !important; }
-  .search input:focus, .ein-search input:focus { border-color: rgba(140,130,255,.7) !important; box-shadow: 0 0 0 4px rgba(124,131,255,.18) !important; outline: none; }
+  .search input, .ein-search input { background: rgba(10, 15, 50, .5) !important; border: 1px solid var(--glass-line) !important; }
+  .search input:focus, .ein-search input:focus { border-color: rgba(90, 130, 255, .8) !important; box-shadow: 0 0 0 4px rgba(37, 82, 255, .22) !important; outline: none; }
 
-  /* Navigation: schwebende Glas-Kapsel */
+  /* Navigation: schwebende Kapsel */
   nav.tabbar { left: 50%; right: auto; bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(760px, calc(100% - 20px));
-      border-radius: 26px; border: 1px solid var(--glass-line); background: rgba(14, 16, 30, .72) !important; padding: 6px 6px !important;
-      box-shadow: 0 20px 60px -20px rgba(0,0,0,.9), inset 0 1px 0 rgba(255,255,255,.06); }
+      border-radius: 20px; border: 1px solid var(--glass-line); background: rgba(5, 8, 28, .78) !important; padding: 6px !important;
+      box-shadow: 0 20px 60px -20px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(140, 170, 255, .12); }
   nav.tabbar .tabs { max-width: none !important; }
-  .tab { border-radius: 20px; padding-top: 8px !important; padding-bottom: 6px !important; transition: background .2s, color .2s; }
-  .tab.on { color: #fff !important; background: var(--grad-soft); box-shadow: inset 0 0 0 1px rgba(150,140,255,.35); }
-  .tab.on svg { filter: drop-shadow(0 0 8px rgba(150,130,255,.9)); }
+  .tab { border-radius: 14px; padding-top: 8px !important; padding-bottom: 6px !important; transition: background .2s, color .2s; }
+  .tab.on { color: #fff !important; background: linear-gradient(180deg, rgba(47, 107, 255, .35), rgba(37, 82, 255, .15)); box-shadow: inset 0 0 0 1px rgba(110, 150, 255, .45); }
+  .tab.on svg { filter: drop-shadow(0 0 8px rgba(80, 130, 255, .95)); }
   body { padding-bottom: calc(var(--nav-h) + env(safe-area-inset-bottom) + 40px); }
 
   /* Score-Ringe & Status */
-  .score { background: conic-gradient(from 210deg, #5b6cff, #a46bff calc(var(--p) * 1%), rgba(255,255,255,.07) 0) !important; }
-  .score::before { background: #0b0d1a !important; }
-  .st.trend, .status.st-trend { background: var(--grad-soft) !important; color: #c9c6ff !important; box-shadow: inset 0 0 0 1px rgba(150,140,255,.35); }
+  .score { background: conic-gradient(from 210deg, #1f3dff, #38bdf8 calc(var(--p) * 1%), rgba(255, 255, 255, .07) 0) !important; }
+  .score::before { background: #060920 !important; }
+  .st.trend, .status.st-trend { background: rgba(37, 82, 255, .2) !important; color: #b8c8ff !important; box-shadow: inset 0 0 0 1px rgba(100, 140, 255, .4); }
 
   /* Tabellen */
   table thead th { color: var(--faint); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; font-size: 11px; }
-  tbody tr { transition: background .15s; } @media (hover: hover) { tbody tr:hover { background: rgba(124,131,255,.06); } }
+  tbody tr { transition: background .15s; } @media (hover: hover) { tbody tr:hover { background: rgba(37, 82, 255, .08); } }
 
-  /* Fokus-Karte auf „Heute“ */
-  .focus { position: relative; overflow: hidden; border-radius: 26px; padding: 22px 22px 20px; margin: 4px 0 18px; border: 1px solid rgba(160,150,255,.28);
-      background: radial-gradient(600px 220px at 85% -40%, rgba(164,107,255,.35), transparent 70%), radial-gradient(500px 240px at 0% 120%, rgba(59,130,246,.22), transparent 70%), linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-      box-shadow: var(--shadow), 0 30px 80px -40px rgba(124,110,255,.7); }
-  .focus .fk { font-size: 11px; letter-spacing: .24em; text-transform: uppercase; color: #b9b6ff; font-weight: 600; }
-  .focus h2 { font-family: var(--display); font-size: clamp(24px, 3.2vw, 34px); letter-spacing: -.03em; margin: 6px 0 4px; line-height: 1.1; }
-  .focus p { margin: 0 0 14px; color: var(--muted); max-width: 640px; }
-  .focus .fl { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 14px; }
-  .focus .fl button { text-align: left; padding: 11px 13px; border-radius: 14px; border: 1px solid var(--glass-line); background: rgba(5,6,12,.45); color: var(--text); cursor: pointer; }
-  .focus .fl b { display: block; font-size: 15px; } .focus .fl span { color: var(--muted); font-size: 12.5px; }
-  .focus .row-actions { margin: 0; display: flex; gap: 8px; flex-wrap: wrap; } .focus .btn { flex: 1 1 180px; max-width: 260px; padding: 12px 18px; }
+  /* Fokus-Karte („Hero“) mit Licht-Band */
+  .focus { position: relative; overflow: hidden; border-radius: 22px; padding: 22px 22px 18px; margin: 6px 0 18px; border: 1px solid rgba(90, 125, 255, .3);
+      background: radial-gradient(700px 260px at 50% -30%, rgba(37, 82, 255, .45), transparent 70%), linear-gradient(180deg, #060a26, #03050f);
+      box-shadow: inset 0 1px 0 rgba(150, 180, 255, .2), 0 40px 90px -50px rgba(37, 82, 255, .9); }
+  .focus > *:not(.ribbon) { position: relative; z-index: 1; }
+  .focus .ribbon { position: absolute; inset: auto -10% -30px -10%; height: 70%; width: 120%; z-index: 0; pointer-events: none; opacity: .9; }
+  .focus .pill { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; border-radius: 999px; border: 1px solid var(--glass-line); background: rgba(10, 16, 60, .6); font-size: 12.5px; color: #cdd6ff; }
+  .focus .pill i { font-style: normal; font-weight: 600; font-size: 11.5px; padding: 3px 9px; border-radius: 999px; background: var(--blue); color: #fff; }
+  .focus h2 { font-family: var(--display); font-weight: 500; font-size: clamp(26px, 3.6vw, 40px); letter-spacing: -.035em; margin: 14px 0 6px; line-height: 1.08; }
+  .focus h2 em.s { font-size: 1.1em; }
+  .focus p { margin: 0 0 16px; color: var(--muted); max-width: 640px; }
+  .focus .fl { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; margin-bottom: 16px; }
+  .focus .fl button { text-align: left; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--glass-line); color: var(--text); cursor: pointer;
+      background: linear-gradient(180deg, rgba(40, 70, 255, .16), rgba(8, 12, 40, .6)); box-shadow: inset 0 1px 0 rgba(140, 170, 255, .14); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+  .focus .fl b { display: block; font-size: 15px; font-weight: 600; } .focus .fl span { color: var(--muted); font-size: 12.5px; }
+  .focus .row-actions { margin: 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .focus .btn { flex: 0 0 auto; padding: 12px 22px; }
+  .focus .feats { display: flex; flex-wrap: wrap; gap: 0; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(90, 125, 255, .16); }
+  .focus .feats span { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted); padding: 4px 16px 4px 0; margin-right: 16px; border-right: 1px solid rgba(90, 125, 255, .18); }
+  .focus .feats span:last-child { border-right: 0; }
+  .focus .feats svg { width: 26px; height: 26px; padding: 5px; border-radius: 8px; border: 1px solid var(--glass-line); background: rgba(15, 22, 70, .5); color: #9fb6ff; }
 
-  /* Sanftes Einblenden */
   @media (prefers-reduced-motion: no-preference) {
-    #main > *, .hcol > * { animation: nova-in .5s cubic-bezier(.2,.7,.2,1) both; }
+    #main > *, .hcol > * { animation: k-in .5s cubic-bezier(.2, .7, .2, 1) both; }
     .hcol > *:nth-child(2) { animation-delay: .05s; } .hcol > *:nth-child(3) { animation-delay: .1s; } .hcol > *:nth-child(4) { animation-delay: .15s; }
-    @keyframes nova-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes k-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    .focus .ribbon path { animation: k-drift 14s ease-in-out infinite alternate; }
+    @keyframes k-drift { to { transform: translateX(-3%) translateY(2%); } }
   }
 </style>
 <link rel="stylesheet" href="splash.css">
@@ -694,7 +702,7 @@
 <script src="splash.js" data-autoplay></script>
 <div class="wrap">
   <header class="hello">
-    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5b6cff"/><stop offset="1" stop-color="#c057ff"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="#0b0d1a"/><rect x="161" y="128" width="16" height="256" rx="8" fill="url(#kg)"/><rect x="137" y="186" width="64" height="140" rx="10" fill="url(#kg)"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+    <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><defs><linearGradient id="kg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2f6bff"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs><rect width="512" height="512" rx="112" fill="#0a1240"/><rect x="161" y="128" width="16" height="256" rx="8" fill="url(#kg)"/><rect x="137" y="186" width="64" height="140" rx="10" fill="url(#kg)"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
     <h1 id="greet">Hallo 👋</h1>
     <p id="sub">Lade den heutigen Scan …</p>
   </header>
@@ -2228,15 +2236,23 @@ function journalTeaserHtml() {
       <div class="mt"><span>Profit-Faktor</span><b>${s.pf == null ? "–" : s.pf === Infinity ? "∞" : fmt(s.pf, 2)}</b></div></div></button>`;
 }
 // Fokus: die besten Einstiege des Tages (Trend Top zuerst) – direkt in den Reiter „Einstieg“
+const RIBBON = `<svg class="ribbon" viewBox="0 0 1200 300" preserveAspectRatio="none" aria-hidden="true"><defs>
+  <linearGradient id="rb1" x1="0" x2="1"><stop offset="0" stop-color="#1f3dff" stop-opacity="0"/><stop offset=".35" stop-color="#2f6bff"/><stop offset=".7" stop-color="#38bdf8"/><stop offset="1" stop-color="#1f3dff" stop-opacity="0"/></linearGradient>
+  <filter id="rbf" x="-10%" y="-50%" width="120%" height="200%"><feGaussianBlur stdDeviation="14"/></filter></defs>
+  <path d="M-50 250 C 250 120, 450 300, 700 170 S 1050 60, 1250 150" stroke="url(#rb1)" stroke-width="46" fill="none" filter="url(#rbf)" opacity=".55"/>
+  <path d="M-50 250 C 250 120, 450 300, 700 170 S 1050 60, 1250 150" stroke="url(#rb1)" stroke-width="2.5" fill="none" opacity=".9"/>
+  <path d="M-50 290 C 300 170, 520 330, 760 220 S 1080 130, 1250 210" stroke="url(#rb1)" stroke-width="1.2" fill="none" opacity=".55"/></svg>`;
 function focusHtml() {
   const tr = data.results.filter(isTrend), top = tr.filter(r => r.tr.top);
   const pick = (top.length ? top : tr).slice().sort((a, b) => (b.market_cap_usd ?? 0) - (a.market_cap_usd ?? 0)).slice(0, 4);
   if (!pick.length) return "";
-  return `<section class="focus"><div class="fk">Heute im Fokus</div>
-    <h2>${top.length ? `${top.length} Top-Einstieg${top.length === 1 ? "" : "e"} im Aufwärtstrend` : `${tr.length} Trend-Rücksetzer`}</h2>
+  const ic = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+  return `<section class="focus">${RIBBON}<span class="pill"><i>Heute</i>Deine besten Einstiege im Fokus</span>
+    <h2>${top.length ? `${top.length} Top-Einstieg${top.length === 1 ? "" : "e"} im <em class="s">Aufwärtstrend</em>` : `${tr.length} <em class="s">Trend-Rücksetzer</em>`}</h2>
     <p>Rücksetzer in Aktien, die klar steigen – im 6-Jahres-Test das stärkste Setup. Antippen für Trade-Plan, K.-o. und Hebel.</p>
     <div class="fl">${pick.map(r => `<button data-ein="${esc(r.ticker)}"><b>${esc((r.name || r.ticker).slice(0, 26))}</b><span>${esc(r.ticker)} · ${fmt(r.close)} ${esc(r.currency || "")}${r.tr.top ? " · Top" : ""}</span></button>`).join("")}</div>
-    <div class="row-actions"><button class="btn" data-gokinds="trend">Alle Trend-Rücksetzer</button><button class="btn ghost" data-gosec="entry">Einstieg planen</button></div></section>`;
+    <div class="row-actions"><button class="btn" data-gokinds="trend">Alle Trend-Rücksetzer</button><button class="btn ghost" data-gosec="entry">Einstieg planen</button></div>
+    <div class="feats"><span>${ic('<path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/>')}6-Jahres-Backtest</span><span>${ic('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12h8M8 8h8M8 16h5"/>')}Trade-Plan mit K.-o.</span><span>${ic('<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/>')}Live-Bilanz geprüft</span></div></section>`;
 }
 function todayHtml() {
   const al = getJson("alerts.json");
@@ -2534,7 +2550,7 @@ function sheetExtras() {
 function renderHead() {
   const h = new Date().getHours();
   const nm = String(state.name || "").trim();
-  $("greet").textContent = (h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + nm : "") + " 👋";
+  $("greet").innerHTML = esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <em class="s">${esc(nm)}</em>` : "");
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
