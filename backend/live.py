@@ -51,7 +51,7 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
         if df is None:
             continue
         df = df.dropna(subset=["Open", "High", "Low", "Close"])
-        idx = df.index.searchsorted(pd.Timestamp(s["d"]), side="right") - 1
+        idx = int(df.index.searchsorted(pd.Timestamp(s["d"]), side="right") - 1)
         if idx < 0:
             continue
         o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))

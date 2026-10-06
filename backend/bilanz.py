@@ -261,10 +261,10 @@ def stats(ev: list[dict]) -> dict:
     bucket = lambda s: "80+" if s >= 80 else "70–79" if s >= 70 else "60–69" if s >= 60 else "< 60"
     out = {"hit": _agg(hits), "fast": _agg([e for e in ev if e["k"] == "fast"]), "base": _agg([e for e in ev if e["k"] == "base"]),
            "trend": _agg([e for e in ev if e["k"] == "trend"]),
-           "score": {b: _agg([e for e in hits if bucket(e["score"]) == b]) for b in ("80+", "70–79", "60–69", "< 60")},
-           "crv": {b: _agg([e for e in hits if (e["crv"] >= 3) == (b == "≥ 3")]) for b in ("≥ 3", "2–3")},
-           "zone": {b: _agg([e for e in hits if e["zone"] == b]) for b in ("Fib", "Support")},
-           "div": {b: _agg([e for e in hits if (e["div"] or "keine") == b]) for b in ("klassisch", "versteckt")}}
+           "score": {b: _agg([e for e in hits if bucket(e.get("score") or 0) == b]) for b in ("80+", "70–79", "60–69", "< 60")},
+           "crv": {b: _agg([e for e in hits if ((e.get("crv") or 0) >= 3) == (b == "≥ 3")]) for b in ("≥ 3", "2–3")},
+           "zone": {b: _agg([e for e in hits if e.get("zone") == b]) for b in ("Fib", "Support")},
+           "div": {b: _agg([e for e in hits if (e.get("div") or "keine") == b]) for b in ("klassisch", "versteckt")}}
     return out
 
 

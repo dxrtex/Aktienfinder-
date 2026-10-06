@@ -530,7 +530,7 @@ def main(argv=None) -> int:
         for name, obj in (("alerts.json", alerts), ("bilanz.json", bil), ("changes.json", changes)):
             with open(SITE / name, "w", encoding="utf-8") as f:
                 json.dump(_clean(obj), f, ensure_ascii=False, separators=(",", ":"))
-    print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Fehler: {stats['errors']}, "
+    print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Trend-Rücksetzer: {stats.get('trend_hits')}, Fehler: {stats['errors']}, "
           f"Dauer {stats['duration_s']} s")
     for r in rows[:30]:
         print(f"  {r['ticker']:<10} Score {r['score']:>3}  {'TREFFER' if r['passed'] else 'fehlt: ' + r['missing'][0]}")
