@@ -51,5 +51,13 @@ def evaluate_trend(df: pd.DataFrame, kairo: Result, cfg=CONFIG) -> Result:
                 "crv": (max(t2, t1) - close) / risk if risk > 0 else None, "stop_pct": risk / close if close else None,
                 "max_leverage": None}
     res.flags["setup"] = "trend"
+    # Qualitätsstufe „Top“ (6-Jahres-Analyse): nah am Hoch, ruhigere Aktie, Trend nicht überdehnt
+    H = (kairo.zone or {}).get("H")
+    dd = (H - close) / H if H else None
+    atrp = atr / close if close else None
+    tt = getattr(tc, "top", None)
+    res.flags["trend_top"] = bool(tt and dd is not None and atrp is not None and g200 is not None
+                                  and dd < tt.max_from_high and atrp < tt.max_atr_pct and g200 < tt.max_above_ema200)
+    res.flags["trend_dd"], res.flags["trend_atrp"] = dd, atrp
     res.score = 0
     return res

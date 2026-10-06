@@ -679,7 +679,7 @@ const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter
   zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
   mbi: "MBI-Signal", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
 const gradeBadge = (r, big) => r.grade ? `<span class="grd g-${r.grade.g}${big ? " big" : ""}" title="Qualitätsstufe ${r.grade.g} – aus dem Backtest, siehe Score antippen">${r.grade.g}</span>` : "";
-const trendBadge = r => isTrend(r) ? `<span class="status st-trend">Trend-Rücksetzer</span>` : "";
+const trendBadge = r => isTrend(r) ? `<span class="status st-trend">Trend-Rücksetzer${r.tr.top ? " · Top" : ""}</span>` : "";
 const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>${gradeBadge(r, true)}${trendBadge(r)}`
   : isTrend(r) ? trendBadge(r) + (r.fast_hit ? `<span class="status st-abwarten">Kairo: Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>` : "")
   : r.fast_hit ? `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`
@@ -753,7 +753,7 @@ function selRows() {
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
   const fv = favs();
   return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit) || (k.has("trend") && isTrend(r))) ? full(r) : ((k.has("watch") && r.in_watchlist) || (k.has("fav") && fv.has(r.ticker))) && light(r))
-    .sort((a, b) => b.passed - a.passed || isTrend(b) - isTrend(a) || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
+    .sort((a, b) => b.passed - a.passed || isTrend(b) - isTrend(a) || !!(b.tr && b.tr.top) - !!(a.tr && a.tr.top) || b.fast_hit - a.fast_hit || b.score - a.score || (b.met ?? 0) - (a.met ?? 0));
 }
 // Zweites Setup „Trend-Rücksetzer“ (Rücksetzer im Aufwärtstrend) – erscheint nur, wenn der Scan es liefert
 const isTrend = r => !!(r.tr && r.tr.ok);
@@ -884,7 +884,8 @@ function chips(r) {
 function trendBoxHtml(r) {
   const t = r.tr; if (!t) return "";
   const p = t.plan || {};
-  return `<div class="trendbox${t.ok ? " ok" : ""}"><div class="plan-h">Trend-Rücksetzer · ${t.met}/${t.total} erfüllt${t.ok ? " ✓" : ""}</div>
+  return `<div class="trendbox${t.ok ? " ok" : ""}"><div class="plan-h">Trend-Rücksetzer · ${t.met}/${t.total} erfüllt${t.ok ? " ✓" : ""}${t.top ? " · Stufe Top" : ""}</div>
+    ${t.ok ? `<div class="note" style="margin:0 0 6px">${t.top ? "<b>Top:</b> nah am Hoch, ruhige Aktie, Trend nicht überdehnt – im 6-Jahres-Test die besten Trend-Rücksetzer. Zuerst diese handeln." : "Nicht Top: weiter vom Hoch entfernt, sehr volatil oder Trend schon überdehnt – im Test deutlich schwächer."}</div>` : ""}
     <ul class="checks">${t.criteria.map(c => `<li><i class="${c.ok ? "up" : "down"}">${c.ok ? "✓" : "✗"}</i><b>${esc(c.l)}:</b> ${esc(c.v)}</li>`).join("")}</ul>
     ${t.ok && p.stop ? `<div class="exrow" style="margin-top:6px"><span>Stop (unter 10-Tage-Tief)</span><b>${fmt(p.stop)}</b><span>Ziel 1 / Ziel 2</span><b>${fmt(p.target1)} / ${fmt(p.target2)}</b><span>K.-o.-Vorschlag (1–1,5 ATR unter Stop)</span><b>${r.atr_pct ? `${fmt(p.stop - 1.5 * r.atr_pct * r.close)} – ${fmt(p.stop - r.atr_pct * r.close)}` : "–"}</b></div>` : ""}
     <div class="note" style="margin:6px 0 0">Zweites Setup: Aktie im klaren Aufwärtstrend macht eine kurze Verschnaufpause an der EMA 50 – Wette auf die Fortsetzung (Kairo: Wende nach einer Korrektur).</div></div>`;
@@ -965,7 +966,7 @@ const COLS = [
   { k: "ticker", l: "Ticker", g: r => r.ticker, h: r => `<span class="tk">${favBtn(r.ticker)}<a href="#" data-card="${esc(r.ticker)}">${esc(r.ticker)}</a>${wlTag(r)}</span>` },
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "trend", l: "Prognose", g: r => r.trend ? (r.trend.fc ? r.trend.fc.d : r.trend.slope + (r.trend.d5 ?? 0) / 10) : 0, h: r => trendHtml(r) || "–" },
-  { k: "status", l: "Status", g: r => r.passed ? 3 : isTrend(r) ? 2 : r.fast_hit ? 1 : 0, h: r => (r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit && !isTrend(r) ? `<span class="st fast">Fast</span>` : isTrend(r) ? "" : `<span class="st">Watchlist</span>`) + (isTrend(r) ? `<span class="st trend">Trend</span>` : "") },
+  { k: "status", l: "Status", g: r => r.passed ? 3 : isTrend(r) ? 2 : r.fast_hit ? 1 : 0, h: r => (r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit && !isTrend(r) ? `<span class="st fast">Fast</span>` : isTrend(r) ? "" : `<span class="st">Watchlist</span>`) + (isTrend(r) ? `<span class="st trend">${r.tr.top ? "Trend Top" : "Trend"}</span>` : "") },
   { k: "grade", l: "Stufe", g: r => r.grade ? { A: 3, B: 2, C: 1 }[r.grade.g] : 0, h: r => gradeBadge(r) || `<span class="muted">–</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -1233,7 +1234,8 @@ function entryEval(c, date) {
   return { tone, label, short, checks, sc, u, i, date: c.t[i], text: checks.map(x => x.t).join(", ") };
 }
 // Gewinnmitnahme bewerten: Wann verkaufe ich eine Aktie, die schon gestiegen ist? 5 Kriterien wie beim Scanner (x/5).
-// Geprüft an 34.000 Trades (6 Jahre): MACD-Signal verkaufte zu früh und ist raus; ab 3 von 5 ≈ so gut wie Halten, aber früher.
+// Geprüft an 6 Jahren (Kairo 10.000, Trend 2.000 Trades, als Turbo-Rendite): MACD verkaufte zu früh und ist raus;
+// „mitnehmen ab 4 von 5“ war für beide Setups am besten (Kairo +19,5 % je Trade, Trend +46 %; ab 3: +16,5 % / +39 %).
 // Je mehr erfüllt, desto mehr spricht dafür, den Gewinn mitzunehmen. Grundlage: die im Ausstiegs-Test geprüften Signale.
 const atrAt = (c, i) => { let s = 0, k = 0; for (let j = Math.max(1, i - 13); j <= i; j++, k++) s += Math.max(c.h[j] - c.l[j], Math.abs(c.h[j] - c.c[j - 1]), Math.abs(c.l[j] - c.c[j - 1])); return k ? s / k : 0; };
 function exitEval(p, c, ent, a) {
@@ -1249,7 +1251,7 @@ function exitEval(p, c, ent, a) {
     { on: px < lo10, l: "Trendbruch", t: px < lo10 ? `Schluss unter dem Tief der letzten 10 Tage (${fmt(lo10)})` : `über dem 10-Tage-Tief (${fmt(lo10)})` }];
   const nw = crit.filter(x => x.on).length, up = gain > 0;
   const [tone, label, short] = !up ? ["gray", "Noch nicht im Gewinn – kein Thema für Gewinnmitnahme", "Kein Gewinn"]
-    : nw >= 3 ? ["red", "Gewinn mitnehmen", "Mitnehmen"] : nw >= 2 ? ["yellow", "Gewinn sichern vorbereiten", "Vorbereiten"] : ["green", "Laufen lassen", "Laufen lassen"];
+    : nw >= 4 ? ["red", "Gewinn mitnehmen", "Mitnehmen"] : nw >= 3 ? ["yellow", "Gewinn sichern vorbereiten", "Vorbereiten"] : ["green", "Laufen lassen", "Laufen lassen"];
   return { tone, label, short, crit, nw, gain, hiSince, fromHi: px / hiSince - 1, bars: L - ent.i };
 }
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
@@ -1384,7 +1386,7 @@ function groupHtml(g) {
     </tbody></table></div>
     ${g.ms.some(m => m.d) ? `<div class="note" style="margin:6px 2px 0">Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag) – mit „Kurs eintragen“ werden sie exakt.</div>` : ""}</div>
     ${g.ms.some(m => m.ex) ? `<div><div class="plan-h">Gewinnmitnahme-Check</div><div class="entries">${g.ms.map((m, j) => !m.ex ? "" : exitBoxHtml(m, j, g)).join("")}</div>
-      <div class="note" style="margin:6px 2px 0">Je mehr Kriterien erfüllt sind, desto mehr spricht dafür, den Gewinn mitzunehmen: 0–1 laufen lassen · 2 vorbereiten · ab 3 mitnehmen (im 6-Jahres-Test so gut wie bis zum Schluss halten, aber früher am Geld). Ein einzelnes Signal ist oft nur ein normaler Rücksetzer im Aufwärtstrend – erst wenn mehrere zusammenkommen, dreht der Trend meist wirklich. Das Kursziel allein ist kein Verkaufsgrund. Keine Anlageberatung.</div></div>` : ""}
+      <div class="note" style="margin:6px 2px 0">Je mehr Kriterien erfüllt sind, desto mehr spricht dafür, den Gewinn mitzunehmen: 0–2 laufen lassen · 3 vorbereiten · ab 4 mitnehmen (im 6-Jahres-Test für Kairo und Trend-Rücksetzer am besten – Gewinner länger laufen lassen zahlt sich aus). Ein einzelnes Signal ist oft nur ein normaler Rücksetzer im Aufwärtstrend – erst wenn mehrere zusammenkommen, dreht der Trend meist wirklich. Das Kursziel allein ist kein Verkaufsgrund. Keine Anlageberatung.</div></div>` : ""}
     ${g.ms.some(m => m.ent) ? `<div><div class="plan-h">Bewertung deiner Einstiege</div><div class="entries">${g.ms.map((m, j) => !m.ent ? "" : `<div class="evalbox tone-${m.ent.tone}"><div class="eh">#${j + 1} · ${dateDE(m.ent.date)} · bei ${fmt(m.ent.u)}</div><b class="et">${m.ent.label}</b>
         <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : ""}
     ${g.ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(g.ev.date)}</b> – ${(CAL_KIND[g.ev.kind] || [])[2] || ""}${g.ev.estimate ? " (geschätzt)" : ""}</div>` : ""}

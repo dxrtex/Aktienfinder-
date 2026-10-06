@@ -204,7 +204,8 @@ def trend_row(tr) -> dict:
     """Kompakt für die Website: erfüllt?, Kriterien (Setup ohne Grundfilter), Trade-Plan."""
     crit = [c for c in tr.criteria if c.key.startswith("t_")]
     p = tr.plan or {}
-    return _clean({"ok": tr.passed, "met": sum(c.ok for c in crit), "total": len(crit),
+    return _clean({"ok": tr.passed, "top": bool(tr.passed and tr.flags.get("trend_top")), "dd": tr.flags.get("trend_dd"),
+                   "met": sum(c.ok for c in crit), "total": len(crit),
                    "criteria": [{"k": c.key, "l": c.label, "ok": c.ok, "v": c.value, "th": c.threshold} for c in crit],
                    "missing": [c.label for c in tr.missing],
                    "plan": {k: (round(float(v), 4) if isinstance(v, (int, float)) and v is not None else v) for k, v in p.items()}})
