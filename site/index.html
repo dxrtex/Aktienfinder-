@@ -1204,53 +1204,25 @@ function entryEval(c, date) {
   const [tone, label, short] = sc >= 2 ? ["green", "Guter Einstieg", "Gut"] : sc <= -1 ? ["red", "Ungünstiger Einstieg", "Ungünstig"] : ["yellow", "Durchschnittlicher Einstieg", "Mittel"];
   return { tone, label, short, checks, sc, u, i, date: c.t[i], text: checks.map(x => x.t).join(", ") };
 }
-// Ausstieg bewerten – feste Regel aus dem 6-Jahres-Test (30.348 Trades, beste ohne Stop-Order):
-// Anfangs-Stop; ab +1 R Stop auf max(Einstand, 10-Tage-Tief) nachziehen; Verkauf bei Schlusskurs unter dem Stop.
-// Rücksetzer, die über dem 10-Tage-Tief bleiben, lösen nichts aus. Warnsignale (MACD, RSI, MBI, EMA 20 …) sind nur Hinweise.
+// Gewinnmitnahme bewerten: Wann verkaufe ich eine Aktie, die schon gestiegen ist? 6 Kriterien wie beim Scanner (x/6).
+// Je mehr erfüllt, desto mehr spricht dafür, den Gewinn mitzunehmen. Grundlage: die im Ausstiegs-Test geprüften Signale.
 const atrAt = (c, i) => { let s = 0, k = 0; for (let j = Math.max(1, i - 13); j <= i; j++, k++) s += Math.max(c.h[j] - c.l[j], Math.abs(c.h[j] - c.c[j - 1]), Math.abs(c.l[j] - c.c[j - 1])); return k ? s / k : 0; };
-function exitStop0(p, c, ent, a) {
-  if (p.stop0 > 0 && p.stop0 < ent.u) return { s: p.stop0, src: "von dir eingetragen" };
-  const b = getJson("bilanz.json"), dd = (x, y) => (new Date(y) - new Date(x)) / 864e5;
-  const sig = b && (b.signals || []).find(s => s.t === p.t && s.stop < ent.u && dd(s.d, ent.date) >= 0 && dd(s.d, ent.date) <= 10);
-  if (sig) return { s: sig.stop, src: `Kairo-Signal vom ${dateDE(sig.d)}` };
-  const i = ent.i, d = p.d;
-  // Turbo ohne eigenen Stop: dein K.-o. ist die eigentliche Risikogrenze → Stop 1 ATR darüber (wie im Test empfohlen)
-  if (d && d.dir === "long" && (!d.cur || !a || !a.cur || d.cur === a.cur) && d.ko < ent.u - atrAt(c, i))
-    return { s: d.ko + atrAt(c, i), src: "aus deinem K.-o. + 1 Tagesspanne" };
- lo = Math.min(...c.l.slice(Math.max(0, i - 9), i + 1));
-  return { s: Math.min(lo * .99, ent.u - atrAt(c, i)), src: "geschätzt: knapp unter dem 10-Tage-Tief vor dem Kauf" };
-}
 function exitEval(p, c, ent, a) {
   if (!c || !ent) return null;
-  const s0 = exitStop0(p, c, ent, a), u = ent.u, risk = u - s0.s, n = c.t.length;
-  if (!(risk > 0)) return null;
-  let stop = s0.s, mfe = 0, trailFrom = null, hit = null;
-  for (let j = ent.i + 1; j < n; j++) {
-    if (c.c[j] < stop) hit = hit || { i: j, stop };            // erster Schluss unter dem Stop (kein Intraday-Ausstoß)
-    mfe = Math.max(mfe, (c.h[j] - u) / risk);
-    if (mfe >= 1) { if (trailFrom == null) trailFrom = j; stop = Math.max(stop, u, Math.min(...c.l.slice(Math.max(0, j - 9), j + 1))); }
-  }
-  const L = n - 1, px = c.c[L], atr = atrAt(c, L), bars = L - ent.i;
-  const rx3 = c.rx.slice(-3).some(Boolean), nx = a && a.tps && (a.tps.levels || [])[0];
-  const warn = [
-    { on: c.hist[L] < 0, l: "MACD", t: c.hist[L] < 0 ? "Histogramm unter 0 – Momentum dreht" : `Histogramm über 0${c.hist[L] < c.hist[L - 1] ? ", fällt leicht" : ", steigt"}` },
-    { on: c.rsi[L] >= 70, l: "RSI", t: `${fmt(c.rsi[L], 0)}${c.rsi[L] >= 70 ? " – überkauft" : " – noch Luft"}` },
-    { on: rx3, l: "MBI", t: rx3 ? "rotes X in den letzten 3 Tagen – Kaufdruck lässt nach" : "kein rotes X" },
-    { on: px < c.e20[L], l: "EMA 20", t: px < c.e20[L] ? `Schluss unter der EMA 20 (${fmt(c.e20[L])})` : "Schluss über der EMA 20" },
-    { on: !!(nx && nx.p - px < atr), l: "Widerstand", t: nx ? `nächstes Hoch ${fmt(nx.p)} ${nx.p - px < atr ? "– weniger als 1 Tagesspanne entfernt" : `noch ${fmt((nx.p - px) / (atr || 1), 1)} Tagesspannen entfernt`}` : "kein Hoch mehr darüber" },
-    { on: px - stop < atr, l: "Stop-Nähe", t: `Kurs ${fmt(Math.max(0, (px - stop) / (atr || 1)), 1)} Tagesspannen über dem Ausstiegs-Stop` }];
-  const nw = warn.filter(x => x.on).length, timeUp = bars >= 63;
-  // „Verkaufen“ nur, wenn der Kurs JETZT unter dem Stop schließt (oder es in den letzten 3 Tagen passierte);
-  // lag er früher kurz darunter und ist wieder drüber, ist das ein Hinweis, kein aktuelles Verkaufssignal.
-  const sellNow = px < stop || (hit && L - hit.i <= 2), recovered = hit && !sellNow;
-  const [tone, label] = sellNow ? ["red", "Verkaufen – Schluss unter dem Ausstiegs-Stop"] : timeUp ? ["orange", "3 Monate erreicht – Verkauf einplanen"]
-    : nw >= 4 ? ["orange", "Ausstieg vorbereiten"] : recovered ? ["yellow", "Wachsam – Stop war schon unterschritten"] : nw >= 2 ? ["yellow", "Wachsam halten"] : ["green", "Halten"];
-  const short = sellNow ? "Verkaufen" : timeUp ? "Zeit um" : nw >= 4 ? "Vorbereiten" : recovered || nw >= 2 ? "Wachsam" : "Halten";
-  const phase = (sellNow ? `Schlusskurs ${fmt(px)} liegt unter dem Ausstiegs-Stop ${fmt(stop)} – laut Regel verkaufen. `
-    : recovered ? `Hinweis: Am ${dateDE(c.t[hit.i])} schloss der Kurs schon einmal unter dem Stop (${fmt(hit.stop)}) – die Regel hätte dort verkauft. Inzwischen ist er wieder darüber. ` : "")
-    + (trailFrom != null ? `+1 R wurde am ${dateDE(c.t[trailFrom])} erreicht – der Stop wird täglich auf das 10-Tage-Tief nachgezogen (nie unter den Einstand).`
-    : `Noch in der Anfangsphase: Nachziehen startet bei +1 R = ${fmt(u + risk)} (${sgnPct((u + risk) / px - 1, 1)} vom aktuellen Kurs).`);
-  return { tone, label, short, stop, s0, risk, r: (px - u) / risk, trail: trailFrom != null, hit, bars, timeUp, warn, nw, phase };
+  const L = c.t.length - 1, px = c.c[L], atr = atrAt(c, L), gain = px / ent.u - 1;
+  const nx = a && a.tps && (a.tps.levels || [])[0], hiSince = Math.max(...c.h.slice(ent.i, L + 1));
+  const lo10 = Math.min(...c.l.slice(L - 10, L)), rx3 = c.rx.slice(-3).some(Boolean);
+  const crit = [
+    { on: !!(nx && nx.p - px < atr), l: "Widerstand erreicht", t: nx ? (nx.p - px < atr ? `nächstes Hoch ${fmt(nx.p)} ist weniger als 1 Tagesspanne entfernt` : `nächstes Hoch ${fmt(nx.p)} noch ${sgnPct(nx.p / px - 1, 1)} entfernt`) : "kein Hoch mehr darüber – freie Bahn" },
+    { on: c.rsi[L] >= 70, l: "RSI überkauft", t: `RSI ${fmt(c.rsi[L], 0)}${c.rsi[L] >= 70 ? " – überkauft" : " – noch Luft nach oben"}` },
+    { on: c.hist[L] < c.hist[L - 1] && c.hist[L - 1] < c.hist[L - 2], l: "MACD dreht", t: c.hist[L] < c.hist[L - 1] && c.hist[L - 1] < c.hist[L - 2] ? "Histogramm fällt seit 2 Tagen – Schwung lässt nach" : "Histogramm steigt bzw. hält sich" },
+    { on: rx3, l: "MBI rotes X", t: rx3 ? "rotes X in den letzten 3 Tagen – Kaufdruck lässt nach" : "kein rotes X" },
+    { on: px < c.e20[L], l: "Unter EMA 20", t: px < c.e20[L] ? `Schluss unter der EMA 20 (${fmt(c.e20[L])}) – kurzfristiger Trend wackelt` : `Schluss über der EMA 20 (${fmt(c.e20[L])})` },
+    { on: px < lo10, l: "Trendbruch", t: px < lo10 ? `Schluss unter dem Tief der letzten 10 Tage (${fmt(lo10)})` : `über dem 10-Tage-Tief (${fmt(lo10)})` }];
+  const nw = crit.filter(x => x.on).length, up = gain > 0;
+  const [tone, label, short] = !up ? ["gray", "Noch nicht im Gewinn – kein Thema für Gewinnmitnahme", "Kein Gewinn"]
+    : nw >= 4 ? ["red", "Gewinn mitnehmen", "Mitnehmen"] : nw >= 2 ? ["yellow", "Gewinn sichern vorbereiten", "Vorbereiten"] : ["green", "Laufen lassen", "Laufen lassen"];
+  return { tone, label, short, crit, nw, gain, hiSince, fromHi: px / hiSince - 1, bars: L - ent.i };
 }
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
 function turboModel(p, a, ent) {
@@ -1337,20 +1309,17 @@ function groupPositions(items) {
     g.tps = lv.map((z, k) => ({ ...z, l: `TP ${k + 1}`, short: `TP${k + 1}`, kind: "lvl" }))
       .concat(a.tps && a.tps.ath ? [{ ...a.tps.ath, l: a.tps.ath.src, short: a.tps.ath.src === "Allzeithoch" ? "ATH" : "2J-Hoch", kind: "ath" }] : []);
     g.ev = nextEvent(g.t);
-    const RANK = { red: 0, orange: 1, yellow: 2, green: 3 };
+    const RANK = { red: 0, orange: 1, yellow: 2, green: 3, gray: 4 };
     g.ex = g.ms.filter(m => m.ex).sort((x, y) => RANK[x.ex.tone] - RANK[y.ex.tone] || y.ex.nw - x.ex.nw)[0]?.ex || null;
-    g.exStop = g.ms.some(m => m.ex) ? Math.max(...g.ms.filter(m => m.ex).map(m => m.ex.stop)) : null;
     return g;
   }).sort((x, y) => y.invested - x.invested);
 }
 function exitBoxHtml(m, j, g) {
-  const x = m.ex, cur = esc(g.cur);
-  return `<div class="evalbox tone-${x.tone}"><div class="eh">#${j + 1} · Kauf ${dateDE(m.ent.date)} bei ${fmt(m.ent.u)} · ${x.bars} Handelstage</div>
+  const x = m.ex;
+  return `<div class="evalbox tone-${x.tone}"><div class="eh">#${j + 1} · Kauf ${dateDE(m.ent.date)} bei ${fmt(m.ent.u)} · seit ${x.bars} Handelstagen</div>
     <b class="et">${x.label}</b>
-    <div class="exrow"><span>Ausstiegs-Stop</span><b>${fmt(x.stop)} ${cur}</b><span>Stand</span><b class="${x.r >= 0 ? "up" : "down"}">${x.r >= 0 ? "+" : ""}${fmt(x.r, 1)} R</b><span>Warnsignale</span><b>${x.nw}/6</b></div>
-    <ul class="checks">${x.warn.map(w => `<li><i class="${w.on ? "down" : "up"}">${w.on ? "!" : "✓"}</i><b>${w.l}:</b> ${esc(w.t)}</li>`).join("")}</ul>
-    <div class="todo">${x.phase}${m.d && !m.short && m.d.ko >= x.stop ? ` Achtung: Der K.-o. (${fmt(m.d.ko)}) liegt über dem Ausstiegs-Stop – er würde zuerst greifen.` : ""}</div>
-    <div class="note" style="margin:6px 0 0">Anfangs-Stop ${fmt(x.s0.s)} ${cur} (${esc(x.s0.src)}) · 1 R = ${fmt(x.risk)} ${cur} <button class="linkbtn" data-dep="stop0" data-i="${m.i}">${m.p.stop0 ? "Stop ändern" : "Eigenen Stop eintragen"}</button></div></div>`;
+    <div class="exrow"><span>Verkaufskriterien</span><b>${x.nw} / 6 erfüllt</b><span>Aktie seit Kauf</span><b class="${x.gain >= 0 ? "up" : "down"}">${sgnPct(x.gain, 1)}</b><span>Abstand zum Hoch seit Kauf</span><b>${sgnPct(x.fromHi, 1)}</b></div>
+    <ul class="checks">${x.crit.map(w => `<li><i class="${w.on ? "down" : "up"}">${w.on ? "✓" : "–"}</i><b>${w.l}:</b> ${esc(w.t)}</li>`).join("")}</ul></div>`;
 }
 const chanceTone = p => p >= .6 ? "up" : p >= .3 ? "gold" : "down";
 function groupHtml(g) {
@@ -1360,13 +1329,13 @@ function groupHtml(g) {
       <div class="g2"><span class="muted">Gewinn / Verlust</span><b class="${g.pl == null ? "" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnEur(g.value - g.invested) : "–"}</b><small class="${g.pl == null ? "muted" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnPct(g.pl, 1) : "Wert unbekannt"}</small></div>
       <div class="g2"><span class="muted">Hebel</span><b>${g.levTxt}</b><small class="${g.koDist != null && g.koDist < .1 ? "down" : "muted"}">${g.koDist != null ? `K.-o. ${pct(g.koDist, 0)} entfernt` : "ohne Knock-out"}</small></div>
       <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
-      ${g.ex ? `<div class="gact tone-${g.ex.tone}"><b>Ausstieg: ${g.ex.short}</b><span>${g.ex.nw}/6 Warnsignale · Ausstiegs-Stop ${fmt(g.ex.stop)} ${esc(g.cur)}${g.ex.trail ? " (wird nachgezogen)" : ""}${g.ko != null && g.ko >= g.ex.stop ? " · K.-o. liegt darüber!" : ""}</span></div>` : ""}
+      ${g.ex ? `<div class="gact tone-${g.ex.tone}"><b>Gewinnmitnahme: ${g.ex.short}</b><span>${g.ex.nw}/6 Verkaufskriterien erfüllt</span></div>` : ""}
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
     <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zwei Finger: waagerecht auseinander = Zeit, senkrecht auseinander = Kurs, gemeinsam hoch/runter = Kurs verschieben · wischen = Zeit verschieben</span>
         <span><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="in" aria-label="Hineinzoomen">＋</button><button class="mini-btn" data-lwc-zoom="${esc(g.t)}" data-z="out" aria-label="Herauszoomen">−</button><button class="mini-btn" data-lwc-reset="${esc(g.t)}">Zurücksetzen</button><button class="mini-btn" data-lwc-tall="${esc(g.t)}">${depTall.has(g.t) ? "Kleiner" : "Größer"}</button></span></div>
       <div class="lwc${depTall.has(g.t) ? " tall" : ""}" data-lwc="${esc(g.t)}"></div>
-      <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;height:2px"></i>${g.ms.filter(m => m.ent).length > 1 ? "Ø Kauf · ▲ Käufe (Nr. wie Tabelle)" : "Kauf"}</span><span><i style="background:#30d158;height:2px"></i>Take Profit</span>${g.exStop != null ? `<span><i style="background:#ff9f43;height:2px"></i>Ausstiegs-Stop</span>` : ""}${g.ko != null ? `<span><i style="background:#ff453a;height:2px"></i>Knock-out</span>` : ""}</div>`
+      <div class="legend"><span><i style="background:#0a84ff;height:2px"></i>EMA 20</span><span><i style="background:#ffd60a;height:2px"></i>EMA 50</span><span><i style="background:#e5e5ea;height:2px"></i>${g.ms.filter(m => m.ent).length > 1 ? "Ø Kauf · ▲ Käufe (Nr. wie Tabelle)" : "Kauf"}</span><span><i style="background:#30d158;height:2px"></i>Take Profit</span>${g.ko != null ? `<span><i style="background:#ff453a;height:2px"></i>Knock-out</span>` : ""}</div>`
       : `<div class="note" style="padding:40px 0;text-align:center">Chart lädt …</div>`}</div>
     ${g.tps.length ? `<div><div class="plan-h">Take-Profit-Zonen</div><div class="table-wrap plain"><table class="xplan tp-t"><thead><tr><th></th><th class="num">Kurs</th><th class="num">Abstand</th><th class="num">Chance 3 Mon.</th><th class="num">6 Mon.</th><th class="num">Deine Position dort</th></tr></thead><tbody>
       ${g.tps.map(tp => { const v = g.known ? g.atX(tp.p) : null;
@@ -1386,8 +1355,8 @@ function groupHtml(g) {
           <td>${m.ent ? `<span class="th tone-${m.ent.tone}">${m.ent.short}</span>` : "–"}</td></tr>`; }).join("")}
     </tbody></table></div>
     ${g.ms.some(m => m.d) ? `<div class="note" style="margin:6px 2px 0">Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag) – mit „Kurs eintragen“ werden sie exakt.</div>` : ""}</div>
-    ${g.ms.some(m => m.ex) ? `<div><div class="plan-h">Ausstiegs-Check</div><div class="entries">${g.ms.map((m, j) => !m.ex ? "" : exitBoxHtml(m, j, g)).join("")}</div>
-      <div class="note" style="margin:6px 2px 0">Regel aus dem 6-Jahres-Test (30.348 Trades): Verkauf erst, wenn ein Tag <b>unter dem Ausstiegs-Stop schließt</b>. Ab +1 R wird der Stop täglich auf das Tief der letzten 10 Tage nachgezogen – normale Rücksetzer im Aufwärtstrend bleiben darüber und werfen dich nicht raus. Die Warnsignale sind Hinweise, kein Verkaufsgrund für sich.</div></div>` : ""}
+    ${g.ms.some(m => m.ex) ? `<div><div class="plan-h">Gewinnmitnahme-Check</div><div class="entries">${g.ms.map((m, j) => !m.ex ? "" : exitBoxHtml(m, j, g)).join("")}</div>
+      <div class="note" style="margin:6px 2px 0">Je mehr Kriterien erfüllt sind, desto mehr spricht dafür, den Gewinn mitzunehmen: 0–1 laufen lassen · 2–3 vorbereiten · ab 4 mitnehmen. Ein einzelnes Signal ist oft nur ein normaler Rücksetzer im Aufwärtstrend – erst wenn mehrere zusammenkommen, dreht der Trend meist wirklich. Das Kursziel allein ist kein Verkaufsgrund. Keine Anlageberatung.</div></div>` : ""}
     ${g.ms.some(m => m.ent) ? `<div><div class="plan-h">Bewertung deiner Einstiege</div><div class="entries">${g.ms.map((m, j) => !m.ent ? "" : `<div class="evalbox tone-${m.ent.tone}"><div class="eh">#${j + 1} · ${dateDE(m.ent.date)} · bei ${fmt(m.ent.u)}</div><b class="et">${m.ent.label}</b>
         <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : ""}
     ${g.ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(g.ev.date)}</b> – ${(CAL_KIND[g.ev.kind] || [])[2] || ""}${g.ev.estimate ? " (geschätzt)" : ""}</div>` : ""}
@@ -1457,7 +1426,7 @@ function mountDepotCharts() {
       handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: true, mouseWheel: true, pinch: true } });
     const T = c.t, pts = k => T.map((d, i) => c[k][i] == null ? null : { time: d, value: c[k][i] }).filter(Boolean);
     // K.-o. und nahe Take-Profit-Marken in die automatische Skalierung einbeziehen (sehr ferne nicht)
-    const extra = [g.ko, g.exStop, ...g.tps.map(tp => tp.p)].filter(v => v != null && v > g.a.c * .5 && v < g.a.c * 1.6);
+    const extra = [g.ko, ...g.tps.map(tp => tp.p)].filter(v => v != null && v > g.a.c * .5 && v < g.a.c * 1.6);
     const cs = ch.addCandlestickSeries({ upColor: "#30d158", downColor: "#ff453a", borderVisible: false, wickUpColor: "#30d158", wickDownColor: "#ff453a", priceLineColor: "#ffffff",
       autoscaleInfoProvider: orig => { const r = orig(); if (!r) return r;
         let lo = Math.min(r.priceRange.minValue, ...extra), hi = Math.max(r.priceRange.maxValue, ...extra);
@@ -1472,7 +1441,6 @@ function mountDepotCharts() {
     const ents = g.ms.filter(m => m.ent);
     if (g.avgEntry) pl(g.avgEntry, ents.length > 1 ? "Ø Kauf" : "Kauf", "#e5e5ea", 0, 1);
     if (g.ko != null) pl(g.ko, "K.-o.", "#ff453a", 2, 2);
-    if (g.exStop != null) pl(g.exStop, "Ausstieg", "#ff9f43", 1, 2);
     cs.setMarkers(g.ms.map((m, j) => m.ent ? { time: m.ent.date, position: "belowBar", color: "#e5e5ea", shape: "arrowUp", text: ents.length > 1 ? `Kauf ${j + 1}` : "Kauf" } : null)
       .filter(Boolean).sort((a, b) => a.time < b.time ? -1 : 1));
     ch.timeScale().setVisibleLogicalRange(depRanges.get(t) || depRange(c, g));
@@ -1634,7 +1602,7 @@ function importRows(rows) {
     if (d) { entry.d = d; turbos++; }
     if (!r) noData.push(d ? d.under : p.name);
     const j = list.findIndex(x => (p.isin && x.isin === p.isin) || (!x.isin && !d && r && x.t === r.t));
-    if (j >= 0) { ["mark", "markU", "markDate", "stop0"].forEach(k => { if (list[j][k] != null && list[j].isin === entry.isin) entry[k] = list[j][k]; }); list[j] = entry; } else list.push(entry);
+    if (j >= 0) { ["mark", "markU", "markDate"].forEach(k => { if (list[j][k] != null && list[j].isin === entry.isin) entry[k] = list[j][k]; }); list[j] = entry; } else list.push(entry);
     added++;
   });
   // Positionen aus früheren Importen, die laut Datei inzwischen verkauft sind, entfernen
@@ -1707,13 +1675,6 @@ document.addEventListener("click", e => {
     if (v === null) return;
     const x = parseFloat(String(v).replace(/\./g, "").replace(",", "."));
     if (x > 0 && a) { p.mark = x; p.markU = a.c; p.markDate = new Date().toISOString().slice(0, 10); } else { delete p.mark; delete p.markU; delete p.markDate; }
-    depotSave(list);
-  } else if (act === "stop0") {
-    const p = list[i];
-    const v = prompt(`Dein Anfangs-Stop für ${p.d ? p.d.under : p.n} – Kurs der Aktie (Basiswert) in ihrer Währung.\nLeer lassen = automatisch (Kairo-Signal bzw. Schätzung).`, p.stop0 ? String(p.stop0).replace(".", ",") : "");
-    if (v === null) return;
-    const x = parseFloat(String(v).replace(/\./g, "").replace(",", "."));
-    if (x > 0) p.stop0 = x; else delete p.stop0;
     depotSave(list);
   } else if (act === "claude") {
     const lines = list.map(p => { const r = p.t ? rowOf(p.t) : null, s = holdSignal(r), a = anaData && p.t && anaData.tickers[p.t];
