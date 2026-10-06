@@ -43,7 +43,10 @@ jobs:
           pattern: bilanz-*
           merge-multiple: true
       - run: python -m backend.bilanz --combine bilanz_part_*.json
+      - run: python -m backend.exits bilanz_part_*.json
       - uses: actions/upload-artifact@v4
         with:
           name: bilanz-ergebnis
-          path: data/bilanz_backtest.json
+          path: |
+            data/bilanz_backtest.json
+            data/exit_backtest.json

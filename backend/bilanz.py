@@ -104,6 +104,8 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
     if n < start + 10:
         return []
     o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))
+    from .indicators import ema as _ema
+    e20 = _ema(df["Close"], 20).to_numpy(float)
     out, last_sig = [], {"hit": -99, "fast": -99}
     for i in range(start, n):
         try:
@@ -125,13 +127,13 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                 continue
             atr = r.flags.get("atr") or 0
             p = {"entry": r.close, "stop": r.close - 2 * atr, "target1": r.close + 2 * atr, "target2": None, "crv": 1.0}
-        tp1 = None
+        tp1, lv = None, []
         if kind:
             try:
                 lv = swing_levels(df.iloc[: i + 1], r.close, r.flags.get("atr") or 0)
                 tp1 = lv[0]["p"] if lv else None
             except Exception:
-                tp1 = None
+                tp1, lv = None, []
         oc = outcome(o, h, l, c, i, p["entry"], p["stop"], p.get("target1"), p.get("target2"), tp1)
         if not oc:
             continue
@@ -141,6 +143,15 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                     "tp1_pct": round(tp1 / p["entry"] - 1, 4) if tp1 else None,
                     "earn": bool(r.flags.get("earnings_risk")), "zone": "Fib" if (r.zone.get("fib") or {}).get("ok") else "Support",
                     "div": (r.flags.get("divergence") or {}).get("kind"), **oc})
+        if kind:                                   # Kursverlauf danach (für den Ausstiegs-Backtest, relativ zum Schluss)
+            cl, j1 = c[i], min(n, i + 1 + HOLD)
+            rn = lambda a: [round(float(x / cl), 4) for x in a]
+            out[-1]["px"] = {"o": rn(o[i + 1:j1]), "h": rn(h[i + 1:j1]), "l": rn(l[i + 1:j1]), "c": rn(c[i + 1:j1]),
+                             "pl": rn(l[max(0, i - 9):i + 1]), "e20": round(float(e20[i] / cl), 4),
+                             "atr": round(float((r.flags.get("atr") or 0) / cl), 4), "s": round(float(p["stop"] / cl), 4),
+                             "t1": round(float(p["target1"] / cl), 4) if p.get("target1") else None,
+                             "t2": round(float(p["target2"] / cl), 4) if p.get("target2") else None,
+                             "tp": [round(float(z["p"] / cl), 4) for z in lv[:3]]}
     return out
 
 
@@ -210,7 +221,7 @@ def main(argv=None) -> int:
                     ev.append(e)
         res = {"generated": time.strftime("%Y-%m-%d"), "stocks": len({e["t"] for e in ev}),
                "period": [min(e["d"] for e in ev), max(e["d"] for e in ev)], "stats": stats(ev),
-               "recent": sorted([e for e in ev if e["k"] == "hit"], key=lambda e: e["d"])[-40:]}
+               "recent": [{k: v for k, v in e.items() if k != "px"} for e in sorted([e for e in ev if e["k"] == "hit"], key=lambda e: e["d"])[-40:]]}
         (ROOT / "data" / "bilanz_backtest.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")))
         print("BILANZ " + json.dumps(res, ensure_ascii=False, separators=(",", ":")))
         return 0
