@@ -136,7 +136,22 @@ def exit_part(ev):
         res = evaluate_rule(ev, lambda e: sim(e["px"], e["_sg"], best[1], best[2], True))
         out["greedy"] = {"crit": best[1], "k": best[2], **res}
     # 4) Vergleich: Halten bis 3 Monate (nur K.-o.), die getesteten Regeln ohne Stop-Order mit K.-o. 1 ATR
-    out["baselines"]["Halten 3 Monate (nur K.-o.)"] = evaluate_rule(ev, lambda e: sim(e["px"], e["_sg"], [], 1, True))
+    for kb in (1.0, 1.5, 2.0, 3.0):
+        out["baselines"][f"Halten 3 Monate (nur K.-o. {kb} ATR)"] = evaluate_rule(ev, lambda e, kb=kb: sim(e["px"], e["_sg"], [], 1, True, kb))
+    for kk in (2, 3):
+        crit = ["res", "rsi", "mbi", "ema", "low10"]
+        out["baselines"][f"Check ohne MACD, ab {kk}"] = evaluate_rule(ev, lambda e, kk=kk: sim(e["px"], e["_sg"], crit, kk, True))
+    # Nach Marktlage (Marktbreite am Kauftag): welche Verkaufsart passt wann?
+    if any(e.get("_br") is not None for e in ev):
+        rules_ = {n: r for n, _, r in RULES}
+        fns = {"Halten": lambda e: sim(e["px"], e["_sg"], [], 1, True),
+               "TP 2": lambda e: (lambda x: (net(x["r"], x["d"], x["rp"]), x["d"], x["x"]) if x else None)(simulate(e["px"], rules_["TP 2 – zweites relevantes Hoch"], "close", 1.0)),
+               "10-Tage-Tief ab 1 R": lambda e: (lambda x: (net(x["r"], x["d"], x["rp"]), x["d"], x["x"]) if x else None)(simulate(e["px"], rules_["Nachziehen: 10-Tage-Tief, ab 1 R"], "close", 1.0))}
+        reg = {}
+        for lo, hi in ((0, 0.3), (0.3, 0.45), (0.45, 0.6), (0.6, 1.01)):
+            es = [e for e in ev if e.get("_br") is not None and lo <= e["_br"] < hi]
+            reg[f"{lo}-{hi}"] = {n: evaluate_rule(es, f)["all"] for n, f in fns.items()}
+        out["by_breadth"] = reg
     rules = {n: r for n, _, r in RULES}
     for name in ("TP 2 – zweites relevantes Hoch", "Nachziehen: 10-Tage-Tief, ab 1 R", "TP 1 – nächstes relevantes Hoch",
                  "TP 1 – bei steigendem MACD weiter bis TP 2"):
@@ -178,6 +193,13 @@ def entry_part(ev_all, ev_px):
         return res
 
     out["groups"] = {g: ret_stats(es) for g, es in sorted(groups.items(), key=lambda x: -len(x[1]))}
+    # Treffer vs. Zufall je Jahr (Rendite nach 20 / 63 Tagen)
+    yr = {}
+    for y in sorted({e["d"][:4] for e in ev_all}):
+        h_ = [e for e in groups["Treffer"] if e["d"][:4] == y]; b_ = [e for e in groups["Vergleichstage (zufällig)"] if e["d"][:4] == y]
+        yr[y] = {"hit": ret_stats(h_), "base": ret_stats(b_)}
+    out["by_year"] = {y: {"hit20": v["hit"].get("ret20"), "base20": v["base"].get("ret20"), "hit63": v["hit"].get("ret63"),
+                          "base63": v["base"].get("ret63"), "n": v["hit"]["n"]} for y, v in yr.items()}
     # Ergebnis mit der empfohlenen Verkaufsregel (TP 2, Schluss-Stop, K.-o. 1 ATR) je Gruppe
     tp2 = {n: r for n, _, r in RULES}["TP 2 – zweites relevantes Hoch"]
     def rnet(e):
@@ -202,13 +224,8 @@ def entry_part(ev_all, ev_px):
     # Merkmale am Signaltag (nur Treffer + Fast mit Kursverlauf): Vorteil je Bereich
     if any("f" in e for e in ev_px):
         # Marktbreite: Anteil der Vergleichstage derselben Woche über der EMA 200
-        wk = defaultdict(list)
-        for e in ev_all:
-            if e["k"] == "base" and (e.get("f") or {}).get("e200") is not None:
-                wk[_week(e["d"])].append(e["f"]["e200"] > 0)
-        breadth = {w: float(np.mean(v)) for w, v in wk.items() if len(v) >= 20}
         for e in ev_px:
-            e.setdefault("f", {})["breadth"] = breadth.get(_week(e["d"]))
+            e.setdefault("f", {})["breadth"] = e.get("_br")
         bins = {"rsi": [0, 30, 35, 40, 45, 100], "e200": [-9, -0.2, -0.1, 0, 0.1, 9], "vol": [0, 0.25, 0.35, 0.5, 0.7, 9],
                 "dd": [0, 0.15, 0.25, 0.35, 0.5, 9], "atrp": [0, 0.02, 0.03, 0.045, 9], "breadth": [0, 0.3, 0.45, 0.6, 1.01]}
         feats = {}
@@ -248,6 +265,13 @@ def main(argv=None) -> int:
                 ev_all.append(e)
     ev_px = [e for e in ev_all if e.get("px") and e["k"] in ("hit", "fast")]
     res = {"n_events": len(ev_all), "n_px": len(ev_px), "period": [min(e["d"] for e in ev_all), max(e["d"] for e in ev_all)]}
+    wk = defaultdict(list)
+    for e in ev_all:
+        if e["k"] == "base" and (e.get("f") or {}).get("e200") is not None:
+            wk[_week(e["d"])].append(e["f"]["e200"] > 0)
+    breadth = {w: float(np.mean(v)) for w, v in wk.items() if len(v) >= 20}
+    for e in ev_px:
+        e["_br"] = breadth.get(_week(e["d"]))
     res["entry"] = entry_part(ev_all, ev_px)
     res["exit"] = exit_part(ev_px)
     (ROOT / "data" / "optimize.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
