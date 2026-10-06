@@ -61,6 +61,11 @@ RULES = [
     ("Swing-High oder MACD dreht – was zuerst kommt", "ind", {"target": ("t2",), "sig": ["macd"], "be": 1.0}),
     ("Hälfte an TP 1, Rest bis MACD dreht", "mix", {"partial": (0.5, ("tp1",)), "sig": ["macd"], "be_after_partial": True}),
     ("Hälfte an TP 1, Rest bis MBI rotes X", "mix", {"partial": (0.5, ("tp1",)), "sig": ["mbi"], "be_after_partial": True}),
+    # An TP 1 nur verkaufen, wenn das Momentum ausgereizt ist – sonst weiterlaufen lassen (Stop sichert die halbe Strecke bis TP 1)
+    ("TP 1 – bei RSI unter 60 weiter bis TP 2", "hold", {"target": ("tp1",), "hold": {"rsi_lt": 60, "next": ("tp2",)}}),
+    ("TP 1 – bei RSI unter 70 weiter bis TP 2", "hold", {"target": ("tp1",), "hold": {"rsi_lt": 70, "next": ("tp2",)}}),
+    ("TP 1 – bei RSI unter 60 weiter, 3 ATR nachziehen", "hold", {"target": ("tp1",), "hold": {"rsi_lt": 60, "trail": ("chand", 3.0)}}),
+    ("TP 1 – bei steigendem MACD weiter bis TP 2", "hold", {"target": ("tp1",), "hold": {"macd_up": True, "next": ("tp2",)}}),
     ("TP 1 + Zeit-Stop (10 T. kein Plus)", "time", {"target": ("tp1",), "time": (10, 0.0)}),
     ("TP 1 + Zeit-Stop (20 T. unter 0,5 R)", "time", {"target": ("tp1",), "time": (20, 0.5)}),
     ("Hälfte TP 1, Rest 3 ATR + Zeit-Stop 20 T.", "mix", {"partial": (0.5, ("tp1",)), "trail": ("chand", 3.0), "trail_from": 1.0,
@@ -103,6 +108,7 @@ def simulate(px: dict, rule: dict) -> dict | None:
     lows = list(px["pl"])
     ko = px["s"] - 0.5 * px["atr"]
     macd_pos = (px.get("mh0") or 0) > 0          # „dreht nach unten“ erst, nachdem das Histogramm positiv war
+    held, trail_override = False, None
     for j in range(len(c)):
         oj = o[j] if j else entry
         # 1) Stop (mit Kurslücke)
@@ -119,7 +125,23 @@ def simulate(px: dict, rule: dict) -> dict | None:
             if rule.get("be_after_partial"):
                 stop = max(stop, entry)
         if target and h[j] >= target:
-            return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False}
+            hd = rule.get("hold")
+            if hd and not held:
+                rsi, mh = px.get("rsi") or [], px.get("mh") or []
+                strong = (("rsi_lt" in hd and j < len(rsi) and rsi[j] < hd["rsi_lt"])
+                          or (hd.get("macd_up") and 0 < j < len(mh) and mh[j] > mh[j - 1]))
+                if strong:                         # Momentum noch nicht ausgereizt → nicht verkaufen
+                    held = True
+                    stop = max(stop, entry + 0.5 * (target - entry))
+                    target = _level(hd["next"], px, entry, risk) if hd.get("next") else None
+                    if target is not None and target <= h[j]:
+                        target = None
+                    if hd.get("trail"):
+                        trail_override = hd["trail"]
+                else:
+                    return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False}
+            else:
+                return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False}
         # 3) Nachziehen (gilt ab dem nächsten Tag)
         maxh = max(maxh, h[j])
         mfe = R(maxh)
@@ -127,8 +149,8 @@ def simulate(px: dict, rule: dict) -> dict | None:
         lows.append(l[j])
         if rule.get("be") is not None and mfe >= rule["be"]:
             stop = max(stop, entry)
-        tr = rule.get("trail")
-        if tr and mfe >= rule.get("trail_from", 0):
+        tr = trail_override or rule.get("trail")
+        if tr and (trail_override or mfe >= rule.get("trail_from", 0)):
             if tr[0] == "chand":
                 stop = max(stop, maxh - tr[1] * px["atr"])
             elif tr[0] == "low":
@@ -175,7 +197,7 @@ def run(events: list[dict]) -> dict:
         row = {"name": name, "fam": fam}
         sims = [(e, simulate(e["px"], rule)) for e in sig]
         sims = [(e, x) for e, x in sims if x]
-        if name.startswith("TP 1 –"):
+        if name == "TP 1 – nächstes relevantes Hoch":
             gaps = [x["gko"] for e, x in sims if x["x"] == "stop"]
         for part, sel in (("all", lambda e: True), ("train", lambda e: e["d"] < SPLIT), ("test", lambda e: e["d"] >= SPLIT)):
             for kind in ("hit", "all"):
