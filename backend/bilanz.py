@@ -127,12 +127,48 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
     mh = _macd(df["Close"], cf.macd.fast, cf.macd.slow, cf.macd.signal)["hist"].to_numpy(float)
     rx = momentum_bias_index(df["Close"], df["High"], df["Low"], cf.mbi.momentum_length, cf.mbi.bias_length, cf.mbi.smooth_length,
                              cf.mbi.impulse_length, cf.mbi.std_mult)["red_x"].to_numpy(bool)
-    out, last_sig = [], {"hit": -99, "fast": -99}
+    out, last_sig = [], {"hit": -99, "fast": -99, "trend": -99}
+
+    def pxrec(i, stop, t1, t2, lv, atr):
+        cl, j1 = c[i], min(n, i + 1 + HOLD)
+        rn = lambda a: [round(float(x / cl), 4) for x in a]
+        return {"o": rn(o[i + 1:j1]), "h": rn(h[i + 1:j1]), "l": rn(l[i + 1:j1]), "c": rn(c[i + 1:j1]),
+                "pl": rn(l[max(0, i - 9):i + 1]), "e20": round(float(e20[i] / cl), 4),
+                "atr": round(float(atr / cl), 4), "s": round(float(stop / cl), 4),
+                "t1": round(float(t1 / cl), 4) if t1 else None, "t2": round(float(t2 / cl), 4) if t2 else None,
+                "tp": [round(float(z["p"] / cl), 4) for z in lv[:3]],
+                "rsi": [round(float(x), 1) for x in rsi_s[i + 1:j1]], "mh": [round(float(x / cl), 5) for x in mh[i + 1:j1]],
+                "mh0": round(float(mh[i] / cl), 5), "rx": [int(x) for x in rx[i + 1:j1]]}
+
     for i in range(start, n):
         try:
             r = evaluate(df.iloc[: i + 1])
         except Exception:
             continue
+        # Zweites Setup zum Vergleich: Rücksetzer im Aufwärtstrend (weit gefasst aufgezeichnet, genaue Schwellen in der Analyse)
+        fl = r.flags
+        if fl.get("ema200") and fl.get("ema50") and fl.get("rsi") is not None and fl.get("atr"):
+            cl, atr = r.close, fl["atr"]
+            g200, g50 = cl / fl["ema200"] - 1, cl / fl["ema50"] - 1
+            if g200 >= 0.05 and -0.12 <= g50 <= 0.01 and 30 <= fl["rsi"] <= 55 and cl >= 1:
+                fresh = i - last_sig["trend"] > GAP
+                last_sig["trend"] = i
+                if fresh and i + 1 < n:
+                    stop = min(float(l[max(0, i - 9):i + 1].min()) - 0.25 * atr, cl - atr)
+                    try:
+                        lv = swing_levels(df.iloc[: i + 1], cl, atr)
+                    except Exception:
+                        lv = []
+                    tp1 = lv[0]["p"] if lv else None
+                    oc = outcome(o, h, l, c, i, cl, stop, cl + 2 * atr, None, tp1)
+                    if oc:
+                        out.append({"t": ticker, "d": str(df.index[i].date()), "k": "trend", "score": 0, "crv": 0,
+                                    "stop_pct": round(1 - stop / cl, 4), **oc,
+                                    "f": {"rsi": _r(fl["rsi"], 1), "atrp": _r(atr / cl, 4), "vol": _r(fl.get("volatility"), 3),
+                                          "e200": _r(g200, 3), "e50": _r(g50, 3),
+                                          "dd": _r((r.zone["H"] - cl) / r.zone["H"], 3) if r.zone.get("H") else None,
+                                          "e200up": bool(fl["ema50"] > fl["ema200"]), "kairo": bool(r.passed)},
+                                    "px": pxrec(i, stop, cl + 2 * atr, None, lv, atr)})
         kind = "hit" if r.passed else "fast" if r.fast_hit else None
         base = kind is None and (i - start) % base_every == 0
         if kind:
@@ -177,17 +213,7 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                           "ok": "".join("1" if c.ok else "0" for c in r.criteria) if kind else None,
                           "met": int(sum(c.ok for c in r.criteria if c.key not in ("cap", "liquidity", "price", "history")))}})
         if kind:                                   # Kursverlauf danach (für den Ausstiegs-Backtest, relativ zum Schluss)
-            cl, j1 = c[i], min(n, i + 1 + HOLD)
-            rn = lambda a: [round(float(x / cl), 4) for x in a]
-            out[-1]["px"] = {"o": rn(o[i + 1:j1]), "h": rn(h[i + 1:j1]), "l": rn(l[i + 1:j1]), "c": rn(c[i + 1:j1]),
-                             "pl": rn(l[max(0, i - 9):i + 1]), "e20": round(float(e20[i] / cl), 4),
-                             "atr": round(float((r.flags.get("atr") or 0) / cl), 4), "s": round(float(p["stop"] / cl), 4),
-                             "t1": round(float(p["target1"] / cl), 4) if p.get("target1") else None,
-                             "t2": round(float(p["target2"] / cl), 4) if p.get("target2") else None,
-                             "tp": [round(float(z["p"] / cl), 4) for z in lv[:3]],
-                             # Indikatoren danach – für Ausstiege mit den Kairo-Signalen (Gegenstück zum Einstieg)
-                             "rsi": [round(float(x), 1) for x in rsi_s[i + 1:j1]], "mh": [round(float(x / cl), 5) for x in mh[i + 1:j1]],
-                             "mh0": round(float(mh[i] / cl), 5), "rx": [int(x) for x in rx[i + 1:j1]]}
+            out[-1]["px"] = pxrec(i, p["stop"], p.get("target1"), p.get("target2"), lv, r.flags.get("atr") or 0)
     return out
 
 

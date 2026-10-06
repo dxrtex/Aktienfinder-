@@ -1212,7 +1212,8 @@ function entryEval(c, date) {
   const [tone, label, short] = sc >= 2 ? ["green", "Guter Einstieg", "Gut"] : sc <= -1 ? ["red", "Ungünstiger Einstieg", "Ungünstig"] : ["yellow", "Durchschnittlicher Einstieg", "Mittel"];
   return { tone, label, short, checks, sc, u, i, date: c.t[i], text: checks.map(x => x.t).join(", ") };
 }
-// Gewinnmitnahme bewerten: Wann verkaufe ich eine Aktie, die schon gestiegen ist? 6 Kriterien wie beim Scanner (x/6).
+// Gewinnmitnahme bewerten: Wann verkaufe ich eine Aktie, die schon gestiegen ist? 5 Kriterien wie beim Scanner (x/5).
+// Geprüft an 34.000 Trades (6 Jahre): MACD-Signal verkaufte zu früh und ist raus; ab 3 von 5 ≈ so gut wie Halten, aber früher.
 // Je mehr erfüllt, desto mehr spricht dafür, den Gewinn mitzunehmen. Grundlage: die im Ausstiegs-Test geprüften Signale.
 const atrAt = (c, i) => { let s = 0, k = 0; for (let j = Math.max(1, i - 13); j <= i; j++, k++) s += Math.max(c.h[j] - c.l[j], Math.abs(c.h[j] - c.c[j - 1]), Math.abs(c.l[j] - c.c[j - 1])); return k ? s / k : 0; };
 function exitEval(p, c, ent, a) {
@@ -1223,13 +1224,12 @@ function exitEval(p, c, ent, a) {
   const crit = [
     { on: !!(nx && nx.p - px < atr), l: "Widerstand erreicht", t: nx ? (nx.p - px < atr ? `nächstes Hoch ${fmt(nx.p)} ist weniger als 1 Tagesspanne entfernt` : `nächstes Hoch ${fmt(nx.p)} noch ${sgnPct(nx.p / px - 1, 1)} entfernt`) : "kein Hoch mehr darüber – freie Bahn" },
     { on: c.rsi[L] >= 70, l: "RSI überkauft", t: `RSI ${fmt(c.rsi[L], 0)}${c.rsi[L] >= 70 ? " – überkauft" : " – noch Luft nach oben"}` },
-    { on: c.hist[L] < c.hist[L - 1] && c.hist[L - 1] < c.hist[L - 2], l: "MACD dreht", t: c.hist[L] < c.hist[L - 1] && c.hist[L - 1] < c.hist[L - 2] ? "Histogramm fällt seit 2 Tagen – Schwung lässt nach" : "Histogramm steigt bzw. hält sich" },
     { on: rx3, l: "MBI rotes X", t: rx3 ? "rotes X in den letzten 3 Tagen – Kaufdruck lässt nach" : "kein rotes X" },
     { on: px < c.e20[L], l: "Unter EMA 20", t: px < c.e20[L] ? `Schluss unter der EMA 20 (${fmt(c.e20[L])}) – kurzfristiger Trend wackelt` : `Schluss über der EMA 20 (${fmt(c.e20[L])})` },
     { on: px < lo10, l: "Trendbruch", t: px < lo10 ? `Schluss unter dem Tief der letzten 10 Tage (${fmt(lo10)})` : `über dem 10-Tage-Tief (${fmt(lo10)})` }];
   const nw = crit.filter(x => x.on).length, up = gain > 0;
   const [tone, label, short] = !up ? ["gray", "Noch nicht im Gewinn – kein Thema für Gewinnmitnahme", "Kein Gewinn"]
-    : nw >= 4 ? ["red", "Gewinn mitnehmen", "Mitnehmen"] : nw >= 2 ? ["yellow", "Gewinn sichern vorbereiten", "Vorbereiten"] : ["green", "Laufen lassen", "Laufen lassen"];
+    : nw >= 3 ? ["red", "Gewinn mitnehmen", "Mitnehmen"] : nw >= 2 ? ["yellow", "Gewinn sichern vorbereiten", "Vorbereiten"] : ["green", "Laufen lassen", "Laufen lassen"];
   return { tone, label, short, crit, nw, gain, hiSince, fromHi: px / hiSince - 1, bars: L - ent.i };
 }
 // Turbo: Bezugsverhältnis aus dem Kaufkurs schätzen → Zertifikatswert heute und an Stop/Zielen
@@ -1326,7 +1326,7 @@ function exitBoxHtml(m, j, g) {
   const x = m.ex;
   return `<div class="evalbox tone-${x.tone}"><div class="eh">#${j + 1} · Kauf ${dateDE(m.ent.date)} bei ${fmt(m.ent.u)} · seit ${x.bars} Handelstagen</div>
     <b class="et">${x.label}</b>
-    <div class="exrow"><span>Verkaufskriterien</span><b>${x.nw} / 6 erfüllt</b><span>Aktie seit Kauf</span><b class="${x.gain >= 0 ? "up" : "down"}">${sgnPct(x.gain, 1)}</b><span>Abstand zum Hoch seit Kauf</span><b>${sgnPct(x.fromHi, 1)}</b></div>
+    <div class="exrow"><span>Verkaufskriterien</span><b>${x.nw} / 5 erfüllt</b><span>Aktie seit Kauf</span><b class="${x.gain >= 0 ? "up" : "down"}">${sgnPct(x.gain, 1)}</b><span>Abstand zum Hoch seit Kauf</span><b>${sgnPct(x.fromHi, 1)}</b></div>
     <ul class="checks">${x.crit.map(w => `<li><i class="${w.on ? "down" : "up"}">${w.on ? "✓" : "–"}</i><b>${w.l}:</b> ${esc(w.t)}</li>`).join("")}</ul></div>`;
 }
 const chanceTone = p => p >= .6 ? "up" : p >= .3 ? "gold" : "down";
@@ -1337,7 +1337,7 @@ function groupHtml(g) {
       <div class="g2"><span class="muted">Gewinn / Verlust</span><b class="${g.pl == null ? "" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnEur(g.value - g.invested) : "–"}</b><small class="${g.pl == null ? "muted" : g.pl >= 0 ? "up" : "down"}">${g.known ? sgnPct(g.pl, 1) : "Wert unbekannt"}</small></div>
       <div class="g2"><span class="muted">Hebel</span><b>${g.levTxt}</b><small class="${g.koDist != null && g.koDist < .1 ? "down" : "muted"}">${g.koDist != null ? `K.-o. ${pct(g.koDist, 0)} entfernt` : "ohne Knock-out"}</small></div>
       <div class="g2"><span class="muted">${nx ? esc(nx.l) : "Take Profit"}</span><b class="up">${nx ? sgnPct(nx.pct, 0) : "–"}</b><small class="${nx ? chanceTone(nx.p3m) : "muted"}">${nx ? `Chance ${pct(nx.p3m, 0)} in 3 Mon.` : ""}</small></div>
-      ${g.ex ? `<div class="gact tone-${g.ex.tone}"><b>Gewinnmitnahme: ${g.ex.short}</b><span>${g.ex.nw}/6 Verkaufskriterien erfüllt</span></div>` : ""}
+      ${g.ex ? `<div class="gact tone-${g.ex.tone}"><b>Gewinnmitnahme: ${g.ex.short}</b><span>${g.ex.nw}/5 Verkaufskriterien erfüllt</span></div>` : ""}
     </summary>`;
   const body = !open ? "" : `<div class="gbody">
     <div class="chartbox">${c ? `<div class="lwc-tools"><span class="muted">Zwei Finger: waagerecht auseinander = Zeit, senkrecht auseinander = Kurs, gemeinsam hoch/runter = Kurs verschieben · wischen = Zeit verschieben</span>
@@ -1364,7 +1364,7 @@ function groupHtml(g) {
     </tbody></table></div>
     ${g.ms.some(m => m.d) ? `<div class="note" style="margin:6px 2px 0">Werte der Zertifikate geschätzt (aus Kaufkurs und Kurs des Basiswerts am Kauftag) – mit „Kurs eintragen“ werden sie exakt.</div>` : ""}</div>
     ${g.ms.some(m => m.ex) ? `<div><div class="plan-h">Gewinnmitnahme-Check</div><div class="entries">${g.ms.map((m, j) => !m.ex ? "" : exitBoxHtml(m, j, g)).join("")}</div>
-      <div class="note" style="margin:6px 2px 0">Je mehr Kriterien erfüllt sind, desto mehr spricht dafür, den Gewinn mitzunehmen: 0–1 laufen lassen · 2–3 vorbereiten · ab 4 mitnehmen. Ein einzelnes Signal ist oft nur ein normaler Rücksetzer im Aufwärtstrend – erst wenn mehrere zusammenkommen, dreht der Trend meist wirklich. Das Kursziel allein ist kein Verkaufsgrund. Keine Anlageberatung.</div></div>` : ""}
+      <div class="note" style="margin:6px 2px 0">Je mehr Kriterien erfüllt sind, desto mehr spricht dafür, den Gewinn mitzunehmen: 0–1 laufen lassen · 2 vorbereiten · ab 3 mitnehmen (im 6-Jahres-Test so gut wie bis zum Schluss halten, aber früher am Geld). Ein einzelnes Signal ist oft nur ein normaler Rücksetzer im Aufwärtstrend – erst wenn mehrere zusammenkommen, dreht der Trend meist wirklich. Das Kursziel allein ist kein Verkaufsgrund. Keine Anlageberatung.</div></div>` : ""}
     ${g.ms.some(m => m.ent) ? `<div><div class="plan-h">Bewertung deiner Einstiege</div><div class="entries">${g.ms.map((m, j) => !m.ent ? "" : `<div class="evalbox tone-${m.ent.tone}"><div class="eh">#${j + 1} · ${dateDE(m.ent.date)} · bei ${fmt(m.ent.u)}</div><b class="et">${m.ent.label}</b>
         <ul class="checks">${m.ent.checks.map(x => `<li><i class="${x.s > 0 ? "up" : x.s < 0 ? "down" : "muted"}">${x.s > 0 ? "✓" : x.s < 0 ? "✗" : "●"}</i><b>${x.l}:</b> ${esc(x.t)}</li>`).join("")}</ul></div>`).join("")}</div></div>` : ""}
     ${g.ev ? `<div class="note" style="margin:0">Nächster Termin: <b>${dateDE(g.ev.date)}</b> – ${(CAL_KIND[g.ev.kind] || [])[2] || ""}${g.ev.estimate ? " (geschätzt)" : ""}</div>` : ""}

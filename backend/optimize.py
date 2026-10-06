@@ -406,6 +406,72 @@ def _week(d):
     return f"{y}-{w:02d}"
 
 
+# ---------------------------------------------------------------- C) Neues Setup: Rücksetzer im Aufwärtstrend
+TREND_VARIANTS = {
+    "Basis: EMA200 ≥ +10 %, EMA50 −8…0 %, RSI 35–50": dict(g=0.10, lo=-0.08, hi=0.0, r=(35, 50)),
+    "EMA200 ≥ +5 %": dict(g=0.05, lo=-0.08, hi=0.0, r=(35, 50)),
+    "EMA200 ≥ +15 %": dict(g=0.15, lo=-0.08, hi=0.0, r=(35, 50)),
+    "EMA200 ≥ +20 %": dict(g=0.20, lo=-0.08, hi=0.0, r=(35, 50)),
+    "Rücksetzer bis −5 %": dict(g=0.10, lo=-0.05, hi=0.0, r=(35, 50)),
+    "Rücksetzer bis −12 %": dict(g=0.10, lo=-0.12, hi=0.0, r=(35, 50)),
+    "RSI 30–50": dict(g=0.10, lo=-0.08, hi=0.0, r=(30, 50)),
+    "RSI 35–55": dict(g=0.10, lo=-0.08, hi=0.0, r=(35, 55)),
+    "RSI 40–50": dict(g=0.10, lo=-0.08, hi=0.0, r=(40, 50)),
+    "Basis + EMA50 über EMA200": dict(g=0.10, lo=-0.08, hi=0.0, r=(35, 50), up=True),
+    "Basis + Vola ≥ 35 %": dict(g=0.10, lo=-0.08, hi=0.0, r=(35, 50), vol=0.35),
+}
+
+
+def _trend_ok(f, v):
+    if not f or f.get("e200") is None or f.get("e50") is None or f.get("rsi") is None:
+        return False
+    return (f["e200"] >= v["g"] and v["lo"] <= f["e50"] <= v["hi"] and v["r"][0] <= f["rsi"] <= v["r"][1]
+            and (not v.get("up") or f.get("e200up")) and (f.get("vol") or 0) >= v.get("vol", 0))
+
+
+def trend_part(ev_all, ev_px):
+    """Neues Setup im Vergleich zu Kairo: Überrendite, Turbo-Ergebnis mit verschiedenen Verkaufsarten, je Jahr, Lernen/Prüfen."""
+    base = [e for e in ev_all if e["k"] == "base"]
+    wk = defaultdict(list)
+    for e in base:
+        if e.get("r63") is not None:
+            wk[_week(e["d"])].append(e["r63"])
+    mw = {w: float(np.mean(np.clip(v, *np.percentile(v, [1, 99])))) for w, v in wk.items() if len(v) >= 20}
+    rules = {n: r for n, _, r in RULES}
+    crit5 = ["res", "rsi", "mbi", "ema", "low10"]
+    def wrap(x):
+        return (net(x["r"], x["d"], x["rp"]), x["d"], x["x"]) if x else None
+    exits = {"Halten 3 Mon. (K.-o. 1 ATR)": lambda e: sim(e["px"], e["_sg"], [], 1, True, 1.0),
+             "Halten 3 Mon. (K.-o. 2 ATR)": lambda e: sim(e["px"], e["_sg"], [], 1, True, 2.0),
+             "Gewinnmitnahme-Check ab 3 von 5": lambda e: sim(e["px"], e["_sg"], crit5, 3, True, 1.0),
+             "Nachziehen 10-Tage-Tief ab 1 R": lambda e: wrap(simulate(e["px"], rules["Nachziehen: 10-Tage-Tief, ab 1 R"], "close", 1.0)),
+             "TP 2": lambda e: wrap(simulate(e["px"], rules["TP 2 – zweites relevantes Hoch"], "close", 1.0))}
+    def evaluate_set(es):
+        es = _dedupe(es)
+        ex = [e["r63"] - mw[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw]
+        ex_tr = [x for x, e in zip(ex, es) if e["d"] < SPLIT]
+        ex_te = [x for x, e in zip(ex, es) if e["d"] >= SPLIT]
+        f = lambda v: round(float(np.mean(v)), 4) if v else None
+        out = {"n": len(es), "je_jahr": round(len(es) / 4.9), "ex63": f(ex), "ex63_se": round(float(np.std(ex) / np.sqrt(len(ex))), 4) if len(ex) > 1 else None,
+               "ex63_train": f(ex_tr), "ex63_test": f(ex_te), "exits": {}}
+        for e in es:
+            if "_sg" not in e:
+                e["_sg"] = signals(e["px"])
+        es2 = [e for e in es if e["_sg"]]
+        for name, fn in exits.items():
+            x = evaluate_rule(es2, fn)
+            out["exits"][name] = {"r": x["all"].get("r"), "turbo": x["all"].get("turbo"), "ko": x["all"].get("ko"), "win": x["all"].get("win"),
+                                  "tage": x["all"].get("days"), "lernen": x["train"].get("r"), "pruefen": x["test"].get("r"), "jahre": x["years"]}
+        return out
+    trend = [e for e in ev_px if e["k"] == "trend"]
+    res = {"Kairo-Treffer (Vergleich)": evaluate_set([e for e in ev_px if e["k"] == "hit"])}
+    for name, v in TREND_VARIANTS.items():
+        res[name] = evaluate_set([e for e in trend if _trend_ok(e.get("f"), v)])
+    for e in ev_px:
+        e.pop("_sg", None)
+    return res
+
+
 def main(argv=None) -> int:
     files = argv if argv is not None else sys.argv[1:]
     ev_all, seen = [], set()
@@ -430,6 +496,7 @@ def main(argv=None) -> int:
         keep.append(e)
     ev_all = keep
     ev_px = [e for e in ev_all if e.get("px") and e["k"] in ("hit", "fast")]
+    ev_trend = [e for e in ev_all if e.get("px") and e["k"] == "trend"]
     res = {"n_events": len(ev_all), "aussortiert": bad, "n_px": len(ev_px), "period": [min(e["d"] for e in ev_all), max(e["d"] for e in ev_all)]}
     wk = defaultdict(list)
     for e in ev_all:
@@ -441,6 +508,8 @@ def main(argv=None) -> int:
     res["entry"] = entry_part(ev_all, ev_px)
     if any((e.get("f") or {}).get("raw") for e in ev_px):
         res["sweep"] = sweep_part(ev_px)
+    if ev_trend:
+        res["trend"] = trend_part(ev_all, ev_px + ev_trend)
     res["exit"] = exit_part(ev_px)
     (ROOT / "data" / "optimize.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     # Ausgabe in Abschnitten (das Wichtigste zuletzt – so lässt es sich gezielt aus dem Protokoll lesen)
@@ -449,6 +518,8 @@ def main(argv=None) -> int:
     dump("entry", {k: v for k, v in res["entry"].items() if k not in ("alt_setups", "excess")})
     if "sweep" in res:
         dump("sweep", res["sweep"])
+    if "trend" in res:
+        dump("trend", res["trend"])
     dump("key", {"n": res["n_events"], "aussortiert": res["aussortiert"], "excess": res["entry"].get("excess"), "alt": res["entry"].get("alt_setups")})
     return 0
 
