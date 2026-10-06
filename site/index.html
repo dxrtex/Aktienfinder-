@@ -98,6 +98,7 @@
   .score::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #18181a; }
   .score.fast { background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--surface-3) 0); }
   .score.fast span { font-size: 14px; color: var(--gold); }
+  .score.flt { background: conic-gradient(var(--red) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.flt span { line-height: 1; } .score.flt small { position: relative; font-size: 9px; color: var(--red); font-weight: 700; line-height: 1; }
   .score span { position: relative; font-weight: 700; font-size: 18px; }
   .card { container-type: inline-size; }
   .figures { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
@@ -877,6 +878,7 @@ function card(r) {
       </div>
       <div class="score-col">
       ${r.passed ? `<button class="score" data-scoreinfo style="--p:${r.score}" title="Score ${r.score} von 100 – antippen für die Zusammensetzung"><span>${r.score}</span></button>`
+        : filterMiss(r) ? `<button class="score fast flt" data-scoreinfo style="--p:100" title="Alle ${r.total} Setup-Kriterien erfüllt, aber Grundfilter nicht: ${esc(filterMiss(r))} – darum kein Treffer"><span>${r.met}/${r.total}</span><small>Filter ✗</small></button>`
         : `<button class="score fast" data-scoreinfo style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – antippen für Details"><span>${r.met ?? "–"}/${r.total ?? 11}</span></button>`}
       ${trendHtml(r)}</div>
     </div>
@@ -954,7 +956,7 @@ const COLS = [
   { k: "score", l: "Score", n: 1, g: r => r.score, h: r => `<b>${r.score}</b>` },
   { k: "earn", l: "Earnings", g: r => r.earnings_date || "9", h: r => `<span class="${r.earnings_risk ? "down" : ""}">${dateDE(r.earnings_date)}</span>` },
   { k: "amp", l: "Kriterien", g: r => -r.missing.length, h: r => ampel(r) },
-  { k: "met", l: "Erfüllt", n: 1, watch: 1, g: r => r.met ?? 0, h: r => `<b class="${r.passed ? "up" : r.fast_hit ? "" : "muted"}">${r.met ?? "–"} / ${r.total ?? 11}</b>` },
+  { k: "met", l: "Erfüllt", n: 1, watch: 1, g: r => r.met ?? 0, h: r => `<b class="${r.passed ? "up" : r.fast_hit ? "" : "muted"}">${r.met ?? "–"} / ${r.total ?? 11}</b>${filterMiss(r) ? `<small class="down" style="display:block">Filter ✗</small>` : ""}` },
   { k: "miss", l: "Fehlt", fast: 1, g: r => r.missing[0] || "", h: r => { if (r.passed) return `<span class="up">– (Treffer)</span>`;
     const miss = r.criteria.filter(x => !x.ok && SETUP_KEYS.includes(x.key)).map(x => SHORT[x.key]);
     const text = miss.length <= 2 ? miss.join(", ") : `${miss.slice(0, 2).join(", ")} +${miss.length - 2}`;
@@ -2031,6 +2033,8 @@ function getJson(name) {
 }
 const byTicker = t => data.results.find(r => r.ticker === t);
 const myTickers = () => new Set([...favs(), ...depotTickers(), ...data.results.filter(r => r.in_watchlist).map(r => r.ticker)]);
+// Alle 11 Setup-Kriterien erfüllt, aber ein Grundfilter (Börsenwert, Liquidität, Kurs, Historie) nicht → kein echter „Fast-Treffer“-Fall
+const filterMiss = r => !r.passed && r.met != null && r.met === r.total && r.missing && r.missing.length ? r.missing[0] : null;
 const statusPill = r => r.passed ? `${gradeBadge(r)}<span class="st hit">Treffer ${r.score}</span>` : r.fast_hit ? `<span class="st fast">Fast</span>` : `<span class="st">${r.met ?? "–"}/${r.total ?? 11}</span>`;
 const hHead = (t, link, lbl) => `<div class="hh"><b>${t}</b>${link ? `<button class="hlink" ${link}>${lbl || "Alle"} ›</button>` : ""}</div>`;
 const SEC_LINK = sec => `data-gosec="${sec}"`;
