@@ -99,6 +99,13 @@
   .score.fast { background: conic-gradient(var(--gold) calc(var(--p) * 1%), var(--surface-3) 0); }
   .score.fast span { font-size: 14px; color: var(--gold); }
   .score.trend { background: conic-gradient(var(--accent) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.trend span { line-height: 1; font-size: 14px; } .score.trend small { position: relative; font-size: 9px; color: var(--accent); font-weight: 700; line-height: 1; }
+  .ein-search { position: relative; margin: 0 0 12px; } .ein-search input { width: 100%; font-size: 17px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface-2, #1c1c1e); color: var(--text); }
+  .ein-list { display: grid; gap: 6px; margin-top: 8px; } .ein-opt { display: grid; grid-template-columns: 1fr auto; text-align: left; gap: 2px 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2, #1c1c1e); color: var(--text); cursor: pointer; }
+  .ein-opt span { color: var(--muted); font-size: 13px; grid-column: 1; } .ein-opt i { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-style: normal; }
+  .ein-head h2 { margin: 0; font-size: 21px; } .ein-verdict { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--cb, rgba(255,255,255,.05)); } .ein-verdict b { display: block; color: var(--c, var(--text)); font-size: 18px; } .ein-verdict span { font-size: 14px; }
+  .mt.rec { outline: 1px solid var(--accent); }
+  .ein-tiles .mt span { white-space: normal; overflow: visible; text-overflow: clip; } .ein-tiles .mt em b { font-size: inherit; display: inline; color: var(--text); }
+  .ein-tpt { width: 100%; font-size: 13px; } .ein-tpt td, .ein-tpt th { padding: 6px 4px; }
   .trendbox { background: var(--surface-2, rgba(255,255,255,.04)); border-radius: var(--radius-s); padding: 10px 12px; margin: 8px 0; } .trendbox.ok { outline: 1px solid var(--accent); }
   .status.st-trend { background: rgba(10,132,255,.15); color: var(--accent); } .st.trend { background: rgba(10,132,255,.15); color: var(--accent); margin-left: 4px; }
   .score.flt { background: conic-gradient(var(--red) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.flt span { line-height: 1; } .score.flt small { position: relative; font-size: 9px; color: var(--red); font-weight: 700; line-height: 1; }
@@ -235,7 +242,7 @@
   nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(22, 22, 24, .82);
                -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line);
                padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
-  .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 2px; }
+  .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
   .tab { border: 0; background: none; cursor: pointer; color: var(--muted); display: flex; flex-direction: column; align-items: center;
          gap: 3px; font-size: 12px; font-weight: 600; padding: 6px 0; border-radius: 16px; position: relative; }
   .tab svg { width: 24px; height: 24px; }
@@ -261,7 +268,7 @@
   .opt.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .sheet .btn { width: 100%; margin-top: 26px; display: block; }
 
-  .tabs { max-width: 680px; grid-template-columns: repeat(5, 1fr); }
+  .tabs { max-width: 760px; grid-template-columns: repeat(6, 1fr); }
   .card h2 a { color: inherit; text-decoration: none; }
   .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
   .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--up); display: inline-block; }
@@ -612,6 +619,9 @@
     <button class="tab" data-sec="scanner">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5M8 11h6M11 8v6"/></svg>
       Scanner<span class="badge" id="wlBadge" hidden></span></button>
+    <button class="tab" data-sec="entry">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+      Einstieg</button>
     <button class="tab" data-sec="calendar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
       Kalender<span class="badge" id="calBadge" hidden></span></button>
@@ -2268,6 +2278,99 @@ function settingsHtml() {
     </div>`;
 }
 
+// ---------- Einstieg: Aktie suchen → Setup erkennen → Trade-Plan, Turbo & Hebel ----------
+// Erwartung je Setup aus dem 6-Jahres-Test (Turbo-Rendite je Trade, K.-o. 1 ATR unter Stop, Verkauf ab 4 von 5)
+const EIN_EXP = { top: [0.71, 0.60], trend: [0.37, 0.60], kairo: [0.195, 0.54] };
+function einMatches(q) {
+  if (!searchIdx || q.length < 2) return [];
+  const qq = q.toLowerCase().replace(/\s+/g, " ");
+  const rank = r => r.t.toLowerCase() === qq ? 0 : r.t.toLowerCase().startsWith(qq) ? 1 : r.n.toLowerCase().startsWith(qq) ? 2 : 3;
+  return searchIdx.filter(r => r.t.toLowerCase().includes(qq) || r.n.toLowerCase().includes(qq) || normName(r.n).includes(normName(q)))
+    .sort((a, b) => rank(a) - rank(b) || (b.tr || 0) - (a.tr || 0) || a.n.localeCompare(b.n)).slice(0, 8);
+}
+function einListHtml() {
+  const q = state.einQ || "", m = einMatches(q);
+  if (q.length < 2 || (state.einT && m.length && m[0].t === state.einT && q === m[0].n)) return "";
+  if (!m.length) return `<div class="note" style="margin:6px 2px">Keine Aktie gefunden – gesucht wird in allen ${fmt(searchIdx.length, 0)} geprüften Aktien (ab 2 Mrd. USD).</div>`;
+  return `<div class="ein-list">${m.map(r => `<button class="ein-opt" data-ein="${esc(r.t)}"><b>${esc(r.n)}</b><span>${esc(r.t)} · ${fmt(r.c)} ${esc(r.cur || "")}</span>${einTag(r)}</button>`).join("")}</div>`;
+}
+const einTag = r => r.tr === 2 ? `<i class="st trend">Trend Top</i>` : r.tr === 1 ? `<i class="st trend">Trend</i>` : r.s === "hit" ? `<i class="st hit">Kairo</i>` : r.s === "fast" ? `<i class="st fast">Kairo fast</i>` : "";
+function einSetup(r) {
+  if (r.tr === 2) return { k: "top", tone: "green", title: "Trend-Rücksetzer · Top", sub: "Das stärkste Setup im 6-Jahres-Test – hier lohnt sich der Einstieg am meisten.", plan: r.tp };
+  if (r.tr === 1) return { k: "trend", tone: "green", title: "Trend-Rücksetzer", sub: "Aufwärtstrend mit kurzer Verschnaufpause an der EMA 50 – im Test deutlich besser als Kairo.", plan: r.tp };
+  if (r.s === "hit") return { k: "kairo", tone: "yellow", title: `Kairo-Treffer${r.sc ? " · Score " + r.sc : ""}`, sub: "Umkehr nach einer Korrektur. Im 6-Jahres-Test ohne Vorsprung gegenüber zufälligen Aktien – nur mit kleiner Position.", plan: r.kp };
+  if (r.s === "fast") return { k: "fast", tone: "yellow", title: "Kairo Fast-Treffer", sub: `Es fehlt noch: ${(r.km || []).map(k => SHORT[k] || k).join(", ") || "–"}. Noch kein Einstieg – beobachten.`, plan: null };
+  return { k: "none", tone: "gray", title: "Kein Einstiegs-Setup", sub: "Weder Trend-Rücksetzer noch Kairo-Treffer – jetzt nicht einsteigen.", plan: null };
+}
+function einTrendCheck(r) {
+  const g200 = r.e200 ? r.c / r.e200 - 1 : null, g50 = r.e50 ? r.c / r.e50 - 1 : null;
+  const rows = [
+    [g200 != null && g200 >= 0.15, "Aufwärtstrend: Kurs ≥ 15 % über der EMA 200", g200 == null ? "–" : `${sgnPct(g200, 1)} (EMA 200 ${fmt(r.e200)})`,
+      g200 != null && g200 < 0.15 ? "Kein ausreichend starker Aufwärtstrend." : ""],
+    [g50 != null && g50 >= -0.08 && g50 <= 0, "Rücksetzer an die EMA 50 (0 bis −8 %)", g50 == null ? "–" : `${sgnPct(g50, 1)} (EMA 50 ${fmt(r.e50)})`,
+      g50 > 0 ? `Noch ${pct(g50, 1)} über der EMA 50 – Rücksetzer bis ca. ${fmt(r.e50)} abwarten.` : g50 < -0.08 ? "Schon zu weit unter die EMA 50 gefallen – Trend wackelt." : ""],
+    [r.rsi >= 35 && r.rsi <= 50, "RSI 35–50", fmt(r.rsi, 1), r.rsi > 50 ? "RSI noch zu hoch – Verschnaufpause abwarten." : r.rsi < 35 ? "RSI zu tief – Verkaufsdruck zu stark." : ""]];
+  const top = r.tr ? [[(r.tdd ?? 1) < 0.15, "Top: höchstens 15 % unter dem letzten Hoch", r.tdd != null ? "−" + pct(r.tdd, 1) : "–"],
+    [(r.ap ?? 1) < 0.045, "Top: ruhige Aktie (Tagesspanne < 4,5 %)", r.ap != null ? pct(r.ap, 1) : "–"],
+    [g200 != null && g200 < 0.30, "Top: Trend nicht überhitzt (< +30 % über EMA 200)", g200 != null ? sgnPct(g200, 0) : "–"]] : [];
+  return `<ul class="checks">${rows.map(([ok, l, v, hint]) => `<li><i class="${ok ? "up" : "down"}">${ok ? "✓" : "✗"}</i><b>${l}:</b> ${esc(v)}${!ok && hint ? `<small style="display:block" class="muted">${esc(hint)}</small>` : ""}</li>`).join("")}
+    ${top.map(([ok, l, v]) => `<li><i class="${ok ? "up" : "muted"}">${ok ? "★" : "·"}</i><b>${l}:</b> ${esc(v)}</li>`).join("")}</ul>`;
+}
+function einPlanHtml(r) {
+  const S = einSetup(r), res = data.results.find(x => x.ticker === r.t), cur = esc(r.cur || "");
+  const p = S.plan, c = r.c, atr = r.atr || (r.ap || 0) * c;
+  let plan = "";
+  if (p && p[0] && p[0] < c) {
+    const [stop, t1, t2] = p, ko1 = stop - atr, ko15 = stop - 1.5 * atr, lev = k => c / (c - k), bud = Math.max(0, +state.budget || 0);
+    const tv = (x, ko) => Math.max(0, (x - ko) / (c - ko)) - 1;
+    const sc = [["Ziel 1 (nächstes Hoch)", t1, "up"], ["Ziel 2", t2, "up"], ["Setup-Stop (Schluss darunter)", stop, "down"], ["Knock-out", ko1, "down"]].filter(x => x[1] && x[1] > 0);
+    const [expR, expKo] = EIN_EXP[S.k === "fast" ? "kairo" : S.k] || [null, null];
+    plan = `<div class="hcard"><div class="plan-h">Trade-Plan</div>
+      <div class="plan"><div class="fig"><span>Einstieg (aktueller Kurs)</span><b>${fmt(c)} ${cur}</b></div>
+        <div class="fig"><span>Setup ungültig unter</span><b class="down">${fmt(stop)}</b><em class="sub">${sgnPct(stop / c - 1, 1)}</em></div>
+        <div class="fig"><span>Ziel 1</span><b class="up">${t1 ? fmt(t1) : "–"}</b><em class="sub">${t1 ? sgnPct(t1 / c - 1, 1) : ""}</em></div>
+        <div class="fig"><span>Ziel 2</span><b class="up">${t2 ? fmt(t2) : "–"}</b><em class="sub">${t2 ? sgnPct(t2 / c - 1, 1) : ""}</em></div></div>
+      <div class="plan-h" style="margin-top:14px">Turbo & Hebel</div>
+      <div class="mtiles ein-tiles"><div class="mt rec"><span>Empfohlen: K.-o. 1 ATR unter Stop</span><b>${fmt(ko1)} ${cur}</b><em>Hebel ≈ <b>${fmt(lev(ko1), 1)}×</b> · im Test beste Ø-Rendite</em></div>
+        <div class="mt"><span>Vorsichtiger: 1,5 ATR unter Stop</span><b>${fmt(ko15)} ${cur}</b><em>Hebel ≈ ${fmt(lev(ko15), 1)}× · seltener ausgeknockt</em></div></div>
+      <div class="form tpform" style="margin-top:10px"><label>Einsatz in €<input id="einBudget" type="number" inputmode="decimal" min="0" step="50" value="${esc(state.budget ?? 400)}"></label></div>
+      <div class="table-wrap plain"><table class="tpt ein-tpt"><thead><tr><th>Szenario · Aktie</th><th class="num">Turbo</th><th class="num">bei ${eur(bud)}</th></tr></thead><tbody>
+        ${sc.map(([l, x, cl]) => `<tr><td>${l}<small>${fmt(x)} · <span class="${cl}">${sgnPct(x / c - 1, 1)}</span></small></td><td class="num ${cl}">${sgnPct(tv(x, ko1), 0)}</td><td class="num ${cl}"><b>${sgnEur(bud * tv(x, ko1))}</b></td></tr>`).join("")}</tbody></table></div>
+      ${expR != null ? `<div class="tip tone-${S.k === "top" || S.k === "trend" ? "green" : "yellow"}" style="margin-top:10px"><b class="t">Erwartung laut 6-Jahres-Test</b>Ø ${sgnPct(expR, 0)} Turbo-Rendite je Trade – aber etwa ${pct(expKo, 0)} der Turbos wurden unterwegs ausgeknockt. Der Gewinn kommt von wenigen großen Gewinnern: <b>kleine Positionen, viele Trades</b> (Faustregel: je Trade höchstens 5 % deines Trading-Kapitals).</div>` : ""}
+      <div class="note">Turbo-Werte als Näherung (ohne Bezugsverhältnis, Spread, Finanzierung). Bei Scalable einen Long-Turbo mit K.-o. nahe ${fmt(ko1)} ${cur} wählen – der Hebel ergibt sich daraus automatisch: volatile Aktien bekommen weniger, ruhige mehr.</div></div>
+      <div class="hcard"><div class="plan-h">Ausstieg</div><div class="note" style="margin:0">Nach dem Kauf im Depot eintragen – der <b>Gewinnmitnahme-Check</b> sagt dir dann täglich, wann es Zeit ist: <b>mitnehmen ab 4 von 5 Kriterien</b> (im Test die beste Regel). Ziel 1 und 2 sind Orientierung, kein Verkaufszwang. Schließt die Aktie unter ${fmt(stop)}, ist das Setup vorbei.</div></div>`;
+  }
+  const days = r.ed ? daysUntil(r.ed) : null;
+  const warn = [days != null && days >= 0 && days <= 21 ? `⚠ Quartalszahlen am ${dateDE(r.ed)} (in ${days} Tagen) – Kurssprünge können den K.-o. überspringen.` : "",
+    res && res.senti && res.senti.tgt ? `Analysten-Ziel Ø ${fmt(res.senti.tgt.m)} ${cur} (${sgnPct(res.senti.tgt.m / c - 1, 0)}).` : ""].filter(Boolean);
+  return `<div class="hcard ein-head tone-${S.tone}">
+      <div class="ein-top"><div><h2>${favBtn(r.t)} ${esc(r.n)}</h2><div class="meta">${esc(r.t)} · ${esc(r.x || "")} · ${fmt(c)} ${cur} · Vola ${pct(r.vola, 0)}</div></div></div>
+      <div class="ein-verdict"><b>${esc(S.title)}</b><span>${esc(S.sub)}</span></div>
+      ${warn.length ? `<div class="note" style="margin:8px 0 0">${warn.map(esc).join("<br>")}</div>` : ""}</div>
+    ${plan}
+    <div class="hcard"><div class="plan-h">Trend-Rücksetzer · ${(r.tm || []).filter(Boolean).length}/3 erfüllt${r.tr === 2 ? " · Stufe Top" : ""}</div>${einTrendCheck(r)}</div>
+    <div class="hcard"><div class="plan-h">Kairo-Setup · ${r.m ?? "–"}/11 erfüllt</div>
+      <div class="note" style="margin:0">${r.s === "hit" ? "Alle Kriterien erfüllt." : (r.km || []).length ? "Fehlt: " + (r.km || []).map(k => esc(SHORT[k] || k)).join(", ") : "–"}${r.title ? ` · ${esc(r.title)}` : ""}</div></div>
+    <div class="row-actions">${res ? `<button class="btn" data-open="${esc(r.t)}">Chart & Details</button>` : ""}<a class="btn ghost" href="${tvUrl(r.t)}" target="_blank" rel="noopener">TradingView</a></div>`;
+}
+function einHtml() {
+  if (!searchIdx) { loadSearch(); return `<div class="section-title"><span>Einstieg</span><span>lädt …</span></div>`; }
+  const r = state.einT && searchIdx.find(x => x.t === state.einT);
+  const best = searchIdx.filter(x => x.tr === 2).sort((a, b) => (a.tdd ?? 1) - (b.tdd ?? 1)).slice(0, 6);
+  return `<div class="section-title"><span>Einstieg planen</span><span>Setup · Trade-Plan · Hebel</span></div>
+    <div class="ein-search"><input id="einQ" type="search" placeholder="Aktie eingeben – z. B. Uber, TUI, Nvidia" autocomplete="off" value="${esc(state.einQ || "")}"><div id="einList">${einListHtml()}</div></div>
+    ${r ? einPlanHtml(r) : `<div class="note" style="margin:10px 2px">Gib den Namen oder das Kürzel einer Aktie ein. Kairo prüft sofort, ob ein <b>Trend-Rücksetzer</b> oder ein <b>Kairo-Setup</b> vorliegt, und stellt dir Trade-Plan, Turbo-K.-o. und Hebel zusammen.</div>
+      ${best.length ? `<div class="plan-h" style="margin:14px 2px 6px">Heute die besten Einstiege · Trend Top</div><div class="ein-list">${best.map(x => `<button class="ein-opt" data-ein="${esc(x.t)}"><b>${esc(x.n)}</b><span>${esc(x.t)} · ${fmt(x.c)} ${esc(x.cur || "")}</span>${einTag(x)}</button>`).join("")}</div>` : ""}`}`;
+}
+document.addEventListener("input", e => {
+  if (e.target.id === "einQ") { state.einQ = e.target.value; if (!state.einQ) state.einT = null; $("einList").innerHTML = einListHtml(); }
+  if (e.target.id === "einBudget") { state.budget = Math.max(0, parseFloat(e.target.value) || 0); save(); }
+});
+document.addEventListener("change", e => { if (e.target.id === "einBudget") render(); });
+document.addEventListener("keydown", e => {
+  if (e.target.id === "einQ" && e.key === "Enter") { const m = einMatches(e.target.value); if (m[0]) { state.einT = m[0].t; state.einQ = m[0].n; save(); render(); } }
+});
+
 // ---------- Rendern ----------
 function render() {
   if (!data) return;
@@ -2278,6 +2381,7 @@ function render() {
   if (state.sec === "today") { $("main").innerHTML = todayHtml(); return; }
   if (state.sec === "bilanz") { $("main").innerHTML = bilanzHtml(); return; }
   if (state.sec === "calendar") { $("main").innerHTML = calendarHtml(); return; }
+  if (state.sec === "entry") { $("main").innerHTML = einHtml(); return; }
   if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
@@ -2352,8 +2456,9 @@ async function openDetail(t) {
         <table class="check"><tbody>${r.criteria.map(c => `<tr><td class="${c.ok ? "ok" : "no"}">${c.ok ? "✓" : "✗"}</td><td><b>${esc(c.label)}</b><br>${esc(c.value)}<div class="th">Schwelle: ${esc(c.threshold)}</div></td></tr>`).join("")}</tbody></table>
         ${r.bonuses && r.bonuses.length ? `<div class="pane-label" style="margin-top:12px">Score-Bausteine</div><table class="check"><tbody>${r.bonuses.map(b => `<tr><td class="${b.points >= 0 ? "ok" : "no"}">${b.points > 0 ? "+" : ""}${b.points}</td><td>${esc(b.label)}</td></tr>`).join("")}</tbody></table>` : ""}
       </div>
-      <div class="pane"><div class="pane-label">Turbo-Plan · Trade-Plan &amp; Rechner</div>
-        ${turboPlanHtml(r)}
+      <div class="pane"><div class="pane-label">Einstieg · Trade-Plan, Turbo &amp; Hebel</div>
+        <div class="note" style="margin-top:0">Setup-Erkennung (Trend-Rücksetzer und Kairo), Trade-Plan, empfohlener K.-o. und Hebel gibt es jetzt gebündelt im Reiter <b>Einstieg</b>.</div>
+        <button class="btn" data-ein="${esc(r.ticker)}">Einstieg planen →</button>
         <div class="pane-label" style="margin-top:14px">Zone</div>
         <div class="note" style="margin-top:0">${fib ? `Fibonacci: H ${fmt(r.zone.H)} (${dateDE(r.zone.H_date)}) → L ${fmt(fib.L)} (${dateDE(fib.L_date)}), Impuls ${pct(fib.impulse)}, Retracement ${fmt(fib.retracement, 3)}${fib.ok ? " ✓" : ""}<br>` : ""}
           ${sup ? `Support: Mitte ${fmt(sup.center)}, ${sup.touches} Touches (${sup.touch_dates.map(dateDE).join(", ")})` : "Kein horizontaler Mehrfachboden."}</div>
@@ -2501,9 +2606,11 @@ $("search").addEventListener("input", () => { if ($("search").value.trim().lengt
 function goSec(sec) {
   state.sec = sec; syncOpts(); save(); render(); window.scrollTo({ top: 0 });
   if (sec === "calendar") loadCalendar();
-  if (sec === "depot" || sec === "today") loadSearch();
+  if (sec === "depot" || sec === "today" || sec === "entry") loadSearch();
 }
 document.addEventListener("click", e => {
+  const ei = e.target.closest("[data-ein]");
+  if (ei) { const r = searchIdx && searchIdx.find(x => x.t === ei.dataset.ein); state.einT = ei.dataset.ein; state.einQ = r ? r.n : ei.dataset.ein; closeCard(); if (state.sec !== "entry") goSec("entry"); else { save(); render(); } window.scrollTo({ top: 0 }); return; }
   const gs = e.target.closest("[data-gosec]");
   if (gs) { e.preventDefault(); closeCard(); goSec(gs.dataset.gosec); return; }
   const gk = e.target.closest("[data-gokinds]");
