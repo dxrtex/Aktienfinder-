@@ -2,6 +2,11 @@ name: Kairo-Bilanz (Backtest)
 
 on:
   workflow_dispatch:
+    inputs:
+      period:
+        description: "Kurshistorie (3y Standard, 6y = Prüfung inkl. 2020 und Bärenmarkt 2022)"
+        required: false
+        default: "3y"
 
 env:
   PYTHONUNBUFFERED: "1"
@@ -9,11 +14,11 @@ env:
 jobs:
   shard:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,7 +27,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m backend.universe
-      - run: python -m backend.bilanz --shard ${{ matrix.shard }} --shards 12 --n 1600
+      - run: python -m backend.bilanz --shard ${{ matrix.shard }} --shards 16 --n 1600 --period "${{ inputs.period || '3y' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: bilanz-${{ matrix.shard }}

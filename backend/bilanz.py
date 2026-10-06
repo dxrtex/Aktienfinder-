@@ -219,6 +219,7 @@ def main(argv=None) -> int:
     ap.add_argument("--shard", type=int, default=0)
     ap.add_argument("--shards", type=int, default=1)
     ap.add_argument("--n", type=int, default=1600)
+    ap.add_argument("--period", default="3y", help="Kurshistorie, z. B. 3y oder 6y (Prüfung über mehrere Marktphasen)")
     ap.add_argument("--combine", nargs="*")
     a = ap.parse_args(argv)
     if a.combine is not None:
@@ -240,7 +241,7 @@ def main(argv=None) -> int:
     tickers = list(load_universe()["ticker"])
     random.Random(11).shuffle(tickers)
     mine = tickers[: a.n][a.shard::a.shards]
-    data = YFinanceProvider().history(mine, "3y")       # 3 Jahre: genug vollständige 3-Monats-Fenster
+    data = YFinanceProvider().history(mine, a.period)   # Standard 3 Jahre; 6 Jahre zur Prüfung inkl. Bärenmarkt 2022
     print(f"Shard {a.shard}: {len(data)} von {len(mine)} Aktien geladen")
     ev, t0 = [], time.time()
     for k, (t, df) in enumerate(data.items()):
