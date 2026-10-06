@@ -94,6 +94,10 @@ def outcome(o, h, l, c, i: int, entry: float, stop: float, t1: float | None, t2:
     return out
 
 
+def _r(x, d):
+    return None if x is None or x != x else round(float(x), d)
+
+
 def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: int = 15) -> list[dict]:
     """Alle Signale (und Vergleichstage) einer Aktie über die Historie."""
     from .analysis import swing_levels
@@ -148,7 +152,14 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                     "t1_pct": round(p["target1"] / p["entry"] - 1, 4) if p.get("target1") else None,
                     "tp1_pct": round(tp1 / p["entry"] - 1, 4) if tp1 else None,
                     "earn": bool(r.flags.get("earnings_risk")), "zone": "Fib" if (r.zone.get("fib") or {}).get("ok") else "Support",
-                    "div": (r.flags.get("divergence") or {}).get("kind"), **oc})
+                    "div": (r.flags.get("divergence") or {}).get("kind"), **oc,
+                    # für die Kriterien-Analyse: was fehlte (Fast-Treffer) und Merkmale am Signaltag
+                    "miss": [m.key for m in r.missing],
+                    "f": {"rsi": _r(r.flags.get("rsi"), 1), "atrp": _r((r.flags.get("atr") or 0) / r.close, 4),
+                          "vol": _r(r.flags.get("volatility"), 3), "e200": _r(r.close / r.flags["ema200"] - 1, 3) if r.flags.get("ema200") else None,
+                          "e50": _r(r.close / r.flags["ema50"] - 1, 3) if r.flags.get("ema50") else None,
+                          "dd": _r((r.zone["H"] - r.close) / r.zone["H"], 3) if r.zone.get("H") else None,
+                          "met": int(sum(c.ok for c in r.criteria if c.key not in ("cap", "liquidity", "price", "history")))}})
         if kind:                                   # Kursverlauf danach (für den Ausstiegs-Backtest, relativ zum Schluss)
             cl, j1 = c[i], min(n, i + 1 + HOLD)
             rn = lambda a: [round(float(x / cl), 4) for x in a]
