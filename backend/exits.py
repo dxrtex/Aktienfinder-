@@ -114,9 +114,9 @@ def simulate(px: dict, rule: dict) -> dict | None:
         # 1) Stop (mit Kurslücke)
         # gko: Am Tag des Stops fiel das Tief bis unter den K.-o. – ohne Stop-Order wäre der Turbo ausgeknockt
         if oj <= stop:
-            return {"r": real + pos * R(oj), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko}
+            return {"r": real + pos * R(oj), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko, "rp": risk / entry}
         if l[j] <= stop:
-            return {"r": real + pos * R(stop), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko}
+            return {"r": real + pos * R(stop), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko, "rp": risk / entry}
         # 2) Teilverkauf und Ziel
         if ptarget and pos == 1.0 and h[j] >= ptarget:
             px_ = max(oj, ptarget)
@@ -139,9 +139,9 @@ def simulate(px: dict, rule: dict) -> dict | None:
                     if hd.get("trail"):
                         trail_override = hd["trail"]
                 else:
-                    return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False}
+                    return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False, "rp": risk / entry}
             else:
-                return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False}
+                return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False, "rp": risk / entry}
         # 3) Nachziehen (gilt ab dem nächsten Tag)
         maxh = max(maxh, h[j])
         mfe = R(maxh)
@@ -156,7 +156,7 @@ def simulate(px: dict, rule: dict) -> dict | None:
             elif tr[0] == "low":
                 stop = max(stop, min(lows[-tr[1]:]))
             elif tr[0] == "ema" and c[j] < ema:
-                return {"r": real + pos * R(c[j]), "d": j + 1, "x": "trail", "gko": False}
+                return {"r": real + pos * R(c[j]), "d": j + 1, "x": "trail", "gko": False, "rp": risk / entry}
         # Indikator-Signale (Schlusskurs)
         sg = rule.get("sig")
         if sg:
@@ -167,12 +167,16 @@ def simulate(px: dict, rule: dict) -> dict | None:
                    or ("macd" in sg and macd_pos and j < len(mh) and mh[j] < 0)
                    or ("mbi" in sg and j < len(px.get("rx") or []) and px["rx"][j]))
             if hit:
-                return {"r": real + pos * R(c[j]), "d": j + 1, "x": "signal", "gko": False}
+                return {"r": real + pos * R(c[j]), "d": j + 1, "x": "signal", "gko": False, "rp": risk / entry}
         # 4) Zeit-Stop
         tm = rule.get("time")
         if tm and j + 1 == tm[0] and R(c[j]) < tm[1]:
-            return {"r": real + pos * R(c[j]), "d": j + 1, "x": "zeit", "gko": False}
-    return {"r": real + pos * R(c[-1]), "d": len(c), "x": "3 Mon.", "gko": False}
+            return {"r": real + pos * R(c[j]), "d": j + 1, "x": "zeit", "gko": False, "rp": risk / entry}
+    return {"r": real + pos * R(c[-1]), "d": len(c), "x": "3 Mon.", "gko": False, "rp": risk / entry}
+
+
+# Geschätzte Turbo-Kosten, umgerechnet auf den Basiswert: Spread ~0,1 % (Kauf + Verkauf) und Finanzierung ~4 % p. a.
+SPREAD, FIN_DAY = 0.001, 0.04 / 252
 
 
 def _summ(res: list[dict]) -> dict:
@@ -180,13 +184,15 @@ def _summ(res: list[dict]) -> dict:
         return {"n": 0}
     r = np.array([x["r"] for x in res])
     d = np.array([x["d"] for x in res])
+    net = r - np.array([(SPREAD + FIN_DAY * x["d"]) / max(x["rp"], 1e-4) for x in res])
     wins, losses = r[r > 0], r[r <= 0]
     return {"n": len(res), "avg_r": round(float(r.mean()), 3), "med_r": round(float(np.median(r)), 3),
             "win": round(float((r > 0).mean()), 3), "avg_win": round(float(wins.mean()), 3) if len(wins) else None,
             "avg_loss": round(float(losses.mean()), 3) if len(losses) else None,
             "days": round(float(d.mean()), 1), "r_month": round(float(r.mean() / d.mean() * 21), 3),
             "exits": {k: round(sum(x["x"] == k for x in res) / len(res), 3) for k in ("ziel", "stop", "be/trail", "trail", "signal", "zeit", "3 Mon.")},
-            "worst5": round(float(np.percentile(r, 5)), 2)}
+            "worst5": round(float(np.percentile(r, 5)), 2),
+            "avg_r_net": round(float(net.mean()), 3), "r_month_net": round(float(net.mean() / d.mean() * 21), 3)}
 
 
 def run(events: list[dict]) -> dict:
@@ -199,6 +205,7 @@ def run(events: list[dict]) -> dict:
         sims = [(e, x) for e, x in sims if x]
         if name == "TP 1 – nächstes relevantes Hoch":
             gaps = [x["gko"] for e, x in sims if x["x"] == "stop"]
+        row["years"] = {y: _summ([x for e, x in sims if e["d"][:4] == y]) for y in sorted({e["d"][:4] for e, _ in sims})}
         for part, sel in (("all", lambda e: True), ("train", lambda e: e["d"] < SPLIT), ("test", lambda e: e["d"] >= SPLIT)):
             for kind in ("hit", "all"):
                 row[f"{part}_{kind}"] = _summ([x for e, x in sims if sel(e) and (kind == "all" or e["k"] == "hit")])
@@ -225,8 +232,9 @@ def main(argv=None) -> int:
     res = run(ev)
     PATH.write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     compact = {"robust": res["robust"], "robust_month": res["robust_month"], "ko_on_stop": res["ko_on_stop"],
-               "rules": [{"name": r["name"], **{k: {kk: r[k].get(kk) for kk in ("n", "avg_r", "win", "days", "r_month", "worst5")}
-                                                 for k in ("all_all", "all_hit", "train_all", "test_all")}} for r in res["rules"]]}
+               "rules": [{"name": r["name"], **{k: {kk: r[k].get(kk) for kk in ("n", "avg_r", "avg_r_net", "win", "days", "r_month", "r_month_net", "worst5")}
+                                                 for k in ("all_all", "all_hit", "train_all", "test_all")},
+                          "years": {y: [v.get("n"), v.get("avg_r"), v.get("avg_r_net")] for y, v in r["years"].items()}} for r in res["rules"]]}
     print("EXITS " + json.dumps(compact, ensure_ascii=False, separators=(",", ":")))
     return 0
 
