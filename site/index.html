@@ -2856,7 +2856,7 @@ function sheetExtras() {
 }
 function greetText() {
   const h = new Date().getHours(), nm = String(state.name || "").trim();
-  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + esc(nm) : "") + (isApple() ? "" : " 👋");
+  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <span class="nm">${esc(nm)}</span>` : "") + (isApple() ? "" : " 👋");
 }
 const SEC_T = { today: "Heute", scanner: "Scanner", entry: "Einstieg", calendar: "Kalender", depot: "Depot", journal: "Journal", settings: "Einstellungen", bilanz: "Bilanz" };
 function appleHead() {
