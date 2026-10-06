@@ -91,14 +91,19 @@ def _level(spec, px: dict, entry: float, risk: float):
     return v if v and v > entry else None
 
 
-def simulate(px: dict, rule: dict) -> dict | None:
+def simulate(px: dict, rule: dict, stop_mode: str = "intraday", ko_buf: float | None = None) -> dict | None:
+    """stop_mode "intraday": Stop-Order (Verkauf, sobald das Tief den Stop berührt);
+    "close": kein Stop-Order – verkauft wird erst, wenn ein Tag UNTER dem Stop schließt (so handelst du ohne Stop-Loss).
+    ko_buf: Turbo-K.-o. so viele ATR unter dem Stop; berührt das Tief den K.-o., ist der Turbo wertlos (Exit zum K.-o.)."""
     o, h, l, c = px["o"], px["h"], px["l"], px["c"]
     if len(c) < HOLD or not o:
         return None                                # Verlauf noch nicht vollständig
     entry, stop0 = o[0], px["s"]
     if entry <= stop0:
         return None                                # Eröffnung schon unter dem Stop – kein Trade
-    risk = entry - stop0
+    # R-Einheit = geplantes Risiko (Schluss am Signaltag bis Stop). Mit dem tatsächlichen Abstand Eröffnung→Stop
+    # würde eine Eröffnung knapp über dem Stop das Risiko winzig und das Ergebnis in R absurd groß machen.
+    risk = 1.0 - stop0
     R = lambda x: (x - entry) / risk
     target = _level(rule.get("target"), px, entry, risk)
     part = rule.get("partial")
@@ -112,10 +117,16 @@ def simulate(px: dict, rule: dict) -> dict | None:
     for j in range(len(c)):
         oj = o[j] if j else entry
         # 1) Stop (mit Kurslücke)
+        if ko_buf is not None:
+            kop = stop0 - ko_buf * px["atr"]
+            if min(oj, l[j]) <= kop:
+                return {"r": real + pos * R(min(oj, kop)), "d": j + 1, "x": "ko", "gko": True, "rp": risk / entry}
         # gko: Am Tag des Stops fiel das Tief bis unter den K.-o. – ohne Stop-Order wäre der Turbo ausgeknockt
-        if oj <= stop:
+        if stop_mode == "close":
+            pass
+        elif oj <= stop:
             return {"r": real + pos * R(oj), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko, "rp": risk / entry}
-        if l[j] <= stop:
+        elif l[j] <= stop:
             return {"r": real + pos * R(stop), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": stop == stop0 and l[j] <= ko, "rp": risk / entry}
         # 2) Teilverkauf und Ziel
         if ptarget and pos == 1.0 and h[j] >= ptarget:
@@ -142,6 +153,8 @@ def simulate(px: dict, rule: dict) -> dict | None:
                     return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False, "rp": risk / entry}
             else:
                 return {"r": real + pos * R(max(oj, target)), "d": j + 1, "x": "ziel", "gko": False, "rp": risk / entry}
+        if stop_mode == "close" and c[j] <= stop:      # ohne Stop-Order: Verkauf zum Schluss unter dem Stop
+            return {"r": real + pos * R(c[j]), "d": j + 1, "x": "stop" if stop < entry else "be/trail", "gko": False, "rp": risk / entry}
         # 3) Nachziehen (gilt ab dem nächsten Tag)
         maxh = max(maxh, h[j])
         mfe = R(maxh)
