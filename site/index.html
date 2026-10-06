@@ -587,6 +587,217 @@
   .links .btn { flex: 1 1 220px; }
   /* Klassisches Design: Fokus-Karte gibt es nur im neuen Design */
   .kpis, .verdict, .mlist, .clab { display: none; } em.s { font-style: normal; } .cgrid, [class^="cl-"] { display: none; }
+  .adate, .abar, .alist, .atools, .apx, .aseg, .sb-brand, .sb-only { display: none; }
+</style>
+<style id="themeApple">
+  /* ================= Kairo – Apple-Look =================
+     Nach Apples Gestaltungsregeln: Systemfarben und SF Pro, hell/dunkel automatisch, große Titel,
+     Seitenleiste auf dem iPad, gruppierte Listen, Aktien-Liste wie in Apple Aktien, Detail als Sheet bzw. geteilte Ansicht. */
+  :root {
+    color-scheme: light dark;
+    --bg: #000; --surface: #1c1c1e; --surface-2: #2c2c2e; --surface-3: #3a3a3c; --line: rgba(84, 84, 88, .55);
+    --glass: #1c1c1e; --glass-line: rgba(84, 84, 88, .55);
+    --text: #fff; --muted: rgba(235, 235, 245, .62); --faint: rgba(235, 235, 245, .32);
+    --accent: #0a84ff; --accent-ink: #fff; --accent-bg: rgba(10, 132, 255, .18);
+    --up: #30d158; --up-bg: rgba(48, 209, 88, .16); --red: #ff453a; --red-bg: rgba(255, 69, 58, .16);
+    --gold: #ffd60a; --gold-bg: rgba(255, 214, 10, .14); --zone: rgba(10, 132, 255, .14);
+    --candle-up: #30d158; --candle-down: #ff453a;
+    --radius: 12px; --radius-s: 10px; --sb: 260px;
+    --chrome: rgba(22, 22, 24, .78); --sel: #0a84ff; --seg: rgba(118, 118, 128, .24); --seg-on: #636366; --fill: rgba(118, 118, 128, .2);
+    --ease: cubic-bezier(.32, .72, 0, 1);
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f2f2f7; --surface: #fff; --surface-2: #f2f2f7; --surface-3: #e5e5ea; --line: rgba(60, 60, 67, .2);
+      --glass: #fff; --glass-line: rgba(60, 60, 67, .16);
+      --text: #000; --muted: rgba(60, 60, 67, .62); --faint: rgba(60, 60, 67, .32);
+      --accent: #007aff; --accent-bg: rgba(0, 122, 255, .12);
+      --up: #248a3d; --up-bg: rgba(52, 199, 89, .15); --red: #d70015; --red-bg: rgba(255, 59, 48, .12);
+      --gold: #a05a00; --gold-bg: rgba(255, 159, 10, .16); --zone: rgba(0, 122, 255, .1);
+      --candle-up: #34c759; --candle-down: #ff3b30;
+      --chrome: rgba(249, 249, 249, .8); --sel: #007aff; --seg: rgba(118, 118, 128, .12); --seg-on: #fff; --fill: rgba(118, 118, 128, .12);
+    }
+  }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif; font-feature-settings: "tnum"; letter-spacing: -.01em; }
+  body::before { display: none; }
+  .card, .table-wrap, .pane, .search input { -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .card, .pane, .hcard, .table-wrap { background: var(--surface) !important; border: 0 !important; box-shadow: none !important; }
+  .card, .hcard { border-radius: var(--radius); }
+  a { color: var(--accent); }
+
+  /* ---------- Navigation: Seitenleiste (iPad) / Tab-Leiste (iPhone) ---------- */
+  nav.tabbar { background: var(--chrome) !important; -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-top: .5px solid var(--line); padding: 6px 4px calc(4px + env(safe-area-inset-bottom)); }
+  .tab { font-size: 10.5px; font-weight: 500; gap: 2px; color: rgba(142, 142, 147, 1); border-radius: 10px; }
+  .tab svg { width: 25px; height: 25px; }
+  .tab.on { color: var(--accent); background: none; }
+  .tab .badge { background: var(--red); color: #fff; }
+  .sb-brand, .sb-only { display: none; }
+  @media (min-width: 1024px) {
+    nav.tabbar { top: 0; bottom: 0; right: auto; width: var(--sb); padding: calc(env(safe-area-inset-top) + 18px) 12px 18px; border-top: 0; border-right: .5px solid var(--line);
+                 background: var(--surface) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+    .tabs { display: flex !important; flex-direction: column; gap: 2px; max-width: none !important; }
+    .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+    .sb-brand svg { width: 30px; height: 30px; border-radius: 7px; }
+    .sb-only { display: flex; } .sb-sep { height: 18px; }
+    .tab { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 9px 10px; font-size: 16px; font-weight: 500; color: var(--text); }
+    .tab svg { width: 22px; height: 22px; color: var(--accent); }
+    .tab.on { background: var(--sel); color: #fff; } .tab.on svg { color: #fff; }
+    .tab .badge { position: static; margin-left: auto; background: none; color: var(--muted); font-size: 14px; font-weight: 500; padding: 0; }
+    .tab.on .badge { color: rgba(255, 255, 255, .85); }
+    .wrap { margin-left: var(--sb); max-width: none; padding-left: 36px; padding-right: 36px; }
+    body { padding-bottom: 40px; }
+    .brand { display: none !important; }
+    footer { margin-left: 0; }
+  }
+
+  /* ---------- Kopf: großer Titel, beim Scrollen kompakte Leiste ---------- */
+  .brand b { display: none; } .brand > svg { display: none; }
+  .brand { margin-bottom: 4px; min-height: 40px; }
+  .brand .gear { border: 0 !important; background: var(--fill) !important; color: var(--accent) !important; border-radius: 50%; width: 36px; height: 36px; }
+  .adate { display: block; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; color: var(--muted); margin: 0 0 2px; }
+  body:not([data-sec="today"]) .adate { display: none; }
+  .hello h1 { font-size: 34px; font-weight: 700; letter-spacing: -.03em; line-height: 1.12; }
+  .hello p { font-size: 15px; color: var(--muted); margin-top: 4px; } .hello p b { color: var(--text); font-weight: 600; }
+  body:not([data-sec="today"]):not([data-sec="scanner"]) .hello p { display: none; }
+  .abar { display: block; position: fixed; top: 0; left: 0; right: 0; z-index: 25; height: calc(env(safe-area-inset-top) + 44px); padding-top: env(safe-area-inset-top);
+          display: flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; background: var(--chrome);
+          -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--line);
+          opacity: 0; transform: translateY(-6px); pointer-events: none; transition: opacity .2s, transform .2s; }
+  body.scrolled .abar { opacity: 1; transform: none; }
+  @media (min-width: 1024px) { .abar { left: var(--sb); } }
+
+  /* ---------- Gruppierte Listen (Einstellungen-Stil) ---------- */
+  /* Abschnitts-Köpfe wie in gruppierten iOS-Listen: klein, grau – der große Titel steht oben */
+  .section-title { text-transform: uppercase; letter-spacing: .01em; font-size: 13px; font-weight: 400; color: var(--muted); margin: 26px 16px 7px; align-items: baseline; gap: 12px; }
+  .section-title span:last-child { text-transform: none; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; }
+  body[data-sec="scanner"] #main > .section-title span:first-child { display: none; }
+  .form select, .form input, .ein-search input, .form textarea { background: var(--fill) !important; border: 0 !important; border-radius: 10px !important; color: var(--text) !important; font: inherit; font-size: 17px; padding: 11px 12px !important; }
+  .form select { appearance: none; -webkit-appearance: none; width: 100%; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%) !important;
+                 background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50% !important; background-size: 5px 5px !important; background-repeat: no-repeat !important; }
+  .agroup-h { font-size: 22px; font-weight: 700; margin: 22px 4px 10px; }
+  .agroup { background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  .arow { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; border: 0; background: none; color: var(--text); text-align: left; cursor: pointer; position: relative; }
+  .arow + .arow::before { content: ""; position: absolute; top: 0; left: 58px; right: 0; border-top: .5px solid var(--line); }
+  .arow:active { background: var(--fill); }
+  .aic { flex: 0 0 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; font-style: normal; font-weight: 700; color: #fff; font-size: 16px; }
+  .aic.g { background: #34c759; } .aic.b { background: #007aff; } .aic.y { background: #ff9f0a; } .aic.r { background: #ff3b30; } .aic.n { background: #8e8e93; }
+  .arow > span { flex: 1; min-width: 0; } .arow b { display: block; font-size: 17px; font-weight: 400; } .arow em { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
+  .arow strong { font-size: 17px; font-weight: 400; color: var(--muted); } .arow s { text-decoration: none; color: var(--faint); font-size: 20px; margin-left: 2px; }
+  .hgrid { margin-top: 8px; }
+  .hcard { padding: 14px 16px; }
+  .hcard h3, .hcard .hh b { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+  button.hcard:active { transform: none; background: var(--fill) !important; }
+
+  /* ---------- Bedienelemente ---------- */
+  .btn { border-radius: 12px; font-weight: 600; font-size: 17px; background: var(--accent); }
+  .btn.ghost { background: var(--fill); color: var(--accent); border: 0; }
+  .search input { border: 0; background: var(--fill); border-radius: 11px; padding: 10px 14px 10px 40px; font-size: 17px; }
+  .search input:focus { box-shadow: none; }
+  .search svg { left: 12px; width: 18px; height: 18px; }
+  .search { margin: 14px 0 12px; }
+  .kchip, .opt { border: 0 !important; background: var(--fill) !important; color: var(--text) !important; font-weight: 500; border-radius: 999px; }
+  .kchip.on, .opt.on { background: var(--accent) !important; color: #fff !important; }
+  .kchip small { color: inherit; opacity: .65; }
+  .kbar { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin-left: -20px; margin-right: -20px; padding: 2px 20px 4px; }
+  .kbar::-webkit-scrollbar { display: none; } .kbar .kchip { flex: 0 0 auto; }
+  @media (min-width: 1024px) { .kbar { margin-left: -36px; margin-right: -36px; padding-left: 36px; padding-right: 36px; } }
+  .aseg, .subnav { display: inline-flex; gap: 0; padding: 2px; border-radius: 9px; background: var(--seg); border: 0 !important; }
+  .aseg button, .subnav button { border: 0; background: none; color: var(--text); font: inherit; font-size: 13px; font-weight: 500; padding: 6px 14px; border-radius: 7px; cursor: pointer; min-width: 64px; }
+  .aseg button.on, .subnav button.on { background: var(--seg-on); color: var(--text); font-weight: 600; box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 0 0 .5px rgba(0, 0, 0, .04); }
+  .subnav { display: grid; }
+  .atools { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0 10px; }
+  .asort { display: flex; align-items: center; gap: 6px; font-size: 15px; color: var(--muted); }
+  .asort select { appearance: none; -webkit-appearance: none; border: 0; background: none; color: var(--accent); font: inherit; font-size: 15px; cursor: pointer; padding: 4px 0; }
+  .sheet { background: var(--surface); border-top: 0; border-radius: 14px 14px 0 0; }
+  .backdrop { background: rgba(0, 0, 0, .35); }
+
+  /* ---------- Aktien-Liste wie Apple Aktien ---------- */
+  .alist { display: block; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  .aitem { display: flex; align-items: center; gap: 12px; padding: 11px 16px; color: var(--text); text-decoration: none; position: relative; }
+  .aitem + .aitem::before { content: ""; position: absolute; top: 0; left: 16px; right: 0; border-top: .5px solid var(--line); }
+  .aitem:active, .aitem.sel { background: var(--fill); }
+  .aitem .an { flex: 1; min-width: 0; }
+  .aitem .an b { display: block; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .aitem .an em { display: flex; align-items: center; gap: 6px; font-style: normal; font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sd { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--faint); } .sd.g { background: var(--up); } .sd.b { background: var(--accent); } .sd.y { background: #ff9f0a; }
+  .spark { flex: 0 0 72px; width: 72px; height: 30px; }
+  .aitem .ap { flex: 0 0 auto; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 78px; }
+  .aitem .ap b { font-size: 17px; font-weight: 500; }
+  .chgp { display: inline-block; min-width: 72px; text-align: right; font-style: normal; font-size: 13px; font-weight: 600; padding: 3px 7px; border-radius: 6px; background: var(--fill); color: var(--muted); }
+  .chgp.up { background: #34c759; color: #fff; } .chgp.dn { background: #ff3b30; color: #fff; }
+  @media (prefers-color-scheme: dark) { .chgp.up { background: #30d158; color: #fff; } .chgp.dn { background: #ff453a; } }
+  @media (max-width: 420px) { .spark { flex-basis: 52px; width: 52px; } .chgp { min-width: 64px; } }
+  table thead th { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; background: var(--surface); }
+  th, td { border-bottom: .5px solid var(--line); }
+
+  /* ---------- Status ---------- */
+  .status { font-weight: 600; } .status::before { width: 7px; height: 7px; }
+  .status.st-bereit, .st.hit { background: var(--up-bg) !important; color: var(--up) !important; }
+  .status.st-abwarten, .st.fast { background: var(--gold-bg) !important; color: var(--gold) !important; }
+  .status.st-trend, .st.trend { background: var(--accent-bg) !important; color: var(--accent) !important; }
+  .st-kein_setup { background: var(--fill); }
+  .score { background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--surface-3) 0) !important; }
+  .score::before { background: var(--surface) !important; }
+  .fig { background: var(--surface-2); }
+  .chip, .chip.ok { background: var(--surface-2); color: var(--text); }
+  .flag, .wl { background: var(--fill) !important; color: var(--text) !important; }
+  .trendbox { background: var(--surface-2); } .trendbox.ok { outline: 0; }
+
+  /* ---------- Aktien-Detail ---------- */
+  .cm-box .card { gap: 14px; }
+  .apx { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .apx b { font-size: 30px; font-weight: 700; letter-spacing: -.03em; } .apx b small { font-size: 15px; font-weight: 500; color: var(--muted); }
+  .apx .chgp { min-width: 0; font-size: 15px; }
+  .aseg.rng { display: flex; } .aseg.rng button { flex: 1; min-width: 0; }
+  .verdict { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: var(--radius); background: var(--surface-2); }
+  .verdict > i { flex: 0 0 10px; height: 10px; border-radius: 50%; background: var(--faint); }
+  .verdict.ok > i { background: var(--up); } .verdict.warn > i { background: #ff9f0a; }
+  .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 17px; font-weight: 600; }
+  .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; margin-top: 1px; }
+  .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; border-radius: 999px; }
+  @media (max-width: 520px) { .verdict { flex-wrap: wrap; } .verdict .btn { flex: 1 1 100%; padding: 12px; } }
+  .chart[data-mini] { position: relative; }
+  .candles { background: transparent !important; height: 190px; }
+  .cgrid { display: inline; stroke: var(--line); stroke-width: 1; }
+  .chart line[class^="cl-"] { display: inline; stroke-width: 1; stroke-dasharray: 3 4; }
+  .chart line.cl-last { stroke: var(--faint); } .chart line.cl-stop { stroke: var(--red); } .chart line.cl-tgt { stroke: var(--up); }
+  .clab { display: block; position: absolute; right: 2px; transform: translateY(-50%); font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 5px; white-space: nowrap; pointer-events: none; }
+  .clab.cl-last { background: var(--text); color: var(--bg); } .clab.cl-stop { background: var(--red); color: #fff; } .clab.cl-tgt { background: var(--up); color: #fff; }
+  .agrp { border-top: .5px solid var(--line); padding-top: 4px; }
+  .agrp > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 600; padding: 8px 0; }
+  .agrp > summary::-webkit-details-marker { display: none; }
+  .agrp > summary::after { content: "›"; color: var(--faint); font-size: 22px; transform: rotate(90deg); transition: transform .2s; }
+  .agrp[open] > summary::after { transform: rotate(-90deg); }
+  .agrp > div { padding: 4px 0 8px; }
+  .agrp .senti, .agrp .fund, .agrp .trendbox { margin: 0; }
+  .agrp .se-h b { display: none; }
+  /* iPhone & iPad hochkant: Sheet von unten mit Griff */
+  .cm-back { background: rgba(0, 0, 0, .3) !important; backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+  @media (max-width: 1099px) {
+    .cmodal { align-items: flex-end; padding: 0; overflow: hidden; }
+    .cm-box { width: min(700px, 100%); max-height: calc(100vh - env(safe-area-inset-top) - 12px); overflow-y: auto; overscroll-behavior: contain;
+              background: var(--surface); border-radius: 14px 14px 0 0; padding: 18px 0 calc(env(safe-area-inset-bottom) + 24px); animation: a-up .45s var(--ease); }
+    .cm-box::before { content: ""; display: block; width: 36px; height: 5px; border-radius: 3px; background: var(--surface-3); margin: -8px auto 6px; }
+    .cm-box .card { background: transparent !important; padding-top: 30px; }
+    .cm-x { position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; font-size: 13px; background: var(--fill); color: var(--muted); }
+    @keyframes a-up { from { transform: translateY(100%); } }
+  }
+  /* iPad quer: geteilte Ansicht – Liste links, Detail rechts, nichts wird abgedunkelt */
+  @media (min-width: 1100px) {
+    .cmodal { pointer-events: none; } .cm-box { pointer-events: auto; }
+    .cm-back { display: none; }
+    .cm-box { width: 460px; background: var(--surface) !important; border-left: .5px solid var(--line) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important;
+              animation: a-in .35s var(--ease); }
+    .cm-box .card { background: transparent !important; padding: 8px 6px; }
+    .card-open .wrap { margin-right: 460px; }
+    .cm-x { position: fixed; top: calc(env(safe-area-inset-top) + 12px); right: 14px; background: var(--fill); color: var(--muted); width: 30px; height: 30px; font-size: 13px; }
+    .cm-box .card { padding-top: 34px; }
+    @keyframes a-in { from { transform: translateX(30px); opacity: 0; } }
+  }
+
+  /* ---------- Übergänge ---------- */
+  @media (prefers-reduced-motion: no-preference) { #main { animation: a-fade .25s ease-out; } @keyframes a-fade { from { opacity: .4; } } }
+  footer { color: var(--faint); }
 </style>
 <style id="themeNew">
   /* ================= Kairo Pro – Design-System =================
@@ -696,6 +907,7 @@
 <div class="wrap">
   <header class="hello">
     <div class="brand" aria-label="Kairo"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg><b>KAIRO</b><button class="gear" data-gosec="settings" aria-label="Einstellungen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+    <div class="adate" id="adate"></div>
     <h1 id="greet">Hallo 👋</h1>
     <p id="sub">Lade den heutigen Scan …</p>
   </header>
@@ -714,8 +926,10 @@
   </footer>
 </div>
 
+<div class="abar" aria-hidden="true"><span id="abarT"></span></div>
 <nav class="tabbar" aria-label="Navigation">
   <div class="tabs">
+    <div class="sb-brand"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg>Kairo</div>
     <button class="tab" data-sec="today">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg>
       Heute</button>
@@ -734,6 +948,13 @@
     <button class="tab" data-sec="journal">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 11.5h4"/></svg>
       Journal</button>
+    <div class="sb-only sb-sep"></div>
+    <button class="tab sb-only" data-sec="bilanz">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+      Bilanz</button>
+    <button class="tab sb-only" data-sec="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      Einstellungen</button>
   </div>
 </nav>
 
@@ -825,8 +1046,15 @@ try { Object.assign(state, JSON.parse(localStorage.getItem(PREF) || "{}")); } ca
 if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 state.sec = "today";   // App startet immer auf „Heute“
 // Design: "new" (Standard) oder "classic" (ursprüngliches Design) – Umschalten in den Einstellungen
-const applyDesign = () => { const el = document.getElementById("themeNew"); if (el) el.disabled = state.design !== "pro"; };
+const isApple = () => state.design === "apple";
+const applyDesign = () => {
+  const n = document.getElementById("themeNew"), a = document.getElementById("themeApple");
+  if (n) n.disabled = state.design !== "pro";
+  if (a) a.disabled = !isApple();
+  document.documentElement.classList.toggle("apple", isApple());
+};
 applyDesign();
+if ("IntersectionObserver" in window) new IntersectionObserver(es => document.body.classList.toggle("scrolled", !es[0].isIntersecting), { rootMargin: "-50px 0px 0px 0px" }).observe(document.getElementById("greet"));
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
 const SORTS = {
@@ -901,10 +1129,18 @@ function openCard(t) {
   const r = data.results.find(x => x.ticker === t); if (!r) return;
   $("cardModalBody").innerHTML = card(r);
   document.body.classList.add("card-open");
+  document.querySelectorAll(".aitem").forEach(x => x.classList.toggle("sel", x.dataset.card === t));
   const el = $("cardModalBody").querySelector("[data-mini]");
   if (el) loadChart(t).then(c => paintChart(el, c, r)).catch(() => {});
 }
-function closeCard() { document.body.classList.remove("card-open"); }
+function closeCard() { document.body.classList.remove("card-open"); document.querySelectorAll(".aitem.sel").forEach(x => x.classList.remove("sel")); }
+(() => {   // Apple-Look: Sheet nach unten wischen schließt die Übersicht (nur iPhone / iPad hochkant)
+  let y0 = null, box = null;
+  document.addEventListener("touchstart", e => { if (!isApple() || innerWidth >= 1100) return; const b = e.target.closest(".cm-box"); if (!b || b.scrollTop > 0) return; y0 = e.touches[0].clientY; box = b; }, { passive: true });
+  document.addEventListener("touchmove", e => { if (y0 == null) return; const d = e.touches[0].clientY - y0; if (d > 0) { box.style.transition = "none"; box.style.transform = `translateY(${d}px)`; } }, { passive: true });
+  document.addEventListener("touchend", e => { if (y0 == null) return; const d = e.changedTouches[0].clientY - y0; y0 = null;
+    box.style.transition = "transform .3s cubic-bezier(.32,.72,0,1)"; box.style.transform = ""; if (d > 110) closeCard(); });
+})();
 
 // Tendenz: Wie viele Kriterien waren an den letzten 10 Handelstagen erfüllt – steigt oder fällt das?
 const TREND_TXT = { up: ["▲", "up", "steigend"], down: ["▼", "down", "fallend"], flat: ["►", "muted", "seitwärts"] };
@@ -1016,6 +1252,7 @@ function verdictHtml(r) {
   if (r.fast_hit) return `<div class="verdict warn"><i></i><div><b>Noch kein Einstieg · fast so weit</b><span>Es fehlt: ${esc((r.missing || []).slice(0, 2).join(", "))}</span></div></div>`;
   return `<div class="verdict"><i></i><div><b>Kein Einstieg · beobachten</b><span>${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt</span></div></div>`;
 }
+const agrp = (t, h, open) => !h ? "" : isApple() ? `<details class="agrp"${open ? " open" : ""}><summary>${esc(t)}</summary><div>${h}</div></details>` : h;
 function card(r) {
   return `<article class="card">
     <div class="card-top">
@@ -1033,6 +1270,7 @@ function card(r) {
         : `<button class="score fast" data-scoreinfo style="--p:${Math.round(100 * (r.met ?? 0) / (r.total || 11))}" title="${r.met ?? "–"} von ${r.total ?? 11} Kriterien erfüllt – antippen für Details"><span>${r.met ?? "–"}/${r.total ?? 11}</span></button>`}
       ${trendHtml(r)}</div>
     </div>
+    ${isApple() ? `<div class="apx"><b>${fmt(r.close)} <small>${esc(r.currency || "")}</small></b><i class="chgp" data-chg="${esc(r.ticker)}"></i></div>` : ""}
     ${verdictHtml(r)}
     <div class="aboutbox" hidden>${aboutHtml(r)}</div>
     <div class="scorebox" hidden>${scoreBoxHtml(r)}</div>
@@ -1042,12 +1280,13 @@ function card(r) {
       <div class="fig"><span>CRV</span><b class="${(r.crv ?? 0) >= 2 ? "up" : "muted"}">${fmt(r.crv, 1)}</b></div>
       <div class="fig"><span>Börsenwert</span><b>${fmtCap(r.market_cap_usd)}</b></div>
     </div>
+    ${isApple() ? `<div class="aseg rng">${[["1M", 21], ["3M", 63], ["6M", 126], ["1J", 252]].map(([l, n]) => `<button data-rng="${n}" class="${(state.aRng || 63) === n ? "on" : ""}">${l}</button>`).join("")}</div>` : ""}
     <div class="chart" data-mini="${esc(r.ticker)}"><svg class="candles" viewBox="0 0 600 220" preserveAspectRatio="none"></svg></div>
-    <div class="chips">${chips(r)}</div>
-    ${trendBoxHtml(r)}
+    ${agrp(`Kriterien · ${r.met ?? "–"}/${r.total ?? 11}`, `<div class="chips">${chips(r)}</div>`, true)}
+    ${agrp(`Trend-Rücksetzer${r.tr ? ` · ${r.tr.met}/${r.tr.total}` : ""}`, trendBoxHtml(r))}
     ${tipHtml(r.hint)}
-    ${sentiHtml(r)}
-    ${fundHtml(r)}
+    ${agrp("Marktstimmung", sentiHtml(r))}
+    ${agrp("Fundament & Wochentrend", fundHtml(r))}
     <div class="actions">
       <button class="btn" data-open="${esc(r.ticker)}">Details &amp; Chart</button>
       <a class="btn ghost" href="${tvUrl(r.ticker)}" target="_blank" rel="noopener">TradingView</a>
@@ -1091,8 +1330,27 @@ function miniSvg(c, r) {
   });
   return s;
 }
+function aLineSvg(c, r) {
+  const n = c.t.length, from = Math.max(0, n - (state.aRng || 63)), W = 600, H = 220, pad = 12;
+  const xs = c.c.slice(from); let lo = Math.min(...xs), hi = Math.max(...xs);
+  const pl = chartPlan(r), lines = [];
+  if (pl) { const span = hi - lo;
+    if (pl.stop && pl.stop > lo - span * .6) { lo = Math.min(lo, pl.stop); lines.push(["stop", pl.stop, "Stop"]); }
+    if (pl.target1 && pl.target1 < hi + span * .6) { hi = Math.max(hi, pl.target1); lines.push(["tgt", pl.target1, "Ziel 1"]); } }
+  const y = v => pad + (1 - (v - lo) / (hi - lo || 1)) * (H - 2 * pad), x = i => i * (W - 64) / Math.max(1, xs.length - 1);
+  const up = xs[xs.length - 1] >= xs[0], col = up ? "var(--up)" : "var(--red)", id = "ag" + String(r.ticker).replace(/[^A-Za-z0-9]/g, "");
+  const line = xs.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  let s = `<defs><linearGradient id="${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".28"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>`;
+  for (let g = 1; g < 4; g++) s += `<line class="cgrid" x1="0" x2="${W}" y1="${(H * g / 4).toFixed(1)}" y2="${(H * g / 4).toFixed(1)}" vector-effect="non-scaling-stroke"/>`;
+  s += `<path d="${line}L${x(xs.length - 1).toFixed(1)},${H}L0,${H}Z" fill="url(#${id})"/><path d="${line}" fill="none" stroke="${col}" stroke-width="2" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+  lines.push(["last", xs[xs.length - 1], ""]);
+  lines.forEach(([k, v]) => { s += `<line class="cl-${k}" x1="0" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" vector-effect="non-scaling-stroke"/>`; });
+  miniSvg.labels = lines.map(([k, v, l]) => `<span class="clab cl-${k}" style="top:${(100 * y(v) / H).toFixed(1)}%">${l ? l + " " : ""}${fmt(v)}</span>`).join("");
+  return s;
+}
 function paintChart(el, c, r) {
-  el.querySelector("svg").innerHTML = miniSvg(c, r);
+  el.querySelector("svg").innerHTML = isApple() ? aLineSvg(c, r) : miniSvg(c, r);
+  if (isApple()) setChg(el.closest(".card") || document, r.ticker, dayChg(c));
   el.querySelectorAll(".clab").forEach(x => x.remove());
   if (miniSvg.labels) el.insertAdjacentHTML("beforeend", miniSvg.labels);
 }
@@ -1871,7 +2129,7 @@ document.addEventListener("click", e => {
 document.addEventListener("input", e => {
   if (e.target.dataset && e.target.dataset.jnote) { const o = jnLoad(), k = e.target.dataset.jnote; (o[k] = o[k] || {}).note = e.target.value; jnSave(o); return; }
   if (e.target.id === "cfgName") { state.name = e.target.value.trim(); save(); renderHead(); }
-  if (e.target.id === "cfgDesign") { state.design = e.target.value; save(); applyDesign(); renderHead(); }
+  if (e.target.id === "cfgDesign") { state.design = e.target.value; save(); applyDesign(); renderHead(); render(); }
 });
 document.addEventListener("change", async e => {
   if (e.target.id === "restoreFile" && e.target.files[0]) {
@@ -2264,6 +2522,16 @@ function journalTeaserHtml() {
       <div class="mt"><span>Profit-Faktor</span><b>${s.pf == null ? "–" : s.pf === Infinity ? "∞" : fmt(s.pf, 2)}</b></div></div></button>`;
 }
 // Kennzahlen-Leiste: Treffer, Trend-Rücksetzer, Fast-Treffer auf einen Blick – antippen öffnet die Liste (nur Kairo Pro)
+// Apple-Look: „Heute zu tun“ im Stil der iOS-Einstellungen
+function todoHtml() {
+  const hits = data.results.filter(r => r.passed), tr = data.results.filter(r => isTrend(r) && !r.passed), top = tr.filter(r => r.tr.top);
+  const fast = data.results.filter(r => r.fast_hit && !r.passed && !isTrend(r));
+  const row = (ic, cls, t, sub, n, kinds) => `<button class="arow" data-gokinds="${kinds}"><i class="aic ${cls}">${ic}</i><span><b>${t}</b><em>${sub}</em></span><strong>${n}</strong><s>›</s></button>`;
+  return `<div class="agroup-h">Heute zu tun</div><div class="agroup">
+    ${row("✓", "g", "Kairo-Treffer", hits.length ? "Einstieg möglich – alle Kriterien erfüllt" : "heute keine", hits.length, "hit")}
+    ${trendOn() ? row("↗", "b", "Trend-Rücksetzer", top.length ? `davon ${top.length} Top – stärkstes Setup im Test` : "Rücksetzer im Aufwärtstrend", tr.length, "trend") : ""}
+    ${row("…", "y", "Fast-Treffer", "ein Kriterium fehlt noch", fast.length, "fast")}</div>`;
+}
 function kpiHtml() {
   const hit = data.results.filter(r => r.passed).length, tr = data.results.filter(isTrend), top = tr.filter(r => r.tr.top).length;
   const fast = data.results.filter(r => r.fast_hit && !r.passed).length;
@@ -2275,7 +2543,7 @@ function kpiHtml() {
 function todayHtml() {
   const al = getJson("alerts.json");
   const tgHint = al && !al.connected ? `<button class="hcard tg" ${SEC_LINK("settings")}><b>📲 Abendbericht aufs Handy</b><span>Neue Treffer, deine Aktien und Knock-out-Warnungen jeden Abend per Telegram – in 3 Minuten eingerichtet.</span><span class="hlink">Einrichten ›</span></button>` : "";
-  return kpiHtml() + `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
+  return (isApple() ? todoHtml() : kpiHtml()) + `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
     <div class="hcol">${bilanzTeaserHtml()}${depotSnapHtml()}${soonHtml()}${topHitsHtml()}${journalTeaserHtml()}${tgHint}</div></div>`;
 }
 
@@ -2414,6 +2682,7 @@ function settingsHtml() {
       <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div>
       <div class="form" style="margin:14px 0 0"><label class="full">Design<select id="cfgDesign">
         <option value="classic"${state.design !== "pro" ? " selected" : ""}>Klassisch (Standard)</option>
+        <option value="apple"${state.design === "apple" ? " selected" : ""}>Apple-Look (neu)</option>
         <option value="pro"${state.design === "pro" ? " selected" : ""}>Kairo Pro (Vorschau)</option></select></label></div>
       <div class="note">Wechselt sofort, alle Funktionen und Daten bleiben gleich.</div></div>
     ${telegramHtml()}${backupHtml()}
@@ -2524,7 +2793,8 @@ document.addEventListener("keydown", e => {
 });
 
 // ---------- Rendern ----------
-function render() {
+function render() { renderMain(); if (data) appleHead(); }
+function renderMain() {
   if (!data) return;
   const hits = data.results.filter(r => r.passed).length, fast = data.results.filter(r => r.fast_hit).length;
   $("wlBadge").hidden = !fast; $("wlBadge").textContent = fast;
@@ -2559,7 +2829,12 @@ function render() {
   if (!(data.stats && data.stats.grade)) hid.add("grade");    // Stufen nur, wenn ein geprüftes Modell aktiv ist
   const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "grade", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
   $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
-    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + mListHtml(list, col) + extra;
+    <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + (isApple() ? "" : mListHtml(list, col)) + extra;
+  if (isApple()) {
+    const tools = `<div class="atools"><div class="aseg"><button data-aview="list" class="${state.aView !== "table" ? "on" : ""}">Liste</button><button data-aview="table" class="${state.aView === "table" ? "on" : ""}">Tabelle</button></div>${aSortHtml(col)}</div>`;
+    if (state.aView === "table") { const st = $("main").querySelector(".section-title"); if (st) st.insertAdjacentHTML("afterend", tools); }
+    else { $("main").innerHTML = head + tools + aListHtml(list) + extra; observeSparks(); }
+  }
 }
 
 // Kompakte Liste fürs iPhone (nur im neuen Design, nur schmale Bildschirme – sonst bleibt die Tabelle)
@@ -2573,6 +2848,37 @@ function mListHtml(list, col) {
       <span>${esc(r.ticker)} · ${fmt(r.close)} ${esc(r.currency || "")}${r.senti && r.senti.tgt ? ` · Ziel ${sgnPct(r.senti.tgt.up, 0)}` : ""}</span></a>
       <div class="mr">${pill(r)}<em>${big(r)}</em></div></div>`).join("")}</div>`;
 }
+function aSortHtml(col) {
+  const opts = COLS.filter(c => ["score", "met", "status", "name", "cap", "close", "tgt", "trend", "grade"].includes(c.k));
+  return `<label class="asort">Sortieren:<select id="mSort">${opts.map(c => `<option value="${c.k}"${c.k === col.k ? " selected" : ""}>${esc(c.l)}</option>`).join("")}</select></label>`;
+}
+function aStatus(r) {
+  return r.passed ? ["g", `Treffer · Score ${r.score ?? "–"}`] : isTrend(r) ? ["b", r.tr.top ? "Trend-Rücksetzer · Top" : "Trend-Rücksetzer"]
+    : filterMiss(r) ? ["y", "Grundfilter fehlt"] : r.fast_hit ? ["y", `Fast · fehlt: ${(r.missing || [])[0] || ""}`] : ["n", `${r.met ?? "–"}/${r.total ?? 11} Kriterien`];
+}
+function aListHtml(list) {
+  return `<div class="alist">${list.map(r => { const [c, t] = aStatus(r);
+    return `<a href="#" class="aitem" data-card="${esc(r.ticker)}"><span class="an"><b>${esc(r.name || r.ticker)}</b><em><i class="sd ${c}"></i>${esc(r.ticker)} · ${esc(t)}</em></span>
+      <svg class="spark" data-spark="${esc(r.ticker)}" viewBox="0 0 80 32" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <span class="ap"><b>${fmt(r.close)}</b><i class="chgp" data-chg="${esc(r.ticker)}">–</i></span></a>`; }).join("")}</div>`;
+}
+// Mini-Kurslinie (3 Monate) und Tagesänderung – wird beim Scrollen nachgeladen
+const dayChg = c => { const n = c.c.length; return n > 1 ? c.c[n - 1] / c.c[n - 2] - 1 : null; };
+function setChg(root, t, ch) {
+  root.querySelectorAll(`[data-chg="${CSS.escape(t)}"]`).forEach(el => { if (ch == null || !isFinite(ch)) return; el.textContent = sgnPct(ch, 2); el.className = "chgp " + (ch >= 0 ? "up" : "dn"); });
+}
+function paintSpark(svg, c) {
+  const xs = c.c.slice(-63).filter(v => v != null); if (xs.length < 2) return;
+  const lo = Math.min(...xs), hi = Math.max(...xs), up = xs[xs.length - 1] >= xs[0];
+  const pts = xs.map((v, i) => `${(i * 80 / (xs.length - 1)).toFixed(1)},${(30 - (v - lo) / (hi - lo || 1) * 28).toFixed(1)}`).join(" ");
+  svg.innerHTML = `<polyline points="${pts}" fill="none" stroke="${up ? "var(--up)" : "var(--red)"}" stroke-width="1.7" stroke-linejoin="round" vector-effect="non-scaling-stroke"/>`;
+}
+const sparkIO = "IntersectionObserver" in window ? new IntersectionObserver(es => es.forEach(async e => {
+  if (!e.isIntersecting) return; sparkIO.unobserve(e.target);
+  const t = e.target.dataset.spark;
+  try { const c = await loadChart(t); paintSpark(e.target, c); setChg(e.target.closest(".aitem"), t, dayChg(c)); } catch (err) {}
+}), { rootMargin: "300px" }) : null;
+function observeSparks() { if (sparkIO) document.querySelectorAll("[data-spark]").forEach(el => sparkIO.observe(el)); }
 const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
@@ -2581,10 +2887,23 @@ function sheetExtras() {
   const hid = new Set(state.hiddenCols || []);
   $("colOpts").innerHTML = COLS.filter(c => c.k !== "ticker").map(c => `<button class="opt${hid.has(c.k) ? "" : " on"}" data-col="${c.k}">${esc(c.l)}</button>`).join("");
 }
+function greetText() {
+  const h = new Date().getHours(), nm = String(state.name || "").trim();
+  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + esc(nm) : "") + (isApple() ? "" : " 👋");
+}
+const SEC_T = { today: "Heute", scanner: "Scanner", entry: "Einstieg", calendar: "Kalender", depot: "Depot", journal: "Journal", settings: "Einstellungen", bilanz: "Bilanz" };
+function appleHead() {
+  document.body.dataset.sec = state.sec;
+  if (!isApple()) return;
+  const t = SEC_T[state.sec] || "Kairo";
+  $("greet").innerHTML = state.sec === "today" ? greetText() : esc(t);
+  $("adate").textContent = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  $("abarT").textContent = t;
+}
 function renderHead() {
   const h = new Date().getHours();
   const nm = String(state.name || "").trim();
-  $("greet").innerHTML = esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + esc(nm) : "") + " 👋";
+  $("greet").innerHTML = greetText();
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
@@ -2772,6 +3091,11 @@ function goSec(sec) {
   if (sec === "depot" || sec === "today" || sec === "entry") loadSearch();
 }
 document.addEventListener("click", e => {
+  const av = e.target.closest("[data-aview]"); if (av) { state.aView = av.dataset.aview; save(); render(); return; }
+  const rg = e.target.closest("[data-rng]");
+  if (rg) { state.aRng = +rg.dataset.rng; save(); const cardEl = rg.closest(".card"), mini = cardEl && cardEl.querySelector("[data-mini]");
+    cardEl.querySelectorAll("[data-rng]").forEach(b => b.classList.toggle("on", b === rg));
+    const r = mini && data.results.find(x => x.ticker === mini.dataset.mini); if (r) loadChart(r.ticker).then(c => paintChart(mini, c, r)); return; }
   const ei = e.target.closest("[data-ein]");
   if (ei) { const r = searchIdx && searchIdx.find(x => x.t === ei.dataset.ein); state.einT = ei.dataset.ein; state.einQ = r ? r.n : ei.dataset.ein; closeCard(); if (state.sec !== "entry") goSec("entry"); else { save(); render(); } window.scrollTo({ top: 0 }); return; }
   const gs = e.target.closest("[data-gosec]");
