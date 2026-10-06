@@ -6,6 +6,10 @@ on:
       run_id:
         description: "Lauf-ID von „Kairo-Bilanz (Backtest)“"
         required: true
+      args:
+        description: "Zusatz, z. B. --trend2 (nur Feinschliff Trend-Rücksetzer)"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -28,7 +32,7 @@ jobs:
           merge-multiple: true
           run-id: ${{ inputs.run_id }}
           github-token: ${{ github.token }}
-      - run: python -m backend.optimize bilanz_part_*.json
+      - run: python -m backend.optimize bilanz_part_*.json ${{ inputs.args }}
       - uses: actions/upload-artifact@v4
         with:
           name: optimierung
