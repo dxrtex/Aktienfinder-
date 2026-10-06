@@ -795,6 +795,48 @@
     @keyframes a-in { from { transform: translateX(30px); opacity: 0; } }
   }
 
+
+  /* ---------- Chart-Geste ---------- */
+  .chart[data-mini] { touch-action: pan-y; cursor: crosshair; user-select: none; -webkit-user-select: none; }
+  .scrub { display: none; position: absolute; top: 0; bottom: 0; width: 0; pointer-events: none; z-index: 2; }
+  .scrub i { position: absolute; top: 0; bottom: 0; left: 0; border-left: 1px solid var(--muted); }
+  .scrub b { position: absolute; left: -5px; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); }
+  .scrub span { position: absolute; top: -22px; left: 0; transform: translateX(-50%); font-size: 12px; font-weight: 600; color: var(--muted); white-space: nowrap; background: var(--surface); padding: 1px 6px; border-radius: 5px; }
+  .aseg.rng { margin-bottom: 18px; }
+
+  /* ---------- Depot ---------- */
+  .adep { padding: 4px 4px 14px; }
+  .adep > span { display: block; font-size: 15px; color: var(--muted); }
+  .adep > b { display: inline-block; font-size: 40px; font-weight: 700; letter-spacing: -.035em; line-height: 1.1; margin-right: 10px; }
+  .adep > .chgp { min-width: 0; font-size: 15px; vertical-align: 8px; }
+  .adep-g { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; margin-top: 16px; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+  .adep-g > div { padding: 12px 14px; border-left: .5px solid var(--line); } .adep-g > div:first-child { border-left: 0; }
+  .adep-g span { display: block; font-size: 12px; color: var(--muted); } .adep-g b { display: block; font-size: 17px; font-weight: 600; }
+  @media (max-width: 640px) { .adep-g { grid-template-columns: 1fr 1fr; } .adep-g > div:nth-child(3) { border-left: 0; } .adep-g > div:nth-child(n+3) { border-top: .5px solid var(--line); } }
+  details.grp { margin-bottom: 10px; }
+  .gsum::after { content: "›"; font-size: 24px; color: var(--faint); transform: rotate(90deg); top: 10px; }
+  details.grp[open] .gsum::after { transform: rotate(-90deg); }
+  .gsum .gname { font-size: 19px; font-weight: 600; }
+  .gsum .gact { border-radius: 10px; }
+  .dep-sum .fig, .cockpit .fig { background: var(--surface); }
+
+  /* ---------- Lade-Platzhalter ---------- */
+  .chgp:empty, .chgp:not(.up):not(.dn) { color: transparent; }
+  .spark:empty, .chgp:not(.up):not(.dn) { background: linear-gradient(90deg, var(--fill) 25%, var(--surface-3) 50%, var(--fill) 75%); background-size: 200% 100%; border-radius: 6px; animation: a-shim 1.4s linear infinite; }
+  @keyframes a-shim { to { background-position: -200% 0; } }
+
+  /* ---------- Filter-Fenster als gruppierte Liste ---------- */
+  .sheet { background: var(--bg) !important; }
+  .sheet .group { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; margin-top: 14px; }
+  .sheet .group-label { text-transform: uppercase; font-size: 12px; letter-spacing: .02em; margin-bottom: 8px; }
+  .sheet h3 { font-size: 28px; font-weight: 700; letter-spacing: -.02em; }
+  .grabber { background: var(--surface-3); width: 36px; }
+
+  /* ---------- Große Detail-Ansicht ---------- */
+  .detail { background: var(--bg) !important; }
+  .detail .card, .detail .pane, .detail .table-wrap { background: var(--surface) !important; }
+  .mini-btn { border: 0 !important; background: var(--fill) !important; color: var(--accent) !important; border-radius: 999px; }
+  .tip { border-radius: var(--radius); }
   /* ---------- Übergänge ---------- */
   @media (prefers-reduced-motion: no-preference) { #main { animation: a-fade .25s ease-out; } @keyframes a-fade { from { opacity: .4; } } }
   footer { color: var(--faint); }
@@ -1047,6 +1089,8 @@ if (state.tab === "settings" || state.tab === "filter") state.tab = "cards";
 state.sec = "today";   // App startet immer auf „Heute“
 // Design: "new" (Standard) oder "classic" (ursprüngliches Design) – Umschalten in den Einstellungen
 const isApple = () => state.design === "apple";
+const isLight = () => isApple() && matchMedia("(prefers-color-scheme: light)").matches;
+const LC = () => isLight() ? { t: "#6e6e73", g: "#ececf0", b: "#d1d1d6", k: "#3a3a3c" } : { t: "#9a9a9f", g: "#1d1d1f", b: "#2a2a2d", k: "#e5e5ea" };
 const applyDesign = () => {
   const n = document.getElementById("themeNew"), a = document.getElementById("themeApple");
   if (n) n.disabled = state.design !== "pro";
@@ -1346,11 +1390,34 @@ function aLineSvg(c, r) {
   lines.push(["last", xs[xs.length - 1], ""]);
   lines.forEach(([k, v]) => { s += `<line class="cl-${k}" x1="0" x2="${W}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" vector-effect="non-scaling-stroke"/>`; });
   miniSvg.labels = lines.map(([k, v, l]) => `<span class="clab cl-${k}" style="top:${(100 * y(v) / H).toFixed(1)}%">${l ? l + " " : ""}${fmt(v)}</span>`).join("");
+  aLineSvg.map = { xs, ts: c.t.slice(from), xw: (W - 64) / W, y: v => y(v) / H };
   return s;
+}
+// Apple-Aktien-Geste: Finger/Maus über den Chart ziehen zeigt Kurs und Datum des Tages, oben ändert sich die große Zahl mit
+function bindScrub(el) {
+  if (el._scrub) return; el._scrub = 1;
+  const card = el.closest(".card"), big = card && card.querySelector(".apx b"), chg = card && card.querySelector(".apx .chgp");
+  let keep = null;
+  const show = ev => {
+    const m = el._map; if (!m) return;
+    const rc = el.getBoundingClientRect(), fx = (ev.clientX - rc.left) / rc.width;
+    const i = Math.max(0, Math.min(m.xs.length - 1, Math.round(fx / m.xw * (m.xs.length - 1))));
+    const v = m.xs[i], px = (i / Math.max(1, m.xs.length - 1)) * m.xw * 100;
+    let sc = el.querySelector(".scrub"); if (!sc) { el.insertAdjacentHTML("beforeend", `<div class="scrub"><i></i><b></b><span></span></div>`); sc = el.querySelector(".scrub"); }
+    sc.style.left = px + "%"; sc.querySelector("b").style.top = (m.y(v) * 100) + "%";
+    sc.querySelector("span").textContent = new Date(m.ts[i] + "T12:00:00").toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "2-digit" });
+    sc.style.display = "block";
+    if (big) { if (!keep) keep = [big.innerHTML, chg ? chg.outerHTML : ""]; big.firstChild.textContent = fmt(v) + " ";
+      if (chg) { const d = v / m.xs[0] - 1; chg.textContent = sgnPct(d, 2); chg.className = "chgp " + (d >= 0 ? "up" : "dn"); } }
+  };
+  const hide = () => { const sc = el.querySelector(".scrub"); if (sc) sc.style.display = "none";
+    if (keep && big) { big.innerHTML = keep[0]; if (chg && keep[1]) chg.outerHTML = keep[1]; keep = null; } };
+  el.addEventListener("pointerdown", show); el.addEventListener("pointermove", e => { if (e.pointerType === "mouse" || e.buttons || e.pressure) show(e); });
+  el.addEventListener("pointerup", e => { if (e.pointerType !== "mouse") hide(); }); el.addEventListener("pointerleave", hide); el.addEventListener("pointercancel", hide);
 }
 function paintChart(el, c, r) {
   el.querySelector("svg").innerHTML = isApple() ? aLineSvg(c, r) : miniSvg(c, r);
-  if (isApple()) setChg(el.closest(".card") || document, r.ticker, dayChg(c));
+  if (isApple()) { setChg(el.closest(".card") || document, r.ticker, dayChg(c)); el._map = aLineSvg.map; bindScrub(el); }
   el.querySelectorAll(".clab").forEach(x => x.remove());
   if (miniSvg.labels) el.insertAdjacentHTML("beforeend", miniSvg.labels);
 }
@@ -1853,9 +1920,9 @@ function mountDepotCharts() {
     const t = el.dataset.lwc, g = depGroups.find(x => x.t === t), c = chartReady[t];
     if (!g || !c) return;
     const ch = LW.createChart(el, { width: el.clientWidth, height: el.clientHeight,
-      layout: { background: { color: "transparent" }, textColor: "#9a9a9f", fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
-      grid: { vertLines: { color: "#1d1d1f" }, horzLines: { color: "#1d1d1f" } },
-      rightPriceScale: { borderColor: "#2a2a2d", scaleMargins: { top: .08, bottom: .06 } }, timeScale: { borderColor: "#2a2a2d", rightOffset: 3 },
+      layout: { background: { color: "transparent" }, textColor: LC().t, fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
+      grid: { vertLines: { color: LC().g }, horzLines: { color: LC().g } },
+      rightPriceScale: { borderColor: LC().b, scaleMargins: { top: .08, bottom: .06 } }, timeScale: { borderColor: LC().b, rightOffset: 3 },
       crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) },
       handleScroll: { mouseWheel: true, pressedMouseMove: true, horzTouchDrag: true, vertTouchDrag: false },   // senkrecht wischen scrollt die Seite
       handleScale: { axisPressedMouseMove: { time: true, price: true }, axisDoubleClickReset: true, mouseWheel: true, pinch: true } });
@@ -1874,9 +1941,9 @@ function mountDepotCharts() {
     const pl = (price, title, color, style = 2, width = 1) => price != null && cs.createPriceLine({ price, title, color, lineWidth: width, lineStyle: style, axisLabelVisible: true });
     g.tps.forEach(tp => pl(tp.p, tp.short + (tp.ath ? " = ATH" : ""), "#30d158", 2, 2));
     const ents = g.ms.filter(m => m.ent);
-    if (g.avgEntry) pl(g.avgEntry, ents.length > 1 ? "Ø Kauf" : "Kauf", "#e5e5ea", 0, 1);
+    if (g.avgEntry) pl(g.avgEntry, ents.length > 1 ? "Ø Kauf" : "Kauf", LC().k, 0, 1);
     if (g.ko != null) pl(g.ko, "K.-o.", "#ff453a", 2, 2);
-    cs.setMarkers(g.ms.map((m, j) => m.ent ? { time: m.ent.date, position: "belowBar", color: "#e5e5ea", shape: "arrowUp", text: ents.length > 1 ? `Kauf ${j + 1}` : "Kauf" } : null)
+    cs.setMarkers(g.ms.map((m, j) => m.ent ? { time: m.ent.date, position: "belowBar", color: LC().k, shape: "arrowUp", text: ents.length > 1 ? `Kauf ${j + 1}` : "Kauf" } : null)
       .filter(Boolean).sort((a, b) => a.time < b.time ? -1 : 1));
     ch.timeScale().setVisibleLogicalRange(depRanges.get(t) || depRange(c, g));
     depCharts.set(t, ch);
@@ -1886,6 +1953,7 @@ function mountDepotCharts() {
 }
 window.addEventListener("resize", () => depCharts.forEach((ch, t) => { const el = document.querySelector(`[data-lwc="${CSS.escape(t)}"]`); if (el) ch.applyOptions({ width: el.clientWidth }); }));
 function cockpitHtml(groups, items) {
+  if (isApple()) return aCockpitHtml(groups, items);
   const inv = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
   const known = groups.filter(g => g.known), val = known.reduce((s, g) => s + g.value, 0), invK = known.reduce((s, g) => s + g.invested, 0);
   const koRisk = groups.reduce((s, g) => s + (g.koRisk ?? 0), 0), big = groups.slice().sort((x, y) => y.share - x.share)[0];
@@ -1896,6 +1964,17 @@ function cockpitHtml(groups, items) {
     <div class="fig"><span>Bei Knock-out weg</span><b class="down">${koRisk ? "−" + eur(koRisk) : "–"}</b><em>${koRisk ? "Wert aller Turbos (ohne Stop-Loss)" : ""}</em></div>
     <div class="fig"><span>Größter Klumpen</span><b class="${big && big.share > .35 ? "down" : ""}">${big ? pct(big.share, 0) : "–"}</b><em>${big ? esc(big.name) : ""}</em></div>
   </div>`;
+}
+function aCockpitHtml(groups, items) {
+  const inv = items.reduce((s, x) => s + x.p.price * x.p.qty, 0);
+  const known = groups.filter(g => g.known), val = known.reduce((s, g) => s + g.value, 0), invK = known.reduce((s, g) => s + g.invested, 0);
+  const koRisk = groups.reduce((s, g) => s + (g.koRisk ?? 0), 0), big = groups.slice().sort((x, y) => y.share - x.share)[0], d = invK ? val / invK - 1 : null;
+  const sell = groups.filter(g => g.ex && g.ex.nw >= 4).length, prep = groups.filter(g => g.ex && g.ex.nw === 3).length;
+  return `<div class="adep"><span>Depotwert (geschätzt)</span><b>${known.length ? eur(val) : eur(inv)}</b>
+    ${known.length ? `<i class="chgp ${d >= 0 ? "up" : "dn"}">${sgnEur(val - invK)} · ${sgnPct(d, 1)}</i>` : ""}
+    <div class="adep-g"><div><span>Eingesetzt</span><b>${eur(inv)}</b></div><div><span>Bei Knock-out weg</span><b class="down">${koRisk ? "−" + eur(koRisk) : "–"}</b></div>
+      <div><span>Größter Klumpen</span><b class="${big && big.share > .35 ? "down" : ""}">${big ? pct(big.share, 0) : "–"}</b></div>
+      <div><span>Gewinnmitnahme</span><b class="${sell ? "down" : ""}">${sell ? `${sell}× mitnehmen` : prep ? `${prep}× vorbereiten` : "laufen lassen"}</b></div></div></div>`;
 }
 // Turbo-/Knock-out-Zertifikat ohne Analyse (Basiswert nicht auf der Watchlist) (keine Zertifikatskurse), aber den Basiswert
 function turboCard(p, i, r) {
@@ -2994,10 +3073,10 @@ document.addEventListener("input", e => {
 function drawCharts(c, r) {
   if (!window.LightweightCharts) return;
   const LW = window.LightweightCharts, css = getComputedStyle(document.documentElement);
-  const opts = el => ({ width: el.clientWidth, height: el.clientHeight, layout: { background: { color: "transparent" }, textColor: "#9a9a9f",
+  const opts = el => ({ width: el.clientWidth, height: el.clientHeight, layout: { background: { color: "transparent" }, textColor: LC().t,
     fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif" },
-    grid: { vertLines: { color: "#1d1d1f" }, horzLines: { color: "#1d1d1f" } }, rightPriceScale: { borderColor: "#2a2a2d" },
-    timeScale: { borderColor: "#2a2a2d" }, crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) } });
+    grid: { vertLines: { color: LC().g }, horzLines: { color: LC().g } }, rightPriceScale: { borderColor: LC().b },
+    timeScale: { borderColor: LC().b }, crosshair: { mode: 0 }, localization: { locale: "de-DE", priceFormatter: v => fmt(v) } });
   const T = c.t, pts = (k, f = v => v) => T.map((t, i) => c[k][i] == null ? null : { time: t, value: f(c[k][i]) }).filter(Boolean);
   const main = LW.createChart($("cMain"), opts($("cMain")));
   const candles = main.addCandlestickSeries({ upColor: "#30d158", downColor: "#ff453a", borderVisible: false, wickUpColor: "#30d158", wickDownColor: "#ff453a" });
