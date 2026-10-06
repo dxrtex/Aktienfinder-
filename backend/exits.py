@@ -53,6 +53,14 @@ RULES = [
     ("Hälfte an TP 1, Rest bis TP 2", "mix", {"partial": (0.5, ("tp1",)), "target": ("tp2",), "be_after_partial": True}),
     ("Hälfte an 1,5 R, Rest 3 ATR nachziehen", "mix", {"partial": (0.5, ("R", 1.5)), "trail": ("chand", 3.0), "trail_from": 1.0, "be_after_partial": True}),
     ("Hälfte an TP 1, Rest Schluss unter EMA 20", "mix", {"partial": (0.5, ("tp1",)), "trail": ("ema",), "trail_from": 1.0, "be_after_partial": True}),
+    # Ausstieg mit den Kairo-Indikatoren (Gegenstück zum Einstieg): Verkauf zum Schlusskurs am Signaltag
+    ("RSI über 70 (überkauft)", "ind", {"sig": ["rsi70"]}),
+    ("MACD dreht nach unten (Histogramm unter 0)", "ind", {"sig": ["macd"]}),
+    ("MBI rotes X (Kaufdruck lässt nach)", "ind", {"sig": ["mbi"]}),
+    ("TP 1 oder RSI über 70 – was zuerst kommt", "ind", {"target": ("tp1",), "sig": ["rsi70"]}),
+    ("Swing-High oder MACD dreht – was zuerst kommt", "ind", {"target": ("t2",), "sig": ["macd"], "be": 1.0}),
+    ("Hälfte an TP 1, Rest bis MACD dreht", "mix", {"partial": (0.5, ("tp1",)), "sig": ["macd"], "be_after_partial": True}),
+    ("Hälfte an TP 1, Rest bis MBI rotes X", "mix", {"partial": (0.5, ("tp1",)), "sig": ["mbi"], "be_after_partial": True}),
     ("TP 1 + Zeit-Stop (10 T. kein Plus)", "time", {"target": ("tp1",), "time": (10, 0.0)}),
     ("TP 1 + Zeit-Stop (20 T. unter 0,5 R)", "time", {"target": ("tp1",), "time": (20, 0.5)}),
     ("Hälfte TP 1, Rest 3 ATR + Zeit-Stop 20 T.", "mix", {"partial": (0.5, ("tp1",)), "trail": ("chand", 3.0), "trail_from": 1.0,
@@ -94,6 +102,7 @@ def simulate(px: dict, rule: dict) -> dict | None:
     ema, alpha = px["e20"], 2 / 21
     lows = list(px["pl"])
     ko = px["s"] - 0.5 * px["atr"]
+    macd_pos = (px.get("mh0") or 0) > 0          # „dreht nach unten“ erst, nachdem das Histogramm positiv war
     for j in range(len(c)):
         oj = o[j] if j else entry
         # 1) Stop (mit Kurslücke)
@@ -126,6 +135,17 @@ def simulate(px: dict, rule: dict) -> dict | None:
                 stop = max(stop, min(lows[-tr[1]:]))
             elif tr[0] == "ema" and c[j] < ema:
                 return {"r": real + pos * R(c[j]), "d": j + 1, "x": "trail", "gko": False}
+        # Indikator-Signale (Schlusskurs)
+        sg = rule.get("sig")
+        if sg:
+            mh = px.get("mh") or []
+            if j < len(mh) and mh[j] > 0:
+                macd_pos = True
+            hit = (("rsi70" in sg and j < len(px.get("rsi") or []) and px["rsi"][j] >= 70)
+                   or ("macd" in sg and macd_pos and j < len(mh) and mh[j] < 0)
+                   or ("mbi" in sg and j < len(px.get("rx") or []) and px["rx"][j]))
+            if hit:
+                return {"r": real + pos * R(c[j]), "d": j + 1, "x": "signal", "gko": False}
         # 4) Zeit-Stop
         tm = rule.get("time")
         if tm and j + 1 == tm[0] and R(c[j]) < tm[1]:
@@ -143,7 +163,7 @@ def _summ(res: list[dict]) -> dict:
             "win": round(float((r > 0).mean()), 3), "avg_win": round(float(wins.mean()), 3) if len(wins) else None,
             "avg_loss": round(float(losses.mean()), 3) if len(losses) else None,
             "days": round(float(d.mean()), 1), "r_month": round(float(r.mean() / d.mean() * 21), 3),
-            "exits": {k: round(sum(x["x"] == k for x in res) / len(res), 3) for k in ("ziel", "stop", "be/trail", "trail", "zeit", "3 Mon.")},
+            "exits": {k: round(sum(x["x"] == k for x in res) / len(res), 3) for k in ("ziel", "stop", "be/trail", "trail", "signal", "zeit", "3 Mon.")},
             "worst5": round(float(np.percentile(r, 5)), 2)}
 
 

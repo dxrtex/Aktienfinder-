@@ -104,8 +104,14 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
     if n < start + 10:
         return []
     o, h, l, c = (df[k].to_numpy(float) for k in ("Open", "High", "Low", "Close"))
-    from .indicators import ema as _ema
+    from .indicators import ema as _ema, macd as _macd, rsi as _rsi
+    from .mbi import momentum_bias_index
     e20 = _ema(df["Close"], 20).to_numpy(float)
+    cf = CONFIG
+    rsi_s = _rsi(df["Close"], cf.rsi.length).to_numpy(float)
+    mh = _macd(df["Close"], cf.macd.fast, cf.macd.slow, cf.macd.signal)["hist"].to_numpy(float)
+    rx = momentum_bias_index(df["Close"], df["High"], df["Low"], cf.mbi.momentum_length, cf.mbi.bias_length, cf.mbi.smooth_length,
+                             cf.mbi.impulse_length, cf.mbi.std_mult)["red_x"].to_numpy(bool)
     out, last_sig = [], {"hit": -99, "fast": -99}
     for i in range(start, n):
         try:
@@ -151,7 +157,10 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                              "atr": round(float((r.flags.get("atr") or 0) / cl), 4), "s": round(float(p["stop"] / cl), 4),
                              "t1": round(float(p["target1"] / cl), 4) if p.get("target1") else None,
                              "t2": round(float(p["target2"] / cl), 4) if p.get("target2") else None,
-                             "tp": [round(float(z["p"] / cl), 4) for z in lv[:3]]}
+                             "tp": [round(float(z["p"] / cl), 4) for z in lv[:3]],
+                             # Indikatoren danach – für Ausstiege mit den Kairo-Signalen (Gegenstück zum Einstieg)
+                             "rsi": [round(float(x), 1) for x in rsi_s[i + 1:j1]], "mh": [round(float(x / cl), 5) for x in mh[i + 1:j1]],
+                             "mh0": round(float(mh[i] / cl), 5), "rx": [int(x) for x in rx[i + 1:j1]]}
     return out
 
 
