@@ -98,6 +98,17 @@ def _r(x, d):
     return None if x is None or x != x else round(float(x), d)
 
 
+def _py(v):
+    """numpy-Zahlen → JSON-taugliche Python-Werte."""
+    if isinstance(v, (bool, np.bool_)):
+        return bool(v)
+    if isinstance(v, (int, np.integer)):
+        return int(v)
+    if isinstance(v, (float, np.floating)):
+        return _r(v, 4)
+    return v
+
+
 def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: int = 15) -> list[dict]:
     """Alle Signale (und Vergleichstage) einer Aktie über die Historie."""
     from .analysis import swing_levels
@@ -159,6 +170,11 @@ def scan_history(df: pd.DataFrame, ticker: str, start: int = 260, base_every: in
                           "vol": _r(r.flags.get("volatility"), 3), "e200": _r(r.close / r.flags["ema200"] - 1, 3) if r.flags.get("ema200") else None,
                           "e50": _r(r.close / r.flags["ema50"] - 1, 3) if r.flags.get("ema50") else None,
                           "dd": _r((r.zone["H"] - r.close) / r.zone["H"], 3) if r.zone.get("H") else None,
+                          "raw": {k[4:]: _py(v) for k, v in r.flags.items()
+                                  if k.startswith("raw_") and v is not None and kind} if kind else None,
+                          "macd_age": _py(r.flags.get("macd_cross_age")) if kind else None, "crv": _r((r.plan or {}).get("crv"), 2),
+                          "div_age": _py(r.flags.get("div_t2_age")) if kind else None,
+                          "ok": "".join("1" if c.ok else "0" for c in r.criteria) if kind else None,
                           "met": int(sum(c.ok for c in r.criteria if c.key not in ("cap", "liquidity", "price", "history")))}})
         if kind:                                   # Kursverlauf danach (für den Ausstiegs-Backtest, relativ zum Schluss)
             cl, j1 = c[i], min(n, i + 1 + HOLD)

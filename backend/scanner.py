@@ -152,6 +152,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     daily = c[-cc.crash_lookback:] / c[-cc.crash_lookback - 1:-1] - 1
     worst = float(daily.min())
     res.flags["crash_age"] = int(len(daily) - 1 - int(np.argmin(daily)))
+    res.flags.update(raw_dd=dd, raw_worst=worst)
     add("no_crash", "Pullback statt Crash (max. Tagesverlust 10 T.)", worst > -cc.crash_max_daily_loss,
         pct(worst), "> −25 %")
     below = close < e20[-1] and close < e50[-1]
@@ -233,7 +234,8 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
         if hi_ - lo_ < limit:
             flat_eta = j
             break
-    res.flags.update(flat_ok=bool(span < limit or wicks >= cc.wick_min_count), flat_eta=0 if span < limit else flat_eta)
+    res.flags.update(flat_ok=bool(span < limit or wicks >= cc.wick_min_count), flat_eta=0 if span < limit else flat_eta,
+                     raw_flat=span / limit if limit else None, raw_wicks=wicks)
     add("flattening", "Abflachung der letzten 10 Kerzen", span < limit or wicks >= cc.wick_min_count,
         f"Spanne {de(span)} vs. Grenze {de(limit)}; {wicks} Lunten-Kerzen in der Zone",
         "Spanne < 1,5 × ATR × √10 oder ≥ 2 lange untere Lunten")
@@ -261,6 +263,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     # ---------- 2.5 MACD ----------
     mc = cfg.macd
     below0 = ml[-1] < 0 and ms[-1] < 0
+    res.flags.update(raw_ml=float(ml[-1] / close), raw_ms=float(ms[-1] / close))
     add("macd_below0", "MACD-Linie und Signal unter 0", bool(below0), f"MACD {de(ml[-1], 3)} / Signal {de(ms[-1], 3)}", "beide < 0")
     crosses = [i for i in range(1, n) if mh[i - 1] <= 0 < mh[i]]
     cross_age = n - 1 - crosses[-1] if crosses else None
@@ -269,6 +272,7 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
     trough = float(np.nanmin(mh[-mc.trough_lookback:]))
     ratio = abs(mh[-1]) / abs(trough) if trough < 0 else None
     b_ok = mh[-1] < 0 and rising and ratio is not None and ratio <= mc.trough_ratio
+    res.flags.update(raw_macd_ratio=ratio, raw_rising=bool(rising))
     failed = (cross_age is not None and cross_age <= mc.cross_max_age + mc.fail_bars and mh[-1] < 0
               and all(mh[-j] < mh[-j - 1] for j in range(1, mc.fail_bars + 1)))
     if a_ok:
@@ -297,6 +301,9 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
         fading = lo_b[-1] <= bc.max_peak_ratio * peak or up_b[-1] > lo_b[-1]
         new_peak = float(np.nanmax(lo_b[ix:])) > peak
         ok_x = above_ref and fading and not new_peak
+        if ix == all_x[-1] or ok_x:                 # Rohwerte für die Analyse (jüngstes bzw. genutztes X)
+            res.flags.update(raw_mbi_age=n - 1 - ix, raw_mbi_fade=float(lo_b[-1] / peak) if peak else None,
+                             raw_mbi_ref=float(peak / bound[ix - 1]) if bound[ix - 1] else None, raw_mbi_green=bool(up_b[-1] > lo_b[-1]))
         why = [w for w, bad in (("rote Spitze beim X lag nicht über der Linie", not above_ref),
                                 (f"Rot noch zu stark (über {de(bc.max_peak_ratio * 100, 0)} % der Spitze)", not fading),
                                 ("seit dem X neue, höhere rote Spitze", new_peak)) if bad]
