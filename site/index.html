@@ -659,7 +659,8 @@
 <script src="lib/lightweight-charts.standalone.production.js"></script>
 <script>
 const $ = id => document.getElementById(id);
-const REPO = "https://github.com/dxrtex/Aktienfinder-";
+const REPO = location.hostname.endsWith(".github.io")      // folgt automatisch dem Repo-Namen
+  ? `https://github.com/${location.hostname.split(".")[0]}/${location.pathname.split("/")[1]}` : "https://github.com/dxrtex/Kairo";
 const REGION = { us: "Nordamerika", europe: "Europa", asia: "Asien/Pazifik" };
 const nf = (d = 2) => new Intl.NumberFormat("de-DE", { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmt = (v, d = 2) => v == null || isNaN(v) ? "–" : nf(d).format(v);
