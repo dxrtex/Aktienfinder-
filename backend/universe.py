@@ -16,7 +16,7 @@ import pandas as pd
 from .config import CONFIG, ROOT
 
 COLUMNS = ["ticker", "name", "exchange", "country", "currency", "market_cap_usd", "sector",
-           "earnings_date", "earnings_estimate", "ex_dividend_date", "dividend_date", "dividend_rate"]
+           "earnings_date", "earnings_estimate", "ex_dividend_date", "dividend_date", "dividend_rate", "adv_usd"]
 US_EXCHANGES = ["NMS", "NYQ", "NGM", "NCM", "ASE"]   # NASDAQ, NYSE, NYSE American
 MAX_PAGES = 80
 
@@ -88,10 +88,14 @@ def screen(country: str, suffixes: tuple, currency: str, min_cap_usd: float) -> 
             if cur in ("GBp", "GBX") and cap:          # London: Börsenwert in Pfund, Kurs in Pence
                 cap_usd = cap * FX_USD["GBP"]
             home = ("." not in sym) if country == "us" else sym.endswith(suffixes)
+            if sym.endswith(".MI") and sym[:1].isdigit():   # Mailand „Global Equity Market“ (z. B. 1TUI1U.MI): Zweitlisting
+                home = False
             if (home and q.get("quoteType", "EQUITY") == "EQUITY" and cap_usd and cap_usd >= min_cap_usd
                     and not _NOT_COMMON.search(name)):
                 rows.append({"ticker": sym, "name": name, "exchange": q.get("exchange", ""), "country": country,
                              "currency": cur, "market_cap_usd": round(cap_usd), "sector": q.get("sector") or "",
+                             "adv_usd": round((q.get("averageDailyVolume3Month") or 0) * (q.get("regularMarketPrice") or 0)
+                                              * FX_USD.get(cur, FX_USD[currency])),
                              **quote_dates(q)})
         offset += len(quotes)
         if not quotes or (res.get("total") is not None and offset >= res["total"]):
@@ -100,11 +104,13 @@ def screen(country: str, suffixes: tuple, currency: str, min_cap_usd: float) -> 
 
 
 def dedupe(df: pd.DataFrame) -> pd.DataFrame:
-    """Gleiche Firma nur einmal: Stammaktie vor Vorzug, größter Börsenwert zuerst."""
-    df = df.assign(_key=df["name"].map(company_key), _pref=df["name"].str.contains(_PREF))
-    df = df.sort_values(["_pref", "market_cap_usd"], ascending=[True, False])
+    """Gleiche Firma nur einmal: Stammaktie vor Vorzug, dann die Notierung mit dem meisten Umsatz (Hauptbörse),
+    bei gleichem Umsatz der größere Börsenwert."""
+    df = df.assign(_key=df["name"].map(company_key), _pref=df["name"].str.contains(_PREF),
+                   _adv=pd.to_numeric(df.get("adv_usd"), errors="coerce").fillna(0) if "adv_usd" in df else 0)
+    df = df.sort_values(["_pref", "_adv", "market_cap_usd"], ascending=[True, False, False])
     keep = ~df["_key"].duplicated() | (df["_key"].str.len() <= 2)
-    return df[keep].drop(columns=["_key", "_pref"]).sort_values("market_cap_usd", ascending=False)
+    return df[keep].drop(columns=["_key", "_pref", "_adv"]).sort_values("market_cap_usd", ascending=False)
 
 
 def _region(markets: dict, min_cap: float) -> pd.DataFrame:

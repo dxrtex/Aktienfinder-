@@ -289,6 +289,12 @@ def main(argv=None) -> int:
                          pd.DataFrame({"ticker": [t for t in wanted if t not in set(uni["ticker"])]})], ignore_index=True)
     meta = {r["ticker"]: {k: (None if pd.isna(v) else v) for k, v in r.items()} for r in uni.to_dict("records")}
     watch = load_watchlist()
+    # Gleiche Firma nur einmal: steht sie auf der Watchlist, zählt deren Notierung (z. B. TUI1.DE statt 1TUI1U.MI)
+    from .universe import company_key
+    wkeys = {company_key(n) for n in watch.values()} | {company_key((meta.get(t) or {}).get("name") or "") for t in watch}
+    wkeys = {k for k in wkeys if len(k) > 2}
+    for t in [t for t, m in meta.items() if t not in watch and company_key(m.get("name") or "") in wkeys]:
+        del meta[t]
     for t, name in watch.items():                    # Watchlist-Aktien immer prüfen
         meta.setdefault(t, {"ticker": t, "name": name})
         meta[t]["in_watchlist"] = True
