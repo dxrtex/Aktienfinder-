@@ -641,8 +641,8 @@
 
   /* Buttons: weiß = Hauptaktion, Text-Link mit Pfeil = Nebenaktion, Blau = Auswahl */
   .btn { background: #fff; color: #05070f; border: 0; border-radius: 10px; font-weight: 600; box-shadow: 0 8px 30px -10px rgba(120, 150, 255, .55); }
-  .btn.ghost { background: transparent; color: var(--text); border: 0; box-shadow: none; }
-  .btn.ghost::after { content: " →"; }
+  .btn.ghost { background: rgba(15, 22, 70, .35); color: var(--text); border: 1px solid var(--glass-line); box-shadow: none; }
+  .focus .btn.ghost { background: transparent; border: 0; } .focus .btn.ghost::after { content: " →"; }
   .mini-btn { border: 1px solid var(--glass-line) !important; background: rgba(20, 30, 90, .3) !important; }
   .kchip, .opt { border: 1px solid var(--glass-line) !important; background: rgba(15, 22, 70, .35); }
   .kchip.on, .opt.on { background: var(--blue) !important; color: #fff !important; border-color: rgba(140, 170, 255, .6) !important; box-shadow: 0 6px 22px -8px rgba(37, 82, 255, .95); }
