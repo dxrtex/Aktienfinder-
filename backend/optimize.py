@@ -572,10 +572,10 @@ def trend2_part(ev_all, ev_trend, ev_hits):
         for lab, f_ in (("ab3", base_fn), ("ab4", fn4)):
             x = evaluate_rule(sub, f_)
             q[f"{name} · Check {lab}"] = {"n": x["all"]["n"], "turbo": x["all"].get("turbo"), "lernen": x["train"].get("turbo"), "pruefen": x["test"].get("turbo"),
-                                          "ko": x["all"]["ko"], "jahre": x["years"]}
+                                          "ko": x["all"].get("ko"), "jahre": x["years"]}
     for lab, f_ in (("ab3", base_fn), ("ab4", fn4), ("Halten", lambda e: _sim_turbo(e["px"], e["_sg"], [], 1, 1.0))):
         x = evaluate_rule([e for e in ev_hits if e["_sg"]], f_)
-        q[f"Kairo · {lab}"] = {"n": x["all"]["n"], "turbo": x["all"].get("turbo"), "lernen": x["train"].get("turbo"), "pruefen": x["test"].get("turbo"), "ko": x["all"]["ko"]}
+        q[f"Kairo · {lab}"] = {"n": x["all"]["n"], "turbo": x["all"].get("turbo"), "lernen": x["train"].get("turbo"), "pruefen": x["test"].get("turbo"), "ko": x["all"].get("ko")}
     out["stufe"] = q
     for e in es + ev_hits:
         e.pop("_sg", None); e.pop("_t", None)
