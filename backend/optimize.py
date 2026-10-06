@@ -275,6 +275,33 @@ def entry_part(ev_all, ev_px):
             yrs = max(1, len({e["d"][:4] for e in ev_all}) - 0.8)
             cands[name] = {**rs(es), "je_jahr": round(len(es) / yrs), "hit63": m([e for e in hits if fn(e["f"])], "r63"), "base63": m(bs, "r63")} if es else {"n": 0}
         out["candidates"] = cands
+        # Überrendite: Rendite minus Ø der zufälligen Tage derselben Woche (Marktbewegung herausgerechnet)
+        wk20, wk63 = defaultdict(list), defaultdict(list)
+        for e in base:
+            if e.get("r20") is not None: wk20[_week(e["d"])].append(e["r20"])
+            if e.get("r63") is not None: wk63[_week(e["d"])].append(e["r63"])
+        mw20 = {w: float(np.mean(v)) for w, v in wk20.items() if len(v) >= 20}
+        mw63 = {w: float(np.mean(v)) for w, v in wk63.items() if len(v) >= 20}
+        def ex(es):
+            a = [e["r20"] - mw20[_week(e["d"])] for e in es if e.get("r20") is not None and _week(e["d"]) in mw20]
+            b = [e["r63"] - mw63[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw63]
+            tr = [e["r63"] - mw63[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw63 and e["d"] < SPLIT]
+            te = [e["r63"] - mw63[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw63 and e["d"] >= SPLIT]
+            se = float(np.std(b) / np.sqrt(len(b))) if len(b) > 1 else None
+            f = lambda v: round(float(np.mean(v)), 4) if v else None
+            return {"n": len(b), "ex20": f(a), "ex63": f(b), "se63": round(se, 4) if se else None, "train63": f(tr), "test63": f(te)}
+        out["excess"] = {"Treffer": ex(hits), **{g: ex(es) for g, es in groups.items() if g.startswith("Fast") and len(es) >= 300}}
+        # Was sagt überhaupt künftige Überrendite voraus? (alle zufälligen Tage, nach Merkmal)
+        study = {}
+        for f, edges in (("e200", [-9, -0.3, -0.15, -0.05, 0.05, 0.15, 0.3, 9]), ("dd", [0, 0.05, 0.1, 0.2, 0.3, 0.5, 9]),
+                         ("rsi", [0, 30, 40, 50, 60, 70, 100]), ("vol", [0, 0.25, 0.35, 0.5, 0.7, 9]), ("e50", [-9, -0.15, -0.05, 0, 0.05, 0.15, 9])):
+            rows = []
+            for lo, hi in zip(edges[:-1], edges[1:]):
+                es = [e for e in base if e["f"].get(f) is not None and lo <= e["f"][f] < hi]
+                if len(es) >= 200:
+                    rows.append({"von": lo, "bis": hi, **ex(es)})
+            study[f] = rows
+        out["base_study"] = study
     for e in ev_px:
         e.pop("_rn", None)
     return out
