@@ -4,7 +4,7 @@ Scannt täglich **alle Aktien ab 2 Mrd. USD Börsenwert in Nordamerika (USA, Kan
 Long-Reversal-Setup im Tageschart, bewertet jeden Treffer mit einem **Score von 0–100** und zeigt
 Treffer und Fast-Treffer auf einer Website mit interaktiven Charts.
 
-**Website:** https://dxrtex.github.io/Aktienfinder-/  (auf dem iPad über „Teilen → Zum Home-Bildschirm“ als App)
+**Website:** https://dxrtex.github.io/Kairo/  (auf dem iPad über „Teilen → Zum Home-Bildschirm“ als App)
 
 > Keine Anlageberatung. Signale sind rein technisch und ersetzen keine eigene Prüfung.
 
