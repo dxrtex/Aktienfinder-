@@ -67,14 +67,16 @@ def sim(px, sg, crit, k, gate=True, ko_buf=1.0, min_gain=0.0):
         return None
     ko = px["s"] - ko_buf * px["atr"]
     rp = risk / entry
+    tf = risk / max(entry - ko, 1e-6)              # R → Rendite des Turbos (Einsatz = Abstand Kurs bis K.-o.)
+    out = lambda r, d, x: (r, d, x, max(-1.0, r * tf))
     for j in range(HOLD):
         oj = o[j] if j else entry
         if min(oj, l[j]) <= ko:
-            return net((min(oj, ko) - entry) / risk, j + 1, rp), j + 1, "ko"
+            return out(net((min(oj, ko) - entry) / risk, j + 1, rp), j + 1, "ko")
         if (not gate or c[j] > entry * (1 + min_gain)) and sum(sg[j][x] for x in crit) >= k:
             px_ = o[j + 1] if j + 1 < HOLD else c[j]
-            return net((px_ - entry) / risk, j + 2, rp), j + 2, "sell"
-    return net((c[HOLD - 1] - entry) / risk, HOLD, rp), HOLD, "time"
+            return out(net((px_ - entry) / risk, j + 2, rp), j + 2, "sell")
+    return out(net((c[HOLD - 1] - entry) / risk, HOLD, rp), HOLD, "time")
 
 
 def summarize(rows):
@@ -83,7 +85,8 @@ def summarize(rows):
     r = np.array([x[0] for x in rows]); d = np.array([x[1] for x in rows])
     return {"n": len(rows), "r": round(float(r.mean()), 3), "win": round(float((r > 0).mean()), 3), "days": round(float(d.mean()), 1),
             "r_month": round(float(r.mean() / d.mean() * 21), 3), "ko": round(float(np.mean([x[2] == "ko" for x in rows])), 3),
-            "p5": round(float(np.percentile(r, 5)), 2)}
+            "p5": round(float(np.percentile(r, 5)), 2),
+            "turbo": round(float(np.mean([x[3] for x in rows])), 3) if len(rows[0]) > 3 else None}
 
 
 def evaluate_rule(ev, fn):
@@ -243,6 +246,35 @@ def entry_part(ev_all, ev_px):
             if len(es) >= 30:
                 sc.append({"von": lo, "bis": hi, **rs(es)})
         out["score_bins"] = sc
+        # Fairer Vergleich: Treffer vs. zufällige Tage mit GLEICHER Volatilität / Korrektur / ATR %
+        base = [e for e in ev_all if e["k"] == "base" and e.get("f")]
+        hits = [e for e in ev_all if e["k"] == "hit" and e.get("f")]
+        def m(es, k):
+            v = [e[k] for e in es if e.get(k) is not None]
+            return round(float(np.mean(v)), 4) if v else None
+        matched = {}
+        for f, edges in (("vol", [0, 0.25, 0.35, 0.5, 0.7, 9]), ("dd", [0, 0.15, 0.25, 0.35, 0.5, 9]), ("atrp", [0, 0.02, 0.03, 0.045, 9])):
+            rows = []
+            for lo, hi in zip(edges[:-1], edges[1:]):
+                hb = [e for e in hits if e["f"].get(f) is not None and lo <= e["f"][f] < hi]
+                bb = [e for e in base if e["f"].get(f) is not None and lo <= e["f"][f] < hi]
+                if len(hb) >= 30 and len(bb) >= 30:
+                    rows.append({"von": lo, "bis": hi, "n_hit": len(hb), "n_base": len(bb), "hit20": m(hb, "r20"), "base20": m(bb, "r20"),
+                                 "hit63": m(hb, "r63"), "base63": m(bb, "r63")})
+            matched[f] = rows
+        out["matched"] = matched
+        # Kandidaten-Filter auf die Treffer (Vorschläge für Stufen/Filter, kein Muss)
+        rules = {"Vola ≥ 35 %": lambda f: (f.get("vol") or 0) >= 0.35, "ATR ≥ 3 %": lambda f: (f.get("atrp") or 0) >= 0.03,
+                 "Rückgang ≥ 25 %": lambda f: (f.get("dd") or 0) >= 0.25, "Vola ≥ 35 % und Rückgang ≥ 20 %": lambda f: (f.get("vol") or 0) >= 0.35 and (f.get("dd") or 0) >= 0.2,
+                 "ATR ≥ 3 % und Rückgang ≥ 20 %": lambda f: (f.get("atrp") or 0) >= 0.03 and (f.get("dd") or 0) >= 0.2,
+                 "Kurs ≥ 10 % unter EMA 200": lambda f: (f.get("e200") or 0) <= -0.1, "Vola < 30 %": lambda f: (f.get("vol") or 1) < 0.3}
+        cands = {}
+        for name, fn in rules.items():
+            es = [e for e in ev_px if e["k"] == "hit" and e["_rn"] is not None and fn(e.get("f") or {})]
+            bs = [e for e in base if fn(e["f"])]
+            yrs = max(1, len({e["d"][:4] for e in ev_all}) - 0.8)
+            cands[name] = {**rs(es), "je_jahr": round(len(es) / yrs), "hit63": m([e for e in hits if fn(e["f"])], "r63"), "base63": m(bs, "r63")} if es else {"n": 0}
+        out["candidates"] = cands
     for e in ev_px:
         e.pop("_rn", None)
     return out
