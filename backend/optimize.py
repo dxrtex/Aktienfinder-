@@ -302,6 +302,16 @@ def entry_part(ev_all, ev_px):
                     rows.append({"von": lo, "bis": hi, **ex(es)})
             study[f] = rows
         out["base_study"] = study
+        # Alternative Setup-Ideen auf allen Vergleichstagen: hätte eine andere Einstiegsart Überrendite gebracht?
+        alt = {"Rücksetzer im Aufwärtstrend (EMA200 +10 %, Kurs −8…0 % unter EMA50, RSI 35–50)":
+                   lambda f: (f.get("e200") or -9) >= 0.10 and -0.08 <= (f.get("e50") or 9) <= 0 and 35 <= (f.get("rsi") or 0) <= 50,
+               "Starker Trend (EMA200 +15 %, EMA50 +5 %)": lambda f: (f.get("e200") or -9) >= 0.15 and (f.get("e50") or -9) >= 0.05,
+               "Trend + überverkauft (EMA200 +20 %, RSI < 45)": lambda f: (f.get("e200") or -9) >= 0.20 and (f.get("rsi") or 99) < 45,
+               "Tief gefallen (EMA200 −30 %)": lambda f: (f.get("e200") or 9) <= -0.30,
+               "Volatil + Trend (Vola ≥ 50 %, EMA200 +10 %)": lambda f: (f.get("vol") or 0) >= 0.5 and (f.get("e200") or -9) >= 0.10,
+               "Kairo-ähnlich (Rückgang ≥ 12 %, unter EMA50, RSI 28–48)": lambda f: (f.get("dd") or 0) >= 0.12 and (f.get("e50") or 9) < 0 and 28 <= (f.get("rsi") or 0) <= 48}
+        out["alt_setups"] = {k: {**ex([e for e in base if fn(e["f"])]),
+                                 "je_jahr_je_1000": round(len([e for e in base if fn(e["f"])]) / max(1, len(base)) * 1000, 1)} for k, fn in alt.items()}
     for e in ev_px:
         e.pop("_rn", None)
     return out
@@ -417,7 +427,13 @@ def main(argv=None) -> int:
         res["sweep"] = sweep_part(ev_px)
     res["exit"] = exit_part(ev_px)
     (ROOT / "data" / "optimize.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print("OPTIMIZE " + json.dumps(res, ensure_ascii=False, separators=(",", ":")))
+    # Ausgabe in Abschnitten (das Wichtigste zuletzt – so lässt es sich gezielt aus dem Protokoll lesen)
+    dump = lambda name, obj: print(f"OPT_{name} " + json.dumps(obj, ensure_ascii=False, separators=(",", ":")))
+    dump("exit", res["exit"])
+    dump("entry", {k: v for k, v in res["entry"].items() if k not in ("alt_setups", "excess")})
+    if "sweep" in res:
+        dump("sweep", res["sweep"])
+    dump("key", {"excess": res["entry"].get("excess"), "alt": res["entry"].get("alt_setups")})
     return 0
 
 
