@@ -92,6 +92,10 @@ trend:                       # Zweites Setup „Trend-Rücksetzer“ (Rücksetze
   rsi_min: 35
   rsi_max: 50
   ema50_over_200: false
+  top:                       # Stufe „Top“ innerhalb der Trend-Rücksetzer (Rangfolge, kein Pflichtkriterium)
+    max_from_high: 0.15      # höchstens 15 % unter dem letzten Swing-High
+    max_atr_pct: 0.045       # Tagesspanne (ATR) unter 4,5 % des Kurses
+    max_above_ema200: 0.30   # Trend nicht überdehnt (höchstens +30 % über EMA 200)
 
 volatility:                  # Zusatzinfo (kein Pflichtkriterium): Filter und Sortierung auf der Website
   days: 30                   # historische Volatilität = Std.-Abw. der Tagesrenditen × √252 über 30 Tage
