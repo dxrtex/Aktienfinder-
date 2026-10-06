@@ -12,11 +12,11 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Kairo">
-<meta name="theme-color" content="#0b0b0c">
+<meta name="theme-color" content="#000000">
 <style>
   /* Graphit mono + Kairo-Blau: Blau = Marke/Aktion, Grün/Rot/Gelb nur mit Bedeutung, sonst grau-weiß */
   :root {
-    --bg: #0b0b0c; --surface: #151516; --surface-2: #1d1d1f; --surface-3: #2a2a2d; --line: #2a2a2d;
+    --bg: #000000; --surface: #151516; --surface-2: #1d1d1f; --surface-3: #2a2a2d; --line: #2a2a2d;
     --glass: rgba(255, 255, 255, .055); --glass-line: rgba(255, 255, 255, .11);
     --text: #f2f2f2; --muted: #9a9a9f; --faint: #66666b;
     --accent: #0a84ff; --accent-ink: #ffffff; --accent-bg: rgba(10, 132, 255, .15);
@@ -30,8 +30,7 @@
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
   body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-                 background: radial-gradient(420px 420px at 0% 0%, rgba(255,255,255,.07), transparent 70%),
-                             radial-gradient(480px 480px at 100% 55%, rgba(255,255,255,.05), transparent 70%); }
+                 background: none; }
   .card, .table-wrap, .pane, .search input, nav.tabbar { -webkit-backdrop-filter: blur(24px) saturate(140%); backdrop-filter: blur(24px) saturate(140%); }
   .card, .pane { background: var(--glass) !important; border-color: var(--glass-line) !important; }
   body { margin: 0; background: var(--bg); color: var(--text);
@@ -588,6 +587,12 @@
   /* Klassisches Design: Fokus-Karte gibt es nur im neuen Design */
   .kpis, .verdict, .mlist, .clab { display: none; } em.s { font-style: normal; } .cgrid, [class^="cl-"] { display: none; }
   .adate, .abar, .alist, .atools, .apx, .aseg, .sb-brand, .sb-only { display: none; }
+  /* Reiter-Leiste: Markierung gleitet zum neuen Reiter und dehnt sich dabei kurz (wie iOS) */
+  .tabs { position: relative; } .tab { z-index: 1; }
+  .tab-ind { position: absolute; left: 0; top: 0; width: 0; height: 0; border-radius: 16px; background: var(--accent-bg); pointer-events: none; z-index: 0; opacity: 0;
+             transition: left .32s cubic-bezier(.32,.72,0,1), top .32s cubic-bezier(.32,.72,0,1), width .32s cubic-bezier(.32,.72,0,1), height .32s cubic-bezier(.32,.72,0,1), opacity .2s; }
+  .tab-ind.on { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .tab-ind { transition: none; } }
 </style>
 <style id="ds-graphit" media="not all">
 
@@ -828,7 +833,7 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
 
 <div class="abar" aria-hidden="true"><span id="abarT"></span></div>
 <nav class="tabbar" aria-label="Navigation">
-  <div class="tabs">
+  <div class="tabs"><span class="tab-ind" aria-hidden="true"></span>
     <div class="sb-brand"><svg viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#000"/><rect x="161" y="128" width="16" height="256" rx="8" fill="#0A84FF"/><rect x="137" y="186" width="64" height="140" rx="10" fill="#0A84FF"/><path d="M354 150 L252 256 L354 362" fill="none" stroke="#fff" stroke-width="46" stroke-linecap="round" stroke-linejoin="round"/></svg>Kairo</div>
     <button class="tab" data-sec="today">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.5 12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5h-5v5H5a1 1 0 0 1-1-1z"/></svg>
@@ -955,7 +960,7 @@ if (!DESIGNS.some(([k]) => k === state.design)) state.design = "classic";   // f
 const isPostfach = () => state.design === "postfach";
 const applyDesign = () => {
   DESIGNS.forEach(([k]) => { const el = document.getElementById("ds-" + k); if (el) el.media = k === state.design ? "all" : "not all"; });
-  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = isLight() ? "#f2f2f7" : state.design === "classic" || state.design === "graphit" ? "#0b0b0c" : "#000";
+  const tc = document.querySelector('meta[name="theme-color"]'); if (tc) tc.content = isLight() ? "#f2f2f7" : state.design === "graphit" ? "#0b0b0c" : "#000";
 };
 applyDesign();
 try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () => { if (state.design === "auto") { applyDesign(); render(); } }); } catch (e) {}
@@ -2856,7 +2861,7 @@ function sheetExtras() {
 }
 function greetText() {
   const h = new Date().getHours(), nm = String(state.name || "").trim();
-  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? ", " + esc(nm) : "") + (isApple() ? "" : " 👋");
+  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <span class="nm">${esc(nm)}</span>` : "") + (isApple() ? "" : " 👋");
 }
 const SEC_T = { today: "Heute", scanner: "Scanner", entry: "Einstieg", calendar: "Kalender", depot: "Depot", journal: "Journal", settings: "Einstellungen", bilanz: "Bilanz" };
 function appleHead() {
@@ -2876,9 +2881,31 @@ function renderHead() {
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
   $("sectorOpts").innerHTML = `<button class="opt" data-v="">alle</button>` + sectors.map(x => `<button class="opt" data-v="${esc(x)}">${esc(x)}</button>`).join("");
 }
+// Markierung unter dem aktiven Reiter: beim Wechsel erst über alten + neuen Reiter dehnen, dann auf den neuen zusammenziehen
+let tabIndT = null;
+function moveTabInd(prev) {
+  const ind = document.querySelector(".tab-ind"), cur = document.querySelector(".tab.on");
+  if (!ind) return;
+  const vis = cur && cur.offsetParent && getComputedStyle(cur).backgroundColor === "rgba(0, 0, 0, 0)";
+  if (!vis) { ind.classList.remove("on"); return; }
+  const box = t => ({ l: t.offsetLeft, t: t.offsetTop, w: t.offsetWidth, h: t.offsetHeight });
+  const place = (b, anim) => { if (!anim) ind.style.transition = "none";
+    Object.assign(ind.style, { left: b.l + "px", top: b.t + "px", width: b.w + "px", height: b.h + "px" });
+    if (!anim) { void ind.offsetWidth; ind.style.transition = ""; } };
+  const b = box(cur); clearTimeout(tabIndT);
+  if (prev && prev !== cur && prev.offsetParent && ind.classList.contains("on")) {
+    const a = box(prev), l = Math.min(a.l, b.l), t = Math.min(a.t, b.t);
+    place({ l, t, w: Math.max(a.l + a.w, b.l + b.w) - l, h: Math.max(a.t + a.h, b.t + b.h) - t }, true);
+    tabIndT = setTimeout(() => place(b, true), 170);
+  } else place(b, false);
+  ind.classList.add("on");
+}
+addEventListener("resize", () => moveTabInd(null));
 function syncOpts() {
   document.querySelectorAll(".opts").forEach(g => g.querySelectorAll(".opt").forEach(b => b.classList.toggle("on", b.dataset.v === String(state[g.dataset.key] ?? ""))));
+  const prev = document.querySelector(".tab.on");
   document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.sec === state.sec));
+  moveTabInd(prev);
 }
 
 // ---------- Detailseite ----------
