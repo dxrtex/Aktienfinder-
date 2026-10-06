@@ -672,7 +672,7 @@ const ddFmt = (v, d = 1) => v == null ? "–" : v >= 0 ? "−" + pct(v, d) : "+"
 const dateDE = s => s ? new Date(s + "T12:00:00").toLocaleDateString("de-DE") : "–";
 const SHORT = { drawdown: "Rückgang", no_crash: "kein Crash", structure: "unter EMAs", flattening: "Abflachung",
   zone: "Zone", rsi_div: "RSI-Divergenz", rsi_range: "RSI 28–48", macd_below0: "MACD < 0", macd_turn: "MACD dreht",
-  mbi: "MBI grünes X", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
+  mbi: "MBI-Signal", crv: "CRV ≥ 2", cap: "Börsenwert", liquidity: "Liquidität", price: "Kurs ≥ 1", history: "Historie" };
 const gradeBadge = (r, big) => r.grade ? `<span class="grd g-${r.grade.g}${big ? " big" : ""}" title="Qualitätsstufe ${r.grade.g} – aus dem Backtest, siehe Score antippen">${r.grade.g}</span>` : "";
 const statusBadge = r => r.passed ? `<span class="status st-bereit">Treffer${r.score ? " · Score " + r.score : ""}</span>${gradeBadge(r, true)}`
   : r.fast_hit ? `<span class="status st-abwarten">Fast-Treffer · fehlt: ${esc(r.missing[0])}</span>`
