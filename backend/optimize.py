@@ -280,8 +280,9 @@ def entry_part(ev_all, ev_px):
         for e in base:
             if e.get("r20") is not None: wk20[_week(e["d"])].append(e["r20"])
             if e.get("r63") is not None: wk63[_week(e["d"])].append(e["r63"])
-        mw20 = {w: float(np.mean(v)) for w, v in wk20.items() if len(v) >= 20}
-        mw63 = {w: float(np.mean(v)) for w, v in wk63.items() if len(v) >= 20}
+        tm = lambda v: float(np.mean(np.clip(v, *np.percentile(v, [1, 99]))))   # um Extreme bereinigter Wochen-Ø
+        mw20 = {w: tm(v) for w, v in wk20.items() if len(v) >= 20}
+        mw63 = {w: tm(v) for w, v in wk63.items() if len(v) >= 20}
         def ex(es):
             a = [e["r20"] - mw20[_week(e["d"])] for e in es if e.get("r20") is not None and _week(e["d"]) in mw20]
             b = [e["r63"] - mw63[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw63]
@@ -289,7 +290,8 @@ def entry_part(ev_all, ev_px):
             te = [e["r63"] - mw63[_week(e["d"])] for e in es if e.get("r63") is not None and _week(e["d"]) in mw63 and e["d"] >= SPLIT]
             se = float(np.std(b) / np.sqrt(len(b))) if len(b) > 1 else None
             f = lambda v: round(float(np.mean(v)), 4) if v else None
-            return {"n": len(b), "ex20": f(a), "ex63": f(b), "se63": round(se, 4) if se else None, "train63": f(tr), "test63": f(te)}
+            md = round(float(np.median(b)), 4) if b else None
+            return {"n": len(b), "ex20": f(a), "ex63": f(b), "med63": md, "se63": round(se, 4) if se else None, "train63": f(tr), "test63": f(te)}
         out["excess"] = {"Treffer": ex(hits), **{g: ex(es) for g, es in groups.items() if g.startswith("Fast") and len(es) >= 300}}
         # Was sagt überhaupt künftige Überrendite voraus? (alle zufälligen Tage, nach Merkmal)
         study = {}
@@ -413,8 +415,22 @@ def main(argv=None) -> int:
             if k not in seen:
                 seen.add(k)
                 ev_all.append(e)
+    # Datenfehler (z. B. nicht bereinigte Aktiensplits) aussortieren, Renditen begrenzen – sonst verzerren
+    # einzelne Scheinrenditen von +1.000 % die Durchschnitte (Median zusätzlich als Gegenprobe)
+    bad = 0
+    keep = []
+    for e in ev_all:
+        px = e.get("px")
+        if px and px.get("c") and (max(px["h"] + px["c"]) > 4 or min(px["l"] + px["c"]) < 0.15 or max(px["pl"] or [1]) > 4):
+            bad += 1
+            continue
+        if any(e.get(f"r{k}") is not None and (e[f"r{k}"] > 3 or e[f"r{k}"] < -0.95) for k in (5, 10, 20, 40, 63)):
+            bad += 1
+            continue
+        keep.append(e)
+    ev_all = keep
     ev_px = [e for e in ev_all if e.get("px") and e["k"] in ("hit", "fast")]
-    res = {"n_events": len(ev_all), "n_px": len(ev_px), "period": [min(e["d"] for e in ev_all), max(e["d"] for e in ev_all)]}
+    res = {"n_events": len(ev_all), "aussortiert": bad, "n_px": len(ev_px), "period": [min(e["d"] for e in ev_all), max(e["d"] for e in ev_all)]}
     wk = defaultdict(list)
     for e in ev_all:
         if e["k"] == "base" and (e.get("f") or {}).get("e200") is not None:
@@ -433,7 +449,7 @@ def main(argv=None) -> int:
     dump("entry", {k: v for k, v in res["entry"].items() if k not in ("alt_setups", "excess")})
     if "sweep" in res:
         dump("sweep", res["sweep"])
-    dump("key", {"excess": res["entry"].get("excess"), "alt": res["entry"].get("alt_setups")})
+    dump("key", {"n": res["n_events"], "aussortiert": res["aussortiert"], "excess": res["entry"].get("excess"), "alt": res["entry"].get("alt_setups")})
     return 0
 
 
