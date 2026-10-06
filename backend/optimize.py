@@ -248,6 +248,87 @@ def entry_part(ev_all, ev_px):
     return out
 
 
+ALL15 = ["cap", "liquidity", "price", "history"] + KEYS
+
+
+def _var_ok(e, key, test):
+    """Wäre das Signal mit einer anderen Schwelle für `key` ein Treffer? (übrige Kriterien wie gemessen)"""
+    ok = (e.get("f") or {}).get("ok")
+    raw = (e.get("f") or {}).get("raw") or {}
+    if not ok or len(ok) != 15:
+        return None
+    for i, k in enumerate(ALL15):
+        if k == key:
+            v = test(e["f"], raw)
+            if v is None:
+                return None
+            if not v:
+                return False
+        elif ok[i] != "1":
+            return False
+    return True
+
+
+# Schwellen-Varianten je Kriterium (None = Kriterium weglassen). Basis = heutige Einstellung.
+def _rng(lo, hi):
+    return lambda f, r: f.get("rsi") is not None and lo <= f["rsi"] <= hi
+SWEEP = {
+    "drawdown": {f"Rückgang ≥ {int(x * 100)} %": (lambda x: lambda f, r: r.get("dd") is not None and r["dd"] >= x)(x) for x in (0.08, 0.10, 0.12, 0.15, 0.20, 0.25)},
+    "no_crash": {**{f"max. Tagesverlust > −{int(x * 100)} %": (lambda x: lambda f, r: r.get("worst") is not None and r["worst"] > -x)(x) for x in (0.10, 0.15, 0.25)}, "weglassen": lambda f, r: True},
+    "structure": {"weglassen": lambda f, r: True},
+    "zone": {"weglassen": lambda f, r: True},
+    "flattening": {**{f"Spanne < {x} × Grenze oder Lunten": (lambda x: lambda f, r: r.get("flat") is not None and (r["flat"] < x or (r.get("wicks") or 0) >= 2))(x) for x in (0.7, 0.85, 1.0, 1.2, 1.5)}, "weglassen": lambda f, r: True},
+    "rsi_div": {"weglassen": lambda f, r: True},
+    "rsi_range": {"RSI 28–48 (heute)": _rng(28, 48), "RSI 25–45": _rng(25, 45), "RSI 28–40": _rng(28, 40), "RSI 30–52": _rng(30, 52),
+                  "RSI 28–55": _rng(28, 55), "RSI 20–48": _rng(20, 48), "weglassen": lambda f, r: True},
+    "macd_below0": {"weglassen": lambda f, r: True},
+    "macd_turn": {"weglassen": lambda f, r: True},
+    "mbi": {**{f"grünes X ≤ {x} T. (sonst wie heute)": (lambda x: lambda f, r: None if r.get("mbi_age") is None else
+                (r["mbi_age"] <= x and (r.get("mbi_ref") or 0) > 1 and ((r.get("mbi_fade") or 9) <= 0.7 or r.get("mbi_green")))) (x) for x in (10, 15, 20, 30)},
+            "weglassen": lambda f, r: True},
+    "crv": {**{f"CRV ≥ {x}": (lambda x: lambda f, r: f.get("crv") is not None and f["crv"] >= x)(x) for x in (1.5, 2.0, 2.5, 3.0, 4.0)}, "weglassen": lambda f, r: True},
+}
+
+
+def _dedupe(es):
+    from .bilanz import GAP
+    import datetime as dt
+    out, last = [], {}
+    for e in sorted(es, key=lambda e: (e["t"], e["d"])):
+        d = dt.date.fromisoformat(e["d"])
+        if e["t"] in last and (d - last[e["t"]]).days <= GAP + 2:
+            last[e["t"]] = d
+            continue
+        last[e["t"]] = d
+        out.append(e)
+    return out
+
+
+def sweep_part(ev_px):
+    """Je Kriterium und Schwelle: Anzahl Signale und Ergebnis (TP 2 netto, Halten netto, Rendite 20/63 T.)."""
+    tp2 = {n: r for n, _, r in RULES}["TP 2 – zweites relevantes Hoch"]
+    for e in ev_px:
+        if "_tp2" not in e:
+            x = simulate(e["px"], tp2, "close", 1.0)
+            e["_tp2"] = net(x["r"], x["d"], x["rp"]) if x else None
+            y = sim(e["px"], [{}] * HOLD, [], 1, True) if len(e["px"]["c"]) >= HOLD else None
+            e["_hold"] = y[0] if y else None
+    def stats(es):
+        es = _dedupe(es)
+        a = [e["_tp2"] for e in es if e["_tp2"] is not None]
+        hd = [e["_hold"] for e in es if e["_hold"] is not None]
+        tr = [e["_tp2"] for e in es if e["_tp2"] is not None and e["d"] < SPLIT]
+        te = [e["_tp2"] for e in es if e["_tp2"] is not None and e["d"] >= SPLIT]
+        r63 = [e["r63"] for e in es if e.get("r63") is not None]
+        f = lambda v: round(float(np.mean(v)), 3) if v else None
+        return {"n": len(es), "tp2": f(a), "hold": f(hd), "train": f(tr), "test": f(te), "ret63": f(r63)}
+    cand = [e for e in ev_px if (e.get("f") or {}).get("ok")]
+    out = {"heute": stats([e for e in cand if e["k"] == "hit"])}
+    for key, vs in SWEEP.items():
+        out[key] = {name: stats([e for e in cand if _var_ok(e, key, fn)]) for name, fn in vs.items()}
+    return out
+
+
 def _week(d):
     import datetime as dt
     y, w, _ = dt.date.fromisoformat(d).isocalendar()
@@ -273,6 +354,8 @@ def main(argv=None) -> int:
     for e in ev_px:
         e["_br"] = breadth.get(_week(e["d"]))
     res["entry"] = entry_part(ev_all, ev_px)
+    if any((e.get("f") or {}).get("raw") for e in ev_px):
+        res["sweep"] = sweep_part(ev_px)
     res["exit"] = exit_part(ev_px)
     (ROOT / "data" / "optimize.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print("OPTIMIZE " + json.dumps(res, ensure_ascii=False, separators=(",", ":")))
