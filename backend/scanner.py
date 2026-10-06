@@ -287,17 +287,22 @@ def evaluate(df: pd.DataFrame, info: dict | None = None, cfg: SimpleNamespace = 
 
     # ---------- 2.6 MBI ----------
     bc = cfg.mbi
-    x_ok, xv = False, "kein grünes X in den letzten 15 Kerzen"
     all_x = [i for i in range(2, n) if gx[i]]
+    x_ok, xv = False, (f"letztes grünes X vor {n - 1 - all_x[-1]} T. – älter als {bc.x_max_age} Kerzen, zählt nicht mehr"
+                       if all_x else f"kein grünes X in den letzten {bc.x_max_age} Kerzen")
     res.flags.update(mbi_x_age=n - 1 - all_x[-1] if all_x else None, mbi_new_peak=False)
     for ix in reversed([i for i in range(max(2, n - bc.x_max_age), n) if gx[i]]):
         peak = float(lo_b[ix - 1])
         above_ref = peak > bound[ix - 1]
         fading = lo_b[-1] <= bc.max_peak_ratio * peak or up_b[-1] > lo_b[-1]
         new_peak = float(np.nanmax(lo_b[ix:])) > peak
-        xv = (f"grünes X vor {n - 1 - ix} T., Spitze {de(peak, 0)} (Linie {de(bound[ix - 1], 0)}), "
-              f"jetzt rot {de(lo_b[-1], 0)} / grün {de(up_b[-1], 0)}" + ("; neue höhere rote Spitze" if new_peak else ""))
         ok_x = above_ref and fading and not new_peak
+        why = [w for w, bad in (("rote Spitze beim X lag nicht über der Linie", not above_ref),
+                                (f"Rot noch zu stark (über {de(bc.max_peak_ratio * 100, 0)} % der Spitze)", not fading),
+                                ("seit dem X neue, höhere rote Spitze", new_peak)) if bad]
+        if ix == all_x[-1] or ok_x:                 # Text immer zum jüngsten (bzw. genutzten) X
+            xv = (f"grünes X vor {n - 1 - ix} T., Spitze {de(peak, 0)} (Linie {de(bound[ix - 1], 0)}), "
+                  f"jetzt rot {de(lo_b[-1], 0)} / grün {de(up_b[-1], 0)}" + ("" if ok_x else " → X da, zählt aber nicht: " + "; ".join(why)))
         if ok_x or ix == all_x[-1]:                 # Hinweis: genutztes bzw. jüngstes X beschreiben
             res.flags.update(mbi_x_age=n - 1 - ix, mbi_new_peak=bool(new_peak), mbi_above_ref=bool(above_ref))
         if ok_x:
