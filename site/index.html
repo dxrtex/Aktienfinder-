@@ -2639,9 +2639,17 @@ function postfachItems() {
   const out = { now: [], prep: [] };
   if (anaData && searchIdx) {
     const items = depotLoad().map((p, i) => ({ p, i, r: p.t ? rowOf(p.t) : null }));
-    groupPositions(items).forEach(g => { if (!g.ex) return;
-      const it = { dep: g.t, c: g.ex.nw >= 4 ? "r" : "y", t: `${g.name} – ${g.ex.nw >= 4 ? "Gewinn mitnehmen" : "Verkauf vorbereiten"}`, d: `${g.ex.nw}/5 Verkaufskriterien${g.pl != null ? " · " + sgnPct(g.pl, 0) : ""}`, v: g.pl };
-      if (g.ex.nw >= 4) out.now.push(it); else if (g.ex.nw === 3) out.prep.push(it); });
+    if (!calData) loadCalendar();
+    groupPositions(items).forEach(g => {
+      // Quartalszahlen in den nächsten 7 Tagen: für gehebelte Positionen das größte Risiko
+      const ev = g.ev && g.ev.kind === "earnings" ? g.ev : null, dd = ev ? daysUntil(ev.date) : null;
+      const evTxt = ev && dd <= 7 ? (dd === 0 ? "Quartalszahlen heute" : dd === 1 ? "Quartalszahlen morgen" : `Quartalszahlen in ${dd} Tagen`) : "";
+      const ex = g.ex && g.ex.nw >= 3 ? g.ex : null;
+      if (!ex && !evTxt) return;
+      const it = { dep: g.t, c: ex && ex.nw >= 4 ? "r" : "y", v: g.pl,
+        t: `${g.name} – ${ex ? (ex.nw >= 4 ? "Gewinn mitnehmen" : "Verkauf vorbereiten") : evTxt}`,
+        d: [ex ? `${ex.nw}/5 Verkaufskriterien` : "Gewinne absichern oder Position verkleinern?", ex && evTxt ? evTxt : "", g.pl != null ? sgnPct(g.pl, 0) : ""].filter(Boolean).join(" · ") };
+      if (ex && ex.nw >= 4) out.now.push(it); else out.prep.unshift(it); });
   } else if (!anaData) loadAnalysis();
   const ent = data.results.filter(r => r.passed || isTrend(r)).sort((a, b) => (isTrend(b) && b.tr.top) - (isTrend(a) && a.tr.top) || (b.score ?? 0) - (a.score ?? 0));
   ent.forEach(r => out.now.push({ t: r.ticker, c: "g", n: `${r.name || r.ticker} einsteigen`, d: r.passed ? `Kairo-Treffer · Score ${r.score ?? "–"} · CRV ${fmt(r.crv, 1)}` : `Trend-Rücksetzer${r.tr.top ? " Top" : ""} · CRV ${fmt(r.tr.plan && r.tr.plan.crv, 1)}` }));
