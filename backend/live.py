@@ -34,6 +34,9 @@ def update(rows: list[dict], data: dict[str, pd.DataFrame], today: str) -> dict:
         s = {"t": r["ticker"], "n": (r.get("name") or r["ticker"])[:40], "k": k, "d": d, "score": r.get("score", 0),
              "entry": p["entry"], "stop": p["stop"], "t1": p.get("target1"), "t2": p.get("target2"), "crv": p.get("crv"),
              "region": r.get("region"), "grade": (r.get("grade") or {}).get("g"), "res": "running"}
+        chk = (r.get("tr") or {}).get("chk") if k == "trend" else None
+        if chk:                                    # Rücksetzer-Check am Signaltag – für die spätere Live-Prüfung
+            s.update(chk=chk["p"], f50=chk.get("fib50"), hi=chk.get("hi"))
         try:                                       # TP 1 = nächstes relevantes Hoch (Hoch-Treppe wie im Depot)
             from .analysis import swing_levels
             dfx = data.get(r["ticker"])
