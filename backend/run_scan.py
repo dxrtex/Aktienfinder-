@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import company, forecast, grade, live, sentiment, state, telegram
+from . import briefing, company, forecast, grade, live, sentiment, state, telegram
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -356,6 +356,16 @@ def main(argv=None) -> int:
             print(f"Marktstimmung: {n_s} aktualisiert, {len(senti) - ('_want' in senti)} im Cache")
         except Exception as exc:
             print(f"Marktstimmung: Fehler {exc!r}")
+    # Tagesbriefing der App: frische Schlagzeilen (letzte ~36 h) für Watchlist + synchronisierte Merkliste/Depot + Markt
+    brief = None
+    if not args.end:
+        try:
+            sync = state.load("telegram.json", {}).get("sync") or {}
+            mine = list(watch) + list(sync.get("fav", [])) + [d.get("t") for d in sync.get("depot", []) if d.get("t")]
+            brief = briefing.build(mine, names={t: (meta.get(t) or {}).get("name") for t in meta})
+            print(f"Briefing: Nachrichten für {len(brief['stocks'])} Aktien, {len(brief['market'])} Marktmeldungen")
+        except Exception as exc:
+            print(f"Briefing: Fehler {exc!r}")
     watch_dates = {}
     if not args.end:
         for t in watch:
@@ -491,6 +501,9 @@ def main(argv=None) -> int:
     with open(SITE / "results.json", "w", encoding="utf-8") as f:
         json.dump(_clean(out), f, ensure_ascii=False, separators=(",", ":"))
     fx = fx_to_eur({r.get("cur") for r in search.values()})
+    if brief is not None:
+        with open(SITE / "briefing.json", "w", encoding="utf-8") as f:
+            json.dump(brief, f, ensure_ascii=False, separators=(",", ":"))
     with open(SITE / "search.json", "w", encoding="utf-8") as f:
         json.dump({"generated": out["generated"], "fx_eur": fx,
                    "rows": sorted(search.values(), key=lambda r: r["n"].lower())},
