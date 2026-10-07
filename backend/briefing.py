@@ -47,7 +47,7 @@ def _parse(raw, hours: float) -> list[dict]:
             continue
         url = ((c.get("canonicalUrl") or {}).get("url") or (c.get("clickThroughUrl") or {}).get("url") or c.get("link") or "")
         out.append({"t": title[:180], "p": ((c.get("provider") or {}).get("displayName") or c.get("publisher") or "")[:40],
-                    "u": url, "d": dt.astimezone(timezone.utc).isoformat(timespec="minutes"), "s": tone(title)})
+                    "u": url, "d": dt.astimezone(timezone.utc).isoformat(timespec="minutes"), "s": tone(title), "en": 1})
     out.sort(key=lambda x: x["d"], reverse=True)
     return out
 
@@ -121,6 +121,8 @@ def translate(items: list[dict], budget_s: float = 60) -> int:
     for x in items:
         if time.time() - start > budget_s:
             break
+        if not x.pop("en", 0):
+            continue
         if x["t"] not in cache:
             cache[x["t"]] = _translate_one(x["t"])
             time.sleep(0.15)
