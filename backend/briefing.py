@@ -41,6 +41,48 @@ def _parse(raw, hours: float) -> list[dict]:
     return out
 
 
+def _translate_one(text: str) -> str | None:
+    import requests
+
+    try:
+        r = requests.get("https://translate.googleapis.com/translate_a/single",
+                         params={"client": "gtx", "sl": "auto", "tl": "de", "dt": "t", "q": text}, timeout=8)
+        if r.ok:
+            j = r.json()
+            if (j[2] if len(j) > 2 else "") == "de":
+                return None                              # schon deutsch
+            out = "".join(seg[0] for seg in j[0] if seg and seg[0]).strip()
+            if out:
+                return out
+    except Exception:
+        pass
+    try:
+        r = requests.get("https://api.mymemory.translated.net/get", params={"q": text, "langpair": "en|de"}, timeout=8)
+        if r.ok:
+            out = ((r.json().get("responseData") or {}).get("translatedText") or "").strip()
+            if out and "MYMEMORY WARNING" not in out.upper() and out.lower() != text.lower():
+                return out
+    except Exception:
+        pass
+    return None
+
+
+def translate(items: list[dict], budget_s: float = 60) -> int:
+    """Schlagzeilen ins Deutsche übersetzen: t = Deutsch, o = Original. Ohne Erfolg bleibt der Originaltitel."""
+    start, done, cache = time.time(), 0, {}
+    for x in items:
+        if time.time() - start > budget_s:
+            break
+        if x["t"] not in cache:
+            cache[x["t"]] = _translate_one(x["t"])
+            time.sleep(0.15)
+        de = cache[x["t"]]
+        if de:
+            x["o"], x["t"] = x["t"], de[:200]
+            done += 1
+    return done
+
+
 def build(tickers: list[str], names: dict | None = None, hours: float = 36, budget_s: float = 150, per: int = 3) -> dict:
     import yfinance as yf
 
@@ -75,4 +117,5 @@ def build(tickers: list[str], names: dict | None = None, hours: float = 36, budg
         time.sleep(0.2)
     market.sort(key=lambda x: x["d"], reverse=True)
     out["market"] = market[:6]
+    out["translated"] = translate(out["market"] + [x for l in out["stocks"].values() for x in l])
     return out
