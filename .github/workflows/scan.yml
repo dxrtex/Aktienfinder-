@@ -77,6 +77,8 @@ jobs:
         run: python -m backend.run_scan
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          PUSH_SUBS: ${{ secrets.PUSH_SUBS }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           TELEGRAM_CHAT: ${{ secrets.TELEGRAM_CHAT }}
       - name: Zustand sichern
         if: always() && steps.time.outputs.skip == 'false' && github.ref == 'refs/heads/main'
