@@ -123,6 +123,8 @@
   .g-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
   .g-tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); }
   .g-act { margin-top: 8px; display: flex; justify-content: flex-end; } .btn.sm { padding: 6px 12px; font-size: 13px; }
+  .g-pos-h > .btn, .g-act .btn { width: auto; flex: none; }
+  .g-mode { display: flex; gap: 6px; margin-top: 10px; } .g-mode .opt { flex: 1; } .g-levs { align-items: center; } .g-levs .opt { min-width: 40px; } .g-lev { color: var(--gold); }
   .g-amts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; } .g-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
   #main.sec-in > * { animation: secin .42s cubic-bezier(.2, .8, .2, 1) both; }
   #main.sec-in > *:nth-child(2) { animation-delay: .04s; } #main.sec-in > *:nth-child(3) { animation-delay: .08s; } #main.sec-in > *:nth-child(4) { animation-delay: .12s; }
@@ -2515,7 +2517,17 @@ function gSetup(t) {
   if (r.fast_hit) return { k: "Fast", plan: {} };
   return { k: "Watchlist", plan: {} };
 }
-const gVal = p => { const x = gPx(p.t); return x.c == null ? p.eur : p.qty * (toEur(x.c, p.cur) ?? p.px); };
+// Turbo Long (Open End): K.-o. = Kurs × (1 − 1/Hebel); die Schwelle steigt täglich um die Finanzierungskosten (~3,5 % p. a.).
+// Wert = (Kurs − K.-o.) / (Kaufkurs − K.-o.) × Einsatz, in Euro mit Wechselkurs-Effekt. Kurs ≤ K.-o. → wertlos.
+const G_FIN = 0.035, G_LEVS = [3, 4, 5, 6, 7, 8, 9, 10];
+const gKo = p => p.ko0 * (1 + G_FIN * Math.max(0, (Date.now() - new Date(p.d + "T22:00:00")) / 864e5) / 365);
+function gVal(p) {
+  const x = gPx(p.t); if (x.c == null) return p.eur - (p.fee || 0);
+  if (!p.lev) return p.qty * (toEur(x.c, p.cur) ?? p.px);
+  const ko = gKo(p); if (x.c <= ko) return 0;
+  const fx = (toEur(x.c, p.cur) ?? x.c) / x.c, fx0 = p.fx0 || fx;
+  return (p.eur - (p.fee || 0)) * (x.c - ko) / (p.px - p.ko0) * fx / fx0;
+}
 function gTotals(g) {
   const inv = g.pos.reduce((a, p) => a + gVal(p), 0), cost = g.pos.reduce((a, p) => a + p.eur, 0);
   return { inv, cost, total: g.cash + inv, open: inv - cost, real: g.closed.reduce((a, c) => a + c.pnl, 0) };
@@ -2524,6 +2536,7 @@ function gTotals(g) {
 function gTick(g) {
   if (!data) return;
   const d = String(data.generated).slice(0, 10);
+  [...g.pos].forEach(p => { if (p.lev) { const x = gPx(p.t); if (x.c != null && x.c <= gKo(p)) gSell(g, p.id, "Knock-out"); } });
   if (g.auto) [...g.pos].forEach(p => {
     const x = gPx(p.t); if (x.c == null || p.scan === d) return;
     if (p.stop && x.c <= p.stop) gSell(g, p.id, "Stop (automatisch)");
@@ -2534,22 +2547,24 @@ function gTick(g) {
   if (!last || last.d !== d) g.hist.push({ d, v: Math.round(tot) }); else last.v = Math.round(tot);
   if (g.hist.length > 400) g.hist = g.hist.slice(-400);
 }
-function gBuy(g, t, eurAmt) {
+function gBuy(g, t, eurAmt, lev) {
   const x = gPx(t), su = gSetup(t), pl = su.plan || {};
   if (x.eur == null || !(eurAmt > 0)) return "Kein Kurs für diese Aktie.";
-  const qty = Math.floor(eurAmt / x.eur);
-  if (qty < 1) return "Betrag reicht nicht für 1 Aktie.";
-  const cost = qty * x.eur + G_FEE;
+  const qty = lev ? 0 : Math.floor(eurAmt / x.eur);
+  if (!lev && qty < 1) return "Betrag reicht nicht für 1 Aktie.";
+  if (lev && eurAmt < 100) return "Mindestens 100 € je Turbo.";
+  const cost = (lev ? Math.round(eurAmt * 100) / 100 : qty * x.eur) + G_FEE;
   if (cost > g.cash + 1e-6) return "Nicht genug Guthaben.";
   g.cash -= cost;
   g.pos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), t, n: x.n, cur: x.cur, qty, px: x.c, eur: cost,
                d: new Date().toISOString().slice(0, 10), scan: String(data.generated).slice(0, 10), k: su.k, score: su.score ?? null,
-               grade: su.grade ?? null, chk: su.chk ?? null, stop: pl.stop ?? null, t1: pl.target1 ?? null, t2: pl.target2 ?? null });
+               grade: su.grade ?? null, chk: su.chk ?? null, stop: pl.stop ?? null, t1: pl.target1 ?? null, t2: pl.target2 ?? null,
+               ...(lev ? { lev, ko0: x.c * (1 - 1 / lev), fx0: x.eur / x.c, fee: G_FEE } : {}) });
   return "";
 }
 function gSell(g, id, why) {
   const i = g.pos.findIndex(p => p.id === id); if (i < 0) return;
-  const p = g.pos[i], x = gPx(p.t), px = x.c ?? p.px, got = p.qty * (toEur(px, p.cur) ?? 0) - G_FEE;
+  const p = g.pos[i], x = gPx(p.t), px = x.c ?? p.px, v = gVal(p), got = p.lev ? (v > 0 ? v - G_FEE : 0) : p.qty * (toEur(px, p.cur) ?? 0) - G_FEE;
   g.cash += got;
   g.closed.unshift({ ...p, xpx: px, xd: new Date().toISOString().slice(0, 10), got, pnl: got - p.eur, ret: got / p.eur - 1, why: why || "manuell" });
   g.pos.splice(i, 1);
@@ -2574,7 +2589,7 @@ function gameHtml() {
   let g = gLoad();
   if (!g) return `<div class="section-title"><span>Spiel</span><span>Depot-Simulation</span></div>
     <div class="card g-intro"><div class="g-big">100.000 €</div><b>Teste Kairos Vorschläge ohne echtes Geld.</b>
-      <p class="note">Du bekommst ein fiktives Konto und kaufst Aktien aus den Kairo-Treffern und Trend-Rücksetzern. Jeder Kauf merkt sich Setup, Score, Rücksetzer-Check und Trade-Plan – so siehst du nach einigen Wochen, welche Signale bei dir wirklich funktionieren. Gehandelt wird zum Schlusskurs des letzten Scans, 0,99 € Gebühr je Order. Alles bleibt auf diesem Gerät.</p>
+      <p class="note">Du bekommst ein fiktives Konto und kaufst Aktien aus den Kairo-Treffern und Trend-Rücksetzern. Jeder Kauf merkt sich Setup, Score, Rücksetzer-Check und Trade-Plan – so siehst du nach einigen Wochen, welche Signale bei dir wirklich funktionieren. Wahlweise als Aktie oder als Turbo Long mit Hebel 3–10 (mit K.-o.-Schwelle). Gehandelt wird zum Schlusskurs des letzten Scans, 0,99 € Gebühr je Order. Alles bleibt auf diesem Gerät.</p>
       <button class="btn" data-g="start">Spiel starten</button></div>`;
   gTick(g); gSave(g);
   const T = gTotals(g), perf = T.total / G_START - 1, m = anaData && anaData.market;
@@ -2582,35 +2597,42 @@ function gameHtml() {
   const days = Math.max(0, Math.round((Date.now() - new Date(g.start)) / 864e5));
   const pos = g.pos.map(p => {
     const x = gPx(p.t), val = gVal(p), pnl = val - p.eur, r = val / p.eur - 1;
-    const st = x.c == null ? "" : p.stop && x.c <= p.stop ? `<span class="g-tag down">Stop unterschritten</span>` : p.t2 && x.c >= p.t2 ? `<span class="g-tag up">Ziel 2 erreicht</span>` : p.t1 && x.c >= p.t1 ? `<span class="g-tag up">Ziel 1 erreicht</span>` : "";
+    const st = x.c == null ? "" : p.lev && x.c && (x.c - gKo(p)) / x.c < .03 ? `<span class="g-tag down">K.-o. sehr nah</span>` : p.stop && x.c <= p.stop ? `<span class="g-tag down">Stop unterschritten</span>` : p.t2 && x.c >= p.t2 ? `<span class="g-tag up">Ziel 2 erreicht</span>` : p.t1 && x.c >= p.t1 ? `<span class="g-tag up">Ziel 1 erreicht</span>` : "";
     return `<div class="g-pos"><div class="g-pos-h"><button class="g-nm" data-card="${esc(p.t)}"><b>${esc(p.n)}</b><small>${esc(p.t)} · ${esc(p.k)}${p.score != null ? ` · Score ${p.score}` : ""}${p.chk != null ? ` · Check ${pct(p.chk, 0)}` : ""} · seit ${dateDE(p.d)}</small></button>
       <div class="g-pl ${pnl >= 0 ? "up" : "down"}"><b>${sEur2(pnl)}</b><small>${sgnPct(r, 1)}</small></div></div>
-      <div class="g-row"><span>${p.qty} Stk. · Kauf ${fmt(p.px)} → jetzt ${fmt(x.c)} ${esc(p.cur || "")}</span><span>Wert ${eur2(val)}</span></div>
+      <div class="g-row"><span>${p.lev ? `<b class="g-lev">Turbo ×${p.lev}</b> · K.-o. ${fmt(gKo(p))} (${x.c ? pct((x.c - gKo(p)) / x.c, 1) : "–"} Abstand)` : `${p.qty} Stk.`} · Kauf ${fmt(p.px)} → jetzt ${fmt(x.c)} ${esc(p.cur || "")}</span><span>Wert ${eur2(val)}</span></div>
       ${p.stop || p.t1 ? `<div class="g-row muted"><span>Plan: Stop ${fmt(p.stop)} · Ziel 1 ${fmt(p.t1)} · Ziel 2 ${fmt(p.t2)}</span>${st}</div>` : st ? `<div class="g-row">${st}</div>` : ""}
       <div class="g-act"><button class="btn ghost sm" data-g="sell" data-id="${p.id}">Verkaufen</button></div></div>`;
   }).join("");
   // Auswertung abgeschlossener Trades je Setup
   const grp = {};
-  g.closed.forEach(c => { const k = c.k.startsWith("Trend") && c.chk != null ? `${c.k} · Check ${c.chk >= .55 ? "↑" : c.chk >= .4 ? "→" : "↓"}` : c.k;
+  g.closed.forEach(c => { const k = (c.k.startsWith("Trend") && c.chk != null ? `${c.k} · Check ${c.chk >= .55 ? "↑" : c.chk >= .4 ? "→" : "↓"}` : c.k) + (c.lev ? " · Turbo" : "");
     (grp[k] = grp[k] || []).push(c); });
   const stat = Object.entries(grp).map(([k, l]) => { const w = l.filter(c => c.pnl > 0).length, s = l.reduce((a, c) => a + c.pnl, 0), ar = l.reduce((a, c) => a + c.ret, 0) / l.length;
     return `<tr><td>${esc(k)}</td><td class="num">${l.length}</td><td class="num">${pct(w / l.length, 0)}</td><td class="num ${ar >= 0 ? "up" : "down"}">${sgnPct(ar, 1)}</td><td class="num ${s >= 0 ? "up" : "down"}">${sEur2(s)}</td></tr>`; }).join("");
-  const closed = g.closed.slice(0, 15).map(c => `<tr><td><b>${esc(c.n)}</b><small class="muted" style="display:block">${esc(c.k)} · ${dateDE(c.d)} → ${dateDE(c.xd)} · ${esc(c.why)}</small></td><td class="num ${c.pnl >= 0 ? "up" : "down"}">${sEur2(c.pnl)}<small style="display:block">${sgnPct(c.ret, 1)}</small></td></tr>`).join("");
+  const closed = g.closed.slice(0, 15).map(c => `<tr><td><b>${esc(c.n)}</b><small class="muted" style="display:block">${esc(c.k)}${c.lev ? ` · Turbo ×${c.lev}` : ""} · ${dateDE(c.d)} → ${dateDE(c.xd)} · ${esc(c.why)}</small></td><td class="num ${c.pnl >= 0 ? "up" : "down"}">${sEur2(c.pnl)}<small style="display:block">${sgnPct(c.ret, 1)}</small></td></tr>`).join("");
   const id = gIdeas(), sel = state.gSel;
   const idea = r => { const su = gSetup(r.ticker), pl = su.plan || {}, x = gPx(r.ticker), own = g.pos.some(p => p.t === r.ticker);
     const risk = pl.stop && x.c ? (x.c - pl.stop) / x.c : null;
     return `<button class="g-idea${sel === r.ticker ? " on" : ""}" data-g="pick" data-t="${esc(r.ticker)}"><b>${esc(r.name || r.ticker)}</b>
-      <small>${esc(su.k)}${su.score != null ? ` · Score ${su.score}` : ""}${su.chk != null ? ` · Check ${pct(su.chk, 0)}` : ""}${risk ? ` · Stop −${pct(risk, 1)}` : ""}${own ? " · im Depot" : ""}</small><span>${x.eur != null ? eur2(x.eur) : "–"}</span></button>`; };
+      <small>${esc(su.k)}${su.score != null ? ` · Score ${su.score}` : ""}${su.chk != null ? ` · Check ${pct(su.chk, 0)}` : ""}${risk > 0 ? ` · Stop −${pct(risk, 1)}` : ""}${own ? " · im Depot" : ""}</small><span>${x.eur != null ? eur2(x.eur) : "–"}</span></button>`; };
   let form = "";
   if (sel) { const x = gPx(sel), su = gSetup(sel), pl = su.plan || {};
-    const amt = +state.gAmt || 10000, qty = x.eur ? Math.floor(amt / x.eur) : 0;
-    const rq = pl.stop && x.c && x.c > pl.stop ? Math.floor(G_START * 0.01 / ((x.c - pl.stop) * (x.eur / x.c))) : null;
+    const lev = state.gMode === "turbo" ? (+state.gLev || 5) : 0;
+    const amt = +state.gAmt || (lev ? 2000 : 10000), qty = lev ? 1 : x.eur ? Math.floor(amt / x.eur) : 0;
+    const ko = lev && x.c ? x.c * (1 - 1 / lev) : null;
+    // 1 % Risiko: Verlust bis zum Stop = 1.000 €  (Turbo: Einsatz × Hebel × Stop-Abstand)
+    const sd = pl.stop && x.c && x.c > pl.stop ? (x.c - pl.stop) / x.c : null;
+    const r1 = sd ? (lev ? (sd * lev >= 1 ? null : G_START * .01 / (sd * lev)) : Math.floor(G_START * .01 / (sd * x.eur)) * x.eur) : null;
     form = `<div class="card g-buy"><div class="g-pos-h"><div><b>${esc(x.n)}</b><small class="muted" style="display:block">${esc(sel)} · ${esc(su.k)} · Kurs ${fmt(x.c)} ${esc(x.cur)} = ${eur2(x.eur)}</small></div><button class="btn ghost sm" data-g="pick" data-t="">✕</button></div>
       ${pl.stop ? `<div class="g-row muted"><span>Plan: Stop ${fmt(pl.stop)} · Ziel 1 ${fmt(pl.target1)} · Ziel 2 ${fmt(pl.target2)}${pl.crv ? ` · CRV ${fmt(pl.crv, 1)}` : ""}</span></div>` : ""}
-      <div class="g-amts">${[2500, 5000, 10000, 20000].map(a => `<button class="opt${amt === a ? " on" : ""}" data-g="amt" data-v="${a}">${fmt(a, 0)} €</button>`).join("")}
-        ${rq ? `<button class="opt" data-g="amt" data-v="${Math.round(rq * x.eur)}" title="So viele Stück, dass ein Stop-Verlust 1 % des Startkapitals (1.000 €) kostet">1 % Risiko: ${fmt(rq * x.eur, 0)} €</button>` : ""}</div>
+      <div class="g-mode"><button class="opt${lev ? "" : " on"}" data-g="mode" data-v="stock">Aktie</button><button class="opt${lev ? " on" : ""}" data-g="mode" data-v="turbo">Turbo Long</button></div>
+      ${lev ? `<div class="g-amts g-levs"><span class="muted">Hebel</span>${G_LEVS.map(l => `<button class="opt${lev === l ? " on" : ""}" data-g="lev" data-v="${l}">${l}</button>`).join("")}</div>
+        <div class="g-row"><span>K.-o.-Schwelle ${fmt(ko)} ${esc(x.cur)} · ${pct(1 / lev, 1)} unter dem Kurs</span>${pl.stop ? (ko >= pl.stop ? `<span class="g-tag down">K.-o. liegt über dem Stop – kleineren Hebel wählen</span>` : `<span class="g-tag up">K.-o. unter dem Stop</span>`) : ""}</div>` : ""}
+      <div class="g-amts">${(lev ? [1000, 2000, 5000, 10000] : [2500, 5000, 10000, 20000]).map(a => `<button class="opt${amt === a ? " on" : ""}" data-g="amt" data-v="${a}">${fmt(a, 0)} €</button>`).join("")}
+        ${r1 ? `<button class="opt" data-g="amt" data-v="${Math.round(r1)}" title="Einsatz so wählen, dass ein Verlust bis zum Stop 1 % des Startkapitals (1.000 €) kostet">1 % Risiko: ${fmt(r1, 0)} €</button>` : ""}</div>
       <div class="form" style="margin:8px 0 0"><label class="full">Betrag in €<input id="gAmt" type="number" inputmode="decimal" min="0" step="100" value="${amt}"></label></div>
-      <div class="g-row"><span>${qty} Stück · ${eur2(qty * (x.eur || 0) + G_FEE)} inkl. Gebühr</span><span class="muted">frei: ${eur2(g.cash)}</span></div>
+      <div class="g-row"><span>${lev ? `Einsatz ${eur2(amt + G_FEE)} inkl. Gebühr · entspricht ${eur2(amt * lev)} in der Aktie` : `${qty} Stück · ${eur2(qty * (x.eur || 0) + G_FEE)} inkl. Gebühr`}</span><span class="muted">frei: ${eur2(g.cash)}</span></div>
       <button class="btn" data-g="buy" data-t="${esc(sel)}"${qty < 1 ? " disabled" : ""}>Kaufen</button>${state.gMsg ? `<div class="note down">${esc(state.gMsg)}</div>` : ""}</div>`; }
   return `<div class="section-title"><span>Spiel · Depot-Simulation</span><span>seit ${days} ${days === 1 ? "Tag" : "Tagen"}</span></div>
     <div class="card g-head"><div class="g-tot"><span>Gesamtwert</span><b data-count="${T.total}" data-fmt="eur2">${eur2(T.total)}</b>
@@ -2627,7 +2649,7 @@ function gameHtml() {
     ${stat ? `<div class="section-title"><span>Was funktioniert?</span><span>abgeschlossene Trades</span></div><div class="table-wrap"><table><thead><tr><th>Setup</th><th class="num">Trades</th><th class="num">Treffer</th><th class="num">Ø Rendite</th><th class="num">Summe</th></tr></thead><tbody>${stat}</tbody></table></div>` : ""}
     ${closed ? `<div class="section-title"><span>Verlauf</span><span>letzte ${Math.min(15, g.closed.length)}</span></div><div class="table-wrap"><table><tbody>${closed}</tbody></table></div>` : ""}
     <div class="card" style="margin-top:18px"><label class="g-opt"><input type="checkbox" data-g="auto"${g.auto ? " checked" : ""}> Plan automatisch befolgen – verkauft beim nächsten Scan, wenn der Schlusskurs unter dem Stop oder über Ziel 2 liegt</label>
-      <div class="note">Kurse: Schlusskurs des letzten Scans (werktags 22:30 Uhr), umgerechnet in Euro. 0,99 € Gebühr je Order, keine Steuern. Spielgeld – keine Anlageberatung.</div>
+      <div class="note">Kurse: Schlusskurs des letzten Scans (werktags 22:30 Uhr), umgerechnet in Euro. 0,99 € Gebühr je Order, keine Steuern. Turbos: Open-End-Long, K.-o. = Kaufkurs × (1 − 1/Hebel), steigt täglich um ca. 3,5 % p. a. Finanzierungskosten; ein K.-o. wird zum Schlusskurs erkannt (im echten Handel kann er schon untertags auslösen). Spielgeld – keine Anlageberatung.</div>
       <div class="row-actions" style="margin-top:10px"><button class="btn ghost" data-g="reset">Spiel neu starten</button></div></div>`;
 }
 document.addEventListener("click", e => {
@@ -2637,7 +2659,9 @@ document.addEventListener("click", e => {
   if (!g) return;
   if (a === "pick") { state.gSel = b.dataset.t || ""; state.gMsg = ""; save(); render(); if (state.gSel) setTimeout(() => { const f = document.querySelector(".g-buy"); f && f.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30); return; }
   if (a === "amt") { state.gAmt = +b.dataset.v; save(); render(); return; }
-  if (a === "buy") { const msg = gBuy(g, b.dataset.t, +state.gAmt || 10000); state.gMsg = msg; if (!msg) { state.gSel = ""; gTick(g); gSave(g); } save(); render(); return; }
+  if (a === "mode") { state.gMode = b.dataset.v; state.gAmt = b.dataset.v === "turbo" ? 2000 : 10000; save(); render(); return; }
+  if (a === "lev") { state.gLev = +b.dataset.v; save(); render(); return; }
+  if (a === "buy") { const lev = state.gMode === "turbo" ? (+state.gLev || 5) : 0; const msg = gBuy(g, b.dataset.t, +state.gAmt || (lev ? 2000 : 10000), lev); state.gMsg = msg; if (!msg) { state.gSel = ""; gTick(g); gSave(g); } save(); render(); return; }
   if (a === "sell") { const p = g.pos.find(x => x.id === b.dataset.id); if (p && confirm(`${p.n} verkaufen?`)) { gSell(g, p.id, "manuell"); gTick(g); gSave(g); render(); } return; }
   if (a === "reset") { if (confirm("Spiel wirklich neu starten? Alle Spiel-Positionen und der Verlauf werden gelöscht.")) { localStorage.removeItem(GKEY); state.gSel = ""; save(); render(); } return; }
 });
