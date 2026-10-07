@@ -1,6 +1,6 @@
 /* Kairo – Start-Animation zum Logo KA|RO (≈ 1,8 s) + Masken-Übergang in die App.
-   Zeitplan: KA/RO gleiten herein 0–0,45 s · rote Kerze wächst von unten 0,25–0,75 s · grüne Kerze wächst ab der Fuge
-             nach oben 0,72–1,2 s (kleiner Überschwinger) · grünes Leuchten ab 1,05 s · Einrasten 1,15 s · Unterzeile 1,15 s
+   Zeitplan: KA/RO gleiten herein 0–0,45 s · Docht zieht sich aus der Mitte auf 0,25–0,7 s · Körper wächst
+             0,6–1,1 s (kleiner Überschwinger) · blaues Leuchten ab 1,0 s · Einrasten 1,15 s · Unterzeile 1,15 s
              · Lichtreflex 1,3–1,85 s. Übergang (ab 1,8 s): Logo blendet aus, schwarzer Rahmen wächst ×25 → App erscheint von innen. */
 .splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden; }
 .sp-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; transform: translateY(-14px); }
@@ -15,9 +15,9 @@
 
 .sp-ka    { opacity: 0; animation: sp-from-left .5s cubic-bezier(.2,.8,.2,1) 0s both; }
 .sp-ro    { opacity: 0; animation: sp-from-right .5s cubic-bezier(.2,.8,.2,1) .05s both; }
-.sp-red   { transform-box: view-box; transform-origin: 257.5px 377.5px; animation: sp-grow .5s cubic-bezier(.3,.7,.3,1) .25s both; }
-.sp-green { transform-box: view-box; transform-origin: 257.5px 253.5px; animation: sp-tick .5s cubic-bezier(.3,.7,.3,1) .72s both; }
-.sp-glow  { opacity: 0; animation: sp-glow .6s ease-out 1.05s both; }
+.sp-wick  { transform-box: view-box; transform-origin: 257.5px 256px; animation: sp-grow .45s cubic-bezier(.3,.7,.3,1) .25s both; }
+.sp-body  { transform-box: view-box; transform-origin: 257.5px 256px; animation: sp-tick .5s cubic-bezier(.3,.7,.3,1) .6s both; }
+.sp-glow  { opacity: 0; animation: sp-glow .6s ease-out 1s both; }
 
 .sp-shine { position: absolute; inset: -10% -60%; pointer-events: none;
   background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.14) 50%, transparent 58%);
