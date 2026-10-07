@@ -2468,25 +2468,41 @@ function briefHtml() {
   const moves = [...mine].map(t => { const s = rowOf(t), r = byTicker(t); const d = s && s.d1 != null ? s.d1 : briefD1[t]; return { t, n: (s && s.n) || (r && r.name) || t, d, d5: s && s.d5 }; })
     .filter(x => x.d != null).sort((a, b) => Math.abs(b.d) - Math.abs(a.d)).slice(0, 5);
   const mv = moves.map(x => row(x.d >= 0 ? "g" : "r", x.n, x.d5 != null ? `5 Tage ${sgnPct(x.d5, 1)}` : x.t, pill(x.d), byTicker(x.t) ? `data-briefcard="${esc(x.t)}"` : "")).join("");
-  // 4) Schlagzeilen zu deinen Aktien
-  const news = data.results.filter(r => mine.has(r.ticker) && r.senti && r.senti.news).flatMap(r => r.senti.news.map(n => ({ ...n, nm: r.name || r.ticker })))
-    .sort((a, b) => String(b.d || "").localeCompare(String(a.d || ""))).slice(0, 4)
-    .map(n => `<a class="bf-r" href="${esc(n.u)}" target="_blank" rel="noopener"><i class="${n.s > 0 ? "g" : n.s < 0 ? "r" : "n"}"></i><span><b>${esc(n.t)}</b><em>${esc(n.nm)} · ${esc(n.p || "")}${n.d ? " · " + dateDE(n.d) : ""}</em></span></a>`).join("");
+  // 4) Nachrichten der letzten 24 h zu deinen Aktien (frisch aus briefing.json, sonst Schlagzeilen vom Scan)
+  const bj = jsonData["briefing.json"], now = Date.now();
+  const ago = d => { const t = Date.parse(d); if (isNaN(t)) return d && d.length <= 10 ? dateDE(d) : ""; const hh = Math.max(0, Math.round((now - t) / 36e5));
+    return hh < 1 ? "gerade eben" : hh < 24 ? `vor ${hh} Std.` : new Date(t).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" }); };
+  const nameOf = t => { const s = rowOf(t), r = byTicker(t); return (r && r.name) || (s && s.n) || t; };
+  const fresh = d => { const t = Date.parse(d); return isNaN(t) ? false : now - t <= 30 * 36e5; };
+  let pool = bj && bj.stocks ? Object.entries(bj.stocks).filter(([t]) => mine.has(t)).flatMap(([t, l]) => l.map(n => ({ ...n, tk: t, nm: nameOf(t) }))) : [];
+  if (!pool.length) pool = data.results.filter(r => mine.has(r.ticker) && r.senti && r.senti.news).flatMap(r => r.senti.news.map(n => ({ ...n, tk: r.ticker, nm: r.name || r.ticker })))
+    .filter(n => n.d && daysUntil(n.d) >= -1);
+  const seenT = new Set(), per = {};
+  const nl = (n, tag) => `<a class="bf-r" href="${esc(n.u)}" target="_blank" rel="noopener"><i class="${n.s > 0 ? "g" : n.s < 0 ? "r" : "n"}"></i><span><b>${esc(n.t)}</b><em>${tag ? esc(tag) + " · " : ""}${esc(n.p || "")}${n.d ? " · " + esc(ago(n.d)) : ""}</em></span></a>`;
+  const news = pool.filter(n => n.d && (fresh(n.d) || n.d.length <= 10)).sort((a, b) => String(b.d).localeCompare(String(a.d)))
+    .filter(n => { const k = n.t.toLowerCase(); if (seenT.has(k) || (per[n.tk] = (per[n.tk] || 0) + 1) > 2) return false; seenT.add(k); return true; })
+    .slice(0, 6).map(n => nl(n, n.nm)).join("");
+  // 5) Markt & Zinsen: Notenbank-/Konjunkturtermine heute und morgen + marktweite Schlagzeilen
+  const mac = (calData || []).filter(e => (e.kind === "macro" || e.kind === "expiry") && daysUntil(e.date) >= 0 && daysUntil(e.date) <= 1)
+    .map(e => row("y", e.title || "Termin", `${daysUntil(e.date) === 0 ? "Heute" : "Morgen"}${e.region === "us" ? " · USA" : e.region === "europe" ? " · Europa" : ""} – betrifft den ganzen Markt`, "", ""));
+  const mnews = (bj && bj.market || []).filter(n => fresh(n.d)).slice(0, 4).map(n => nl({ ...n, s: 0 }, ""));
+  const macro = mac.join("") + mnews.join("");
   return `<div class="bf-k">Tagesbriefing · Scan ${esc(when)}</div>
     <div class="bf-h">${esc(h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend")}${nm ? ", " + esc(nm) : ""}</div>
     ${reg ? `<div class="bf-mkt"><i class="${reg.tone}"></i><span>Markt: <b>${esc(reg.label)}</b></span></div>` : ""}
     ${sec("Dein Depot – jetzt wichtig", todo.join(""))}
     ${sec("Neu seit dem letzten Scan", cnt || neu.length ? cnt + neu.join("") || "" : "")}
     ${sec("Größte Bewegungen deiner Aktien", mv)}
-    ${sec("Schlagzeilen zu deinen Aktien", news)}
-    ${!todo.length && !neu.length && !mv && !news ? `<div class="bf-s"><div class="bf-l"><div class="bf-empty">Heute nichts Besonderes – alles ruhig.</div></div></div>` : ""}
+    ${sec("Markt &amp; Zinsen", macro)}
+    ${sec("Nachrichten zu deinen Aktien · 24 h", news)}
+    ${!todo.length && !neu.length && !mv && !news && !macro ? `<div class="bf-s"><div class="bf-l"><div class="bf-empty">Heute nichts Besonderes – alles ruhig.</div></div></div>` : ""}
     <div class="bf-act"><button class="btn" data-briefclose data-gosec="today">Zu „Heute“</button><button class="btn ghost" data-briefclose>Schließen</button></div>
     <label class="bf-opt"><input type="checkbox" id="briefAuto"${state.briefOff ? "" : " checked"}> Beim Öffnen der App automatisch zeigen</label>`;
 }
 const briefD1 = {};
 async function openBrief() {
   try { await Promise.all([loadSearch(), loadAnalysis(), loadCalendar(),
-    jsonData["changes.json"] !== undefined ? 0 : fetch("data/changes.json", { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { jsonData["changes.json"] = d; })]); } catch (e) {}
+    ...["changes.json", "briefing.json"].map(f => jsonData[f] !== undefined ? 0 : fetch(`data/${f}`, { cache: "no-store" }).then(r => r.ok ? r.json() : null).catch(() => null).then(d => { jsonData[f] = d; }))]); } catch (e) {}
   // Tagesänderung aus den Charts, falls der Suchindex sie noch nicht enthält
   const miss = [...myTickers()].filter(t => { const s = rowOf(t); return !(s && s.d1 != null) && byTicker(t) && briefD1[t] === undefined; });
   await Promise.all(miss.map(t => loadChart(t).then(c => { const n = c.c.length; briefD1[t] = n > 1 ? c.c[n - 1] / c.c[n - 2] - 1 : null; }).catch(() => { briefD1[t] = null; })));
