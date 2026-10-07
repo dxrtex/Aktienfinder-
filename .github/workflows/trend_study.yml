@@ -1,0 +1,33 @@
+name: Studie Trend-Rücksetzer (Rücksetzer oder Korrektur?)
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: "Anzahl zufälliger Aktien (USA + Europa)"
+        required: false
+        default: "900"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m backend.universe
+      - run: python -m backend.trend_study --n "${{ inputs.n || '900' }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trend-studie
+          path: data/trend_model.json
