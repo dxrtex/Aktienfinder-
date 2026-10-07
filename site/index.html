@@ -105,10 +105,6 @@
   .mt.rec { outline: 1px solid var(--accent); }
   .ein-tiles .mt span { white-space: normal; overflow: visible; text-overflow: clip; } .ein-tiles .mt em b { font-size: inherit; display: inline; color: var(--text); }
   .ein-tpt { width: 100%; font-size: 13px; } .ein-tpt td, .ein-tpt th { padding: 6px 4px; }
-  .chk { margin: 8px 0; padding: 10px 12px; border-radius: var(--radius-s); background: color-mix(in srgb, var(--c) 10%, transparent); --c: var(--gold); }
-  .chk.tone-g { --c: var(--up); } .chk.tone-r { --c: var(--red); }
-  .chk-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; } .chk-h span { color: var(--c); font-weight: 600; font-size: .9em; }
-  .chk-bar { height: 6px; border-radius: 3px; background: var(--line); margin: 6px 0; overflow: hidden; } .chk-bar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
   .trendbox { background: var(--surface-2, rgba(255,255,255,.04)); border-radius: var(--radius-s); padding: 10px 12px; margin: 8px 0; } .trendbox.ok { outline: 1px solid var(--accent); }
   .status.st-trend { background: rgba(10,132,255,.15); color: var(--accent); } .st.trend { background: rgba(10,132,255,.15); color: var(--accent); margin-left: 4px; }
   .score.flt { background: conic-gradient(var(--red) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.flt span { line-height: 1; } .score.flt small { position: relative; font-size: 9px; color: var(--red); font-weight: 700; line-height: 1; }
@@ -1210,26 +1206,14 @@ function trendBoxHtml(r) {
   return `<div class="trendbox${t.ok ? " ok" : ""}"><div class="plan-h">Trend-Rücksetzer · ${t.met}/${t.total} erfüllt${t.ok ? " ✓" : ""}${t.top ? " · Stufe Top" : ""}</div>
     ${t.ok ? `<div class="note" style="margin:0 0 6px">${t.top ? "<b>Top:</b> nah am Hoch, ruhige Aktie, Trend nicht überdehnt – im 6-Jahres-Test die besten Trend-Rücksetzer. Zuerst diese handeln." : "Nicht Top: weiter vom Hoch entfernt, sehr volatil oder Trend schon überdehnt – im Test deutlich schwächer."}</div>` : ""}
     <ul class="checks">${t.criteria.map(c => `<li><i class="${c.ok ? "up" : "down"}">${c.ok ? "✓" : "✗"}</i><b>${esc(c.l)}:</b> ${esc(c.v)}</li>`).join("")}</ul>
-    ${t.ok ? chkHtml(t.chk) : ""}
     ${t.ok && p.stop ? `<div class="exrow" style="margin-top:6px"><span>Stop (unter 10-Tage-Tief)</span><b>${fmt(p.stop)}</b><span>Ziel 1 / Ziel 2</span><b>${fmt(p.target1)} / ${fmt(p.target2)}</b><span>K.-o.-Vorschlag (1–1,5 ATR unter Stop)</span><b>${r.atr_pct ? `${fmt(p.stop - 1.5 * r.atr_pct * r.close)} – ${fmt(p.stop - r.atr_pct * r.close)}` : "–"}</b></div>` : ""}
     <div class="note" style="margin:6px 0 0">Zweites Setup: Aktie im klaren Aufwärtstrend macht eine kurze Verschnaufpause an der EMA 50 – Wette auf die Fortsetzung (Kairo: Wende nach einer Korrektur).</div></div>`;
-}
-// Rücksetzer-Check (Studie 6 J.): bleibt es ein Rücksetzer oder wird es eine richtige Korrektur?
-const chkTone = c => c.p >= .55 ? "g" : c.p >= .4 ? "y" : "r";
-const chkLabel = c => c.p >= .55 ? "wahrscheinlich nur Rücksetzer" : c.p >= .4 ? "offen" : "Korrektur-Risiko erhöht";
-function chkHtml(c) {
-  if (!c) return "";
-  const tn = chkTone(c), li = (a, cls) => a.map(x => `<li><i class="${cls}">${cls === "up" ? "+" : "–"}</i>${esc(x)}</li>`).join("");
-  return `<div class="chk tone-${tn}"><div class="chk-h"><b>Rücksetzer-Check: ${pct(c.p, 0)}</b><span>${chkLabel(c)}</span></div>
-    <div class="chk-bar"><i style="width:${Math.round(c.p * 100)}%"></i></div>
-    ${c.pro.length || c.con.length ? `<ul class="checks">${li(c.pro, "up")}${li(c.con, "down")}</ul>` : ""}
-    <div class="note" style="margin:6px 0 0">Wahrscheinlichkeit für ein neues Hoch, bevor der Kurs unter das 50-%-Fibonacci-Niveau (${fmt(c.fib50)}) des letzten Anstiegs fällt. ${c.korr != null ? `In vergleichbaren Fällen der Studie fiel der Kurs in ${pct(c.korr, 0)} der Fälle zuerst darunter. ` : ""}${tn === "r" ? "Für Turbos: K.-o. mit mehr Abstand (unter das 61,8-%-Niveau) oder kleiner positionieren. " : ""}Im Test lohnte sich Abwarten im Schnitt trotzdem nicht – wer wartete, verpasste die besten Läufe.</div></div>`;
 }
 // Urteil: die Antwort zuerst – Einstieg ja/nein, warum, und der nächste Schritt (nur im neuen Design sichtbar)
 function verdictHtml(r) {
   const ein = t => `<button class="btn" data-ein="${esc(r.ticker)}">${t}</button>`;
   if (r.passed) return `<div class="verdict ok"><i></i><div><b>Einstieg möglich · Kairo-Treffer</b><span>Score ${r.score ?? "–"} · CRV ${fmt(r.crv, 1)}${r.plan && r.plan.stop ? ` · Setup ungültig unter ${fmt(r.plan.stop)}` : ""}</span></div>${ein("Einstieg planen")}</div>`;
-  if (isTrend(r)) return `<div class="verdict ok"><i></i><div><b>Einstieg möglich · Trend-Rücksetzer${r.tr.top ? " Top" : ""}</b><span>${r.tr.top ? "Stärkste Stufe im 6-Jahres-Test" : "Gültig, aber nicht Top – im Test schwächer"}${r.tr.chk ? ` · Rücksetzer-Check ${pct(r.tr.chk.p, 0)}` : ""}${r.tr.plan && r.tr.plan.stop ? ` · Stop ${fmt(r.tr.plan.stop)}` : ""}</span></div>${ein("Einstieg planen")}</div>`;
+  if (isTrend(r)) return `<div class="verdict ok"><i></i><div><b>Einstieg möglich · Trend-Rücksetzer${r.tr.top ? " Top" : ""}</b><span>${r.tr.top ? "Stärkste Stufe im 6-Jahres-Test" : "Gültig, aber nicht Top – im Test schwächer"}${r.tr.plan && r.tr.plan.stop ? ` · Stop ${fmt(r.tr.plan.stop)}` : ""}</span></div>${ein("Einstieg planen")}</div>`;
   const fm = filterMiss(r);
   if (fm) return `<div class="verdict warn"><i></i><div><b>Kein Einstieg · Grundfilter nicht erfüllt</b><span>Alle ${r.total} Setup-Kriterien erfüllt, aber: ${esc(fm)}</span></div></div>`;
   if (r.fast_hit) return `<div class="verdict warn"><i></i><div><b>Noch kein Einstieg · fast so weit</b><span>Es fehlt: ${esc((r.missing || []).slice(0, 2).join(", "))}</span></div></div>`;
