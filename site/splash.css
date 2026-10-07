@@ -1,56 +1,99 @@
-/* Kairo – Start-Animation zum Logo KA|RO (≈ 1,8 s) + Masken-Übergang in die App.
-   Zeitplan: KA/RO gleiten herein 0–0,45 s · Docht zieht sich aus der Mitte auf 0,25–0,7 s · Körper wächst
-             0,6–1,1 s (kleiner Überschwinger) · blaues Leuchten ab 1,0 s · Einrasten 1,15 s · Unterzeile 1,15 s
-             · Lichtreflex 1,3–1,85 s. Übergang (ab 1,8 s): Logo blendet aus, schwarzer Rahmen wächst ×25 → App erscheint von innen. */
-.splash { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden; }
-.sp-stage { position: relative; display: flex; flex-direction: column; align-items: center; gap: 16px; transform: translateY(-14px); }
-.sp-box { position: relative; width: min(300px, 74vw); aspect-ratio: 2 / 1; }
+/* Kairo – Start-Animation zum finalen Markenauftritt (≈ 2,2 s) + Masken-Übergang in die App.
+   Farben: Kairo Blau #0A84FF · Onyx #0B0D11 · Graphit #1B1F27 · Signal Weiß #F4F6FA · Nebel #8A93A3
+   Zeitplan  0,00 s  Graphit-Licht + Kachel blenden auf
+             0,18 s  Docht zieht sich aus der Mitte auf
+             0,42 s  Körper federt auf, blaues Leuchten blüht auf
+             0,74 s  Winkel des K fährt aus der Kerze
+             1,10 s  Kachel gleitet nach links, KA|RO steigt Buchstabe für Buchstabe, Kerze der Wortmarke wächst
+             1,48 s  „Der richtige Moment“ läuft zusammen
+             1,70 s  Lichtreflex über die Kachel
+   Übergang  Wortmarke blendet aus, die Kachel öffnet sich zur App. */
+.splash { --T: min(104px, 21vw); --onyx: #0b0d11;
+  position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; overflow: hidden;
+  font-synthesis: none; -webkit-font-smoothing: antialiased; }
+.sp-ambient { position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  background: radial-gradient(70% 55% at 50% 0%, rgba(38, 46, 60, .55), transparent 70%),
+              radial-gradient(40% 30% at 50% 50%, rgba(10, 132, 255, .07), transparent 70%);
+  opacity: 0; animation: sp-fade .9s ease-out 0s forwards; }
+.sp-stage { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center;
+  gap: calc(var(--T) * .42); transform: translateY(-2vh); }
 
-/* „Loch“: transparentes Rechteck mit riesigem schwarzem Rand – wächst beim Übergang */
-.sp-hole { position: absolute; inset: 0; border-radius: 34px; background: #000; box-shadow: 0 0 0 250vmax #000; }
+/* Lockup: Kachel + Wortmarke; startet mit der Kachel in der Mitte */
+.sp-lock { display: flex; align-items: center; gap: calc(var(--T) * .307);
+  transform: translateX(calc(var(--T) * 1.578));
+  animation: sp-slide .62s cubic-bezier(.65, 0, .25, 1) 1.08s forwards; }
+.sp-box { position: relative; width: var(--T); height: var(--T); flex: none; }
 
-.sp-logo { position: absolute; inset: 0; border-radius: 34px; overflow: hidden; background: #000;
-  animation: sp-snap .4s cubic-bezier(.34,1.56,.64,1) 1.15s both; }
-.sp-logo svg { display: block; width: 100%; height: 100%; overflow: visible; }
+/* „Loch“: Kachel-Form mit riesigem Onyx-Rand – öffnet sich beim Übergang */
+.sp-hole { position: absolute; inset: 0; border-radius: 22.4%; background: var(--onyx); box-shadow: 0 0 0 250vmax var(--onyx); }
 
-.sp-ka    { opacity: 0; animation: sp-from-left .5s cubic-bezier(.2,.8,.2,1) 0s both; }
-.sp-ro    { opacity: 0; animation: sp-from-right .5s cubic-bezier(.2,.8,.2,1) .05s both; }
-.sp-wick  { transform-box: view-box; transform-origin: 257.5px 256px; animation: sp-grow .45s cubic-bezier(.3,.7,.3,1) .25s both; }
-.sp-body  { transform-box: view-box; transform-origin: 257.5px 256px; animation: sp-tick .5s cubic-bezier(.3,.7,.3,1) .6s both; }
-.sp-glow  { opacity: 0; animation: sp-glow .6s ease-out 1s both; }
+.sp-tile { position: absolute; inset: 0; border-radius: 22.4%; overflow: hidden;
+  background: radial-gradient(130% 110% at 50% 0%, #1b1f28 0%, #0b0d11 58%, #050608 100%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08), 0 calc(var(--T) * .18) calc(var(--T) * .5) rgba(0, 0, 0, .55);
+  opacity: 0; transform: scale(.9);
+  animation: sp-tile-in .7s cubic-bezier(.2, .8, .2, 1) 0s forwards, sp-snap .42s cubic-bezier(.34, 1.56, .64, 1) 1.02s; }
+.sp-tile svg { display: block; width: 100%; height: 100%; overflow: visible; }
 
-.sp-shine { position: absolute; inset: -10% -60%; pointer-events: none;
-  background: linear-gradient(105deg, transparent 42%, rgba(255,255,255,.14) 50%, transparent 58%);
-  transform: translateX(-70%); animation: sp-shine .55s ease-in-out 1.3s forwards; }
+.sp-wick { transform-box: view-box; transform-origin: 323.3px 500px; transform: scaleY(0);
+  animation: sp-grow .5s cubic-bezier(.3, .7, .2, 1) .18s forwards; }
+.sp-body { transform-box: view-box; transform-origin: 323.1px 500px; transform: scaleY(0);
+  animation: sp-spring .62s cubic-bezier(.3, .7, .3, 1) .42s forwards; }
+.sp-glow { opacity: 0; animation: sp-glow .8s ease-out .62s forwards; }
+.sp-chev { transform-box: view-box; transform: translateX(-26px); animation: sp-slide .6s cubic-bezier(.2, .8, .2, 1) .74s forwards; }
 
-.sp-tag { font: 600 12px/1 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
-  letter-spacing: .32em; text-transform: uppercase; color: #8e8e93; opacity: 0; transform: translateY(6px);
-  animation: sp-tag .5s cubic-bezier(.2,.8,.2,1) 1.15s both; }
+.sp-shine { position: absolute; inset: -20% -80%; pointer-events: none;
+  background: linear-gradient(105deg, transparent 42%, rgba(255, 255, 255, .13) 50%, transparent 58%);
+  transform: translateX(-75%); animation: sp-shine .7s ease-in-out 1.7s forwards; }
 
-/* App lädt noch: Leuchten pulsiert langsam weiter */
-.splash.waiting .sp-glow { animation: sp-pulse 2s ease-in-out infinite; opacity: .6; }
+/* Wortmarke: Buchstaben steigen aus der Grundlinie */
+.sp-word { position: relative; width: calc(var(--T) * 2.85); height: calc(var(--T) * .719); overflow: hidden; flex: none; }
+.sp-word svg { display: block; width: 100%; height: 100%; }
+.sp-l { fill: #f4f6fa; transform-box: view-box; transform: translateY(112px); }
+.sp-l1 { animation: sp-rise .62s cubic-bezier(.2, .9, .25, 1) 1.16s forwards; }
+.sp-l2 { animation: sp-rise .62s cubic-bezier(.2, .9, .25, 1) 1.22s forwards; }
+.sp-l3 { animation: sp-rise .62s cubic-bezier(.2, .9, .25, 1) 1.34s forwards; }
+.sp-l4 { animation: sp-rise .62s cubic-bezier(.2, .9, .25, 1) 1.40s forwards; }
+.sp-wc { fill: #0a84ff; transform-box: view-box; transform-origin: 464.7px 382px; transform: scaleY(0);
+  animation: sp-spring .55s cubic-bezier(.3, .7, .3, 1) 1.26s forwards; }
 
-/* Übergang in die App */
+.sp-tag { position: relative; font: 500 calc(var(--T) * .118)/1 "SF Mono", ui-monospace, Menlo, "JetBrains Mono", Consolas, monospace;
+  letter-spacing: .75em; margin-right: -.42em; text-transform: uppercase; color: #8a93a3; white-space: nowrap;
+  opacity: 0; animation: sp-tag .8s cubic-bezier(.2, .8, .2, 1) 1.48s forwards; }
+
+/* App lädt noch: Leuchten atmet weiter */
+.splash.waiting .sp-glow { animation: sp-pulse 2.2s ease-in-out infinite; }
+
+/* Übergang in die App: Wortmarke und Symbol gehen, die Kachel öffnet sich */
 .splash.exit { pointer-events: none; }
-.splash.exit .sp-logo { animation: sp-out .14s ease-out forwards; }
-.splash.exit .sp-tag { opacity: 0; transition: opacity .14s ease-out; }
-.splash.exit .sp-hole { background: transparent; will-change: transform; transform: scale(25); transition: transform .45s cubic-bezier(.55,0,.8,.25) .05s; }
+.splash.exit .sp-word { opacity: 0; transition: opacity .16s ease-out; }
+.splash.exit .sp-tag { animation: sp-gone .16s ease-out forwards; }
+.splash.exit .sp-ambient { opacity: 0 !important; animation: none; transition: opacity .3s ease-out; }
+.splash.exit .sp-tile { animation: sp-out .16s ease-out forwards; }
+.splash.exit .sp-hole { background: transparent; will-change: transform;
+  transform: scale(32); transition: transform .5s cubic-bezier(.6, 0, .8, .2) .06s; }
 
-/* „Bewegung reduzieren“: Logo steht sofort, danach nur sanftes Ausblenden */
+/* „Bewegung reduzieren“: fertiges Logo, danach sanftes Ausblenden */
 .splash.reduce * { animation: none !important; }
-.splash.reduce .sp-ka, .splash.reduce .sp-ro, .splash.reduce .sp-tag { opacity: 1; transform: none; }
-.splash.reduce .sp-glow { opacity: .6; } .splash.reduce .sp-shine { display: none; }
+.splash.reduce .sp-lock { transform: none; }
+.splash.reduce .sp-tile { opacity: 1; transform: none; }
+.splash.reduce .sp-wick, .splash.reduce .sp-body, .splash.reduce .sp-wc, .splash.reduce .sp-l { transform: none; }
+.splash.reduce .sp-chevw { clip-path: none; } .splash.reduce .sp-chev { transform: none; }
+.splash.reduce .sp-glow { opacity: .55; } .splash.reduce .sp-shine { display: none; }
+.splash.reduce .sp-tag, .splash.reduce .sp-ambient { opacity: 1; letter-spacing: .42em; }
 .splash.reduce.exit { opacity: 0; transition: opacity .25s ease-out; }
 .splash.reduce.exit .sp-hole { transform: none; }
-.splash.reduce.exit .sp-logo { animation: none !important; }
+.splash.reduce.exit .sp-tile { animation: none !important; }
 
-@keyframes sp-from-left  { from { opacity: 0; transform: translateX(-34px); } to { opacity: 1; transform: none; } }
-@keyframes sp-from-right { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: none; } }
-@keyframes sp-grow  { from { transform: scaleY(0); } to { transform: scaleY(1); } }
-@keyframes sp-tick  { 0% { transform: scaleY(0); } 70% { transform: scaleY(1.08); } 100% { transform: scaleY(1); } }
-@keyframes sp-out   { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(1.06); } }
-@keyframes sp-snap  { 0% { transform: scale(1); } 45% { transform: scale(1.035); } 100% { transform: scale(1); } }
-@keyframes sp-glow  { to { opacity: .6; } }
-@keyframes sp-pulse { 0%, 100% { opacity: .35; } 50% { opacity: .8; } }
-@keyframes sp-shine { to { transform: translateX(70%); } }
-@keyframes sp-tag   { to { opacity: 1; transform: none; } }
+@keyframes sp-fade    { to { opacity: 1; } }
+@keyframes sp-tile-in { to { opacity: 1; transform: scale(1); } }
+@keyframes sp-grow    { to { transform: scaleY(1); } }
+@keyframes sp-spring  { 0% { transform: scaleY(0); } 68% { transform: scaleY(1.07); } 100% { transform: scaleY(1); } }
+@keyframes sp-glow    { to { opacity: .6; } }
+@keyframes sp-pulse   { 0%, 100% { opacity: .38; } 50% { opacity: .8; } }
+@keyframes sp-snap    { 0% { transform: scale(1); } 40% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes sp-slide   { to { transform: translateX(0); } }
+@keyframes sp-rise    { to { transform: translateY(0); } }
+@keyframes sp-tag     { from { opacity: 0; letter-spacing: .75em; } to { opacity: 1; letter-spacing: .42em; } }
+@keyframes sp-shine   { to { transform: translateX(75%); } }
+@keyframes sp-gone    { from { opacity: 1; letter-spacing: .42em; } to { opacity: 0; letter-spacing: .42em; } }
+@keyframes sp-out     { to { opacity: 0; transform: scale(1.06); } }
