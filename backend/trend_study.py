@@ -178,10 +178,24 @@ def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[
                     C = trade(k, ent, min(stC, ent - a[k]))
                     break
         ret60 = c[min(n - 1, i + HZ)] / c[i] - 1
+        # ----- Turbo ohne Stop (nur K.-o.): Ausstieg am Ziel R oder nach 60 T.; Ergebnis in % des Turbo-Einsatzes
+        def turbo(ko):
+            if ko >= c[i] or ko <= 0:
+                return None
+            for k in range(i + 1, min(n, i + 1 + HZ)):
+                if l[k] <= ko:
+                    return -1.0
+                if h[k] >= R:
+                    return (R - ko) / (c[i] - ko) - 1
+            k = min(n, i + 1 + HZ) - 1
+            return (c[k] - ko) / (c[i] - ko) - 1
+        ko_std = stopA - a[i]                                       # App-Vorschlag: 1 ATR unter dem Stop
+        ko_wide = min(ko_std, f618 - .25 * a[i])                    # unter das 61,8-%-Niveau
+        TS, TW = turbo(ko_std), turbo(ko_wide)
         feat = feats_at(x, i, ri, R, L, top, float(vx[i]) if not math.isnan(vx[i]) else 20.0)
         if any(isinstance(val, float) and (math.isnan(val) or math.isinf(val)) for val in feat.values()):
             continue
-        out.append({"t": t, "d": str(dates[i].date()), "res": res, "A": A, "B": B, "C": C, "ret60": ret60, "x": feat})
+        out.append({"t": t, "d": str(dates[i].date()), "res": res, "A": A, "B": B, "C": C, "ret60": ret60, "TS": TS, "TW": TW, "lev_s": c[i] / (c[i] - ko_std), "lev_w": c[i] / (c[i] - ko_wide), "x": feat})
     return out
 
 
@@ -353,11 +367,35 @@ def study(n: int, period: str, seed: int = 11) -> dict:
              "calib_test": calib(p, te), "calib_time_test": calib(p_time, late),
              "quint": [{"p_hi": q["p_hi"], "ok": q["ok"], "korr": q["korr"]} for q in calib(p, te)],
              "coef": sorted([[f, round(float(wi), 3)] for f, wi in zip(names, w[1:])], key=lambda z: -abs(z[1]))}
+    def tstats(sel, key):
+        xs = [e[key] for e in sel if e[key] is not None]
+        lk = "lev_s" if key == "TS" else "lev_w"
+        ex = [e[key] / e[lk] for e in sel if e[key] is not None]      # bezogen auf gleich viel Aktien-Gegenwert
+        return {"n": len(xs), "avg": round(float(np.mean(xs)), 4) if xs else None, "exp": round(float(np.mean(ex)), 4) if ex else None, "ko": round(float(np.mean([x == -1.0 for x in xs])), 3) if xs else None,
+                "lev": round(float(np.median([e["lev_s" if key == "TS" else "lev_w"] for e in sel])), 2) if sel else None}
+
+    def turbo_eval(pp, mask, cut):
+        sel = [ev[i] for i in np.where(mask)[0]]
+        pr = {id(ev[i]): pp[i] for i in np.where(mask)[0]}
+        qs = np.quantile(pp[mask], [0, .2, .4, .6, .8, 1])
+        quint = []
+        for q in range(5):
+            m = mask & (pp >= qs[q]) & ((pp < qs[q + 1]) if q < 4 else (pp <= qs[q + 1]))
+            ss = [ev[i] for i in np.where(m)[0]]
+            quint.append({"p_hi": round(float(qs[q + 1]), 3), "std": tstats(ss, "TS"), "wide": tstats(ss, "TW")})
+        mix = [e["TW"] if pr[id(e)] < cut else e["TS"] for e in sel if e["TS"] is not None and e["TW"] is not None]
+        mix_exp = [(e["TW"] / e["lev_w"]) if pr[id(e)] < cut else (e["TS"] / e["lev_s"]) for e in sel if e["TS"] is not None and e["TW"] is not None]
+        skip = [e["TS"] if pr[id(e)] >= cut else 0.0 for e in sel if e["TS"] is not None]
+        return {"all_std": tstats(sel, "TS"), "all_wide": tstats(sel, "TW"),
+                "mix_wide_if_red": round(float(np.mean(mix)), 4) if mix else None, "mix_exp": round(float(np.mean(mix_exp)), 4) if mix_exp else None,
+                "skip_red_std": round(float(np.mean(skip)), 4) if skip else None, "cut": cut, "quint": quint}
+
+    turbo_res = {"test": turbo_eval(p, te, .4), "time_test": turbo_eval(p_time, late, .4)}
     entries = {k: _var(ev, k) for k in ("A", "B", "C")}
     entries_top = {k: _var(top, k) for k in ("A", "B", "C")}
     return {"generated": time.strftime("%Y-%m-%d"), "period": period, "n_stocks": len(data),
             "range": [min(e["d"] for e in ev), max(e["d"] for e in ev)], "base": base, "base_top": base_top,
-            "entries": entries, "entries_top": entries_top, "single": single, "model": model}
+            "entries": entries, "entries_top": entries_top, "turbo": turbo_res, "single": single, "model": model}
 
 
 def main(argv=None) -> int:
