@@ -188,22 +188,14 @@ def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[
 # Begründungen für die App: (spricht dafür, spricht dagegen) – {v} = Wert
 REASON = {
     "retr": ("erst flacher Rücksetzer ({p:.0f} % des letzten Anstiegs)", "schon tief korrigiert ({p:.0f} % des letzten Anstiegs)"),
-    "speed": ("ruhiger, langsamer Rücksetzer", "schneller Abverkauf"),
     "worst": ("kein großer Verlusttag", "großer Verlusttag zuletzt ({p:.0f} %)"),
     "atrp": ("ruhige Aktie (geringe Schwankung)", "stark schwankende Aktie"),
     "rsi_drop": ("RSI nur leicht gefallen", "RSI stark eingebrochen seit dem Hoch"),
-    "leg": ("gesunder letzter Anstieg", "letzter Anstieg sehr steil – Gewinnmitnahmen drohen"),
     "e50slope": ("EMA 50 steigt gleichmäßig", "EMA 50 steigt sehr steil – Trend überhitzt"),
-    "dnvol": ("wenig Volumen an roten Tagen", "hohes Volumen an roten Tagen (Verkaufsdruck)"),
-    "vol5": ("Volumen zuletzt erhöht", "Volumen zuletzt niedrig"),
     "wk": ("Wochentrend intakt", "Wochentrend dreht nach unten"),
     "vix": ("Angst im Markt (VIX hoch) – Rücksetzer werden oft gekauft", "Markt sorglos (VIX niedrig)"),
-    "g200": ("Trend nicht überdehnt", "Kurs weit über der EMA 200 – überdehnt"),
     "g50": ("Kurs nah an der EMA 50", "Kurs schon deutlich unter der EMA 50"),
-    "top": ("Stufe „Top“", "nicht Stufe „Top“"),
-    "days": ("Rücksetzer schon einige Tage alt", "Rücksetzer noch jung"),
     "red10": ("wenige rote Tage", "viele rote Tage in Folge"),
-    "rsi": ("RSI im oberen Bereich", "RSI im unteren Bereich"),
 }
 
 
