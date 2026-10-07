@@ -1077,7 +1077,7 @@ const save = () => { try { const { tableSort, tableAsc, ...p } = state; localSto
 const GLOSS = {
   score: ["Score", "Kairo-Bewertung 0–100 für Treffer: je näher am idealen Einstieg (Zone, Divergenz, MACD-Wende, CRV), desto höher. Nur für Kairo-Treffer, nicht für Trend-Rücksetzer."],
   crv: ["CRV (Chance-Risiko)", "Möglicher Gewinn bis Ziel 2 geteilt durch das Risiko bis zum Stop. CRV 3 heißt: 3 € Chance je 1 € Risiko. Kairo verlangt mindestens 2."],
-  chk: ["Rücksetzer-Check", "Nur bei Trend-Rücksetzern: Wahrscheinlichkeit, dass es ein kurzer Rücksetzer bleibt (neues Hoch, bevor der Kurs unter 50 % Fibonacci fällt). ↑ ab 55 %, → 40–55 %, ↓ unter 40 %. Studie mit 3.354 Signalen aus 6 Jahren – Einordnung, kein Ausschlusskriterium."],
+  chk: ["Rücksetzer-Check", "Nur bei Trend-Rücksetzern: Wahrscheinlichkeit, dass es ein kurzer Rücksetzer bleibt (neues Hoch, bevor der Kurs unter 50 % Fibonacci fällt). ↑ ab 55 %, → 40–55 %, ↓ unter 40 %. Studie mit 7.310 Signalen aus 9 Jahren – Einordnung, kein Ausschlusskriterium."],
   vola: ["Volatilität", "Wie stark die Aktie schwankt: Standardabweichung der Tagesrenditen der letzten 30 Tage, aufs Jahr hochgerechnet. Über 50 % = sehr unruhig – mit Hebel besonders riskant."],
   atr: ["ATR (Tagesspanne)", "Average True Range: durchschnittliche Tagesschwankung in Kurs-Einheiten (14 Tage). Kairo setzt Stops und K.-o.-Abstände in ATR, damit normale Schwankungen nicht sofort auslösen."],
   rsi: ["RSI", "Relative Stärke 0–100 (14 Tage). Unter 30 überverkauft, über 70 überkauft. Kairo sucht Wenden im Bereich 28–48, Trend-Rücksetzer 35–50."],
@@ -1308,7 +1308,7 @@ function chkHtml(c) {
   return `<div class="chk tone-${tn}"><div class="chk-h"><b>Rücksetzer-Check: ${pct(c.p, 0)} ${gl("chk")}</b><span>${chkLabel(c)}</span></div>
     <div class="chk-bar"><i style="width:${Math.round(c.p * 100)}%"></i></div>
     ${c.pro.length || c.con.length ? `<ul class="checks">${li(c.pro, "up")}${li(c.con, "down")}</ul>` : ""}
-    <div class="note" style="margin:6px 0 0">Wahrscheinlichkeit für ein neues Hoch, bevor der Kurs unter das 50-%-Fibonacci-Niveau (${fmt(c.fib50)}) des letzten Anstiegs fällt. ${c.korr != null ? `In vergleichbaren Fällen der Studie fiel der Kurs in ${pct(c.korr, 0)} der Fälle zuerst darunter. ` : ""}${tn === "r" ? "Rechne mit einem tieferen Rücksetzer – K.-o. mit Abstand wählen (unter das 61,8-%-Niveau). " : ""}Zur Einordnung, nicht zum Aussortieren: Im Test (3.354 Signale, 6 J.) hätte Weglassen der roten Signale Rendite gekostet – sie korrigieren oft erst und steigen danach trotzdem.</div></div>`;
+    <div class="note" style="margin:6px 0 0">Wahrscheinlichkeit für ein neues Hoch, bevor der Kurs unter das 50-%-Fibonacci-Niveau (${fmt(c.fib50)}) des letzten Anstiegs fällt. ${c.korr != null ? `In vergleichbaren Fällen der Studie fiel der Kurs in ${pct(c.korr, 0)} der Fälle zuerst darunter. ` : ""}${tn === "r" ? "Rechne mit einem tieferen Rücksetzer – K.-o. mit Abstand wählen (unter das 61,8-%-Niveau). " : ""}Zur Einordnung, nicht zum Aussortieren: Im Test (7.310 Signale, 9 J.) hätte Weglassen der roten Signale Rendite gekostet – sie korrigieren oft erst und steigen danach trotzdem.</div></div>`;
 }
 // Urteil: die Antwort zuerst – Einstieg ja/nein, warum, und der nächste Schritt (nur im neuen Design sichtbar)
 function verdictHtml(r) {
