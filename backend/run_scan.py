@@ -363,7 +363,7 @@ def main(argv=None) -> int:
             sync = state.load("telegram.json", {}).get("sync") or {}
             mine = list(watch) + list(sync.get("fav", [])) + [d.get("t") for d in sync.get("depot", []) if d.get("t")]
             brief = briefing.build(mine, names={t: (meta.get(t) or {}).get("name") for t in meta})
-            print(f"Briefing: Nachrichten für {len(brief['stocks'])} Aktien, {len(brief['market'])} Marktmeldungen, {brief.get('translated', 0)} übersetzt")
+            print(f"Briefing: Nachrichten für {len(brief['stocks'])} Aktien, {len(brief['market'])} Marktmeldungen, {brief.get('translated', 0)} übersetzt · {brief.get('diag')}")
         except Exception as exc:
             print(f"Briefing: Fehler {exc!r}")
     watch_dates = {}
