@@ -7,6 +7,10 @@ on:
         description: "Anzahl zufälliger Aktien (USA + Europa)"
         required: false
         default: "900"
+      period:
+        description: "Historie"
+        required: false
+        default: "7y"
 
 permissions:
   contents: read
@@ -26,7 +30,7 @@ jobs:
           cache: pip
       - run: pip install -r requirements.txt
       - run: python -m backend.universe
-      - run: python -m backend.trend_study --n "${{ inputs.n || '900' }}"
+      - run: python -m backend.trend_study --n "${{ inputs.n || '900' }}" --period "${{ inputs.period || '7y' }}"
       - uses: actions/upload-artifact@v4
         with:
           name: trend-studie
