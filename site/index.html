@@ -2478,7 +2478,9 @@ function briefHtml() {
   if (!pool.length) pool = data.results.filter(r => mine.has(r.ticker) && r.senti && r.senti.news).flatMap(r => r.senti.news.map(n => ({ ...n, tk: r.ticker, nm: r.name || r.ticker })))
     .filter(n => n.d && daysUntil(n.d) >= -1);
   const seenT = new Set(), per = {};
-  const nl = (n, tag) => `<a class="bf-r" href="${esc(n.u)}" target="_blank" rel="noopener"><i class="${n.s > 0 ? "g" : n.s < 0 ? "r" : "n"}"></i><span><b>${esc(n.t)}</b><em>${tag ? esc(tag) + " · " : ""}${esc(n.p || "")}${n.d ? " · " + esc(ago(n.d)) : ""}</em></span></a>`;
+  // Übersetzte Meldung → Artikel ebenfalls über Google Übersetzer auf Deutsch öffnen
+  const trU = n => n.o && /^https?:/.test(n.u || "") ? `https://translate.google.com/translate?sl=auto&tl=de&u=${encodeURIComponent(n.u)}` : n.u;
+  const nl = (n, tag) => `<a class="bf-r" href="${esc(trU(n))}" target="_blank" rel="noopener"${n.o ? ` title="${esc(n.o)}"` : ""}><i class="${n.s > 0 ? "g" : n.s < 0 ? "r" : "n"}"></i><span><b>${esc(n.t)}</b><em>${tag ? esc(tag) + " · " : ""}${esc(n.p || "")}${n.d ? " · " + esc(ago(n.d)) : ""}</em></span></a>`;
   const news = pool.filter(n => n.d && (fresh(n.d) || n.d.length <= 10)).sort((a, b) => String(b.d).localeCompare(String(a.d)))
     .filter(n => { const k = n.t.toLowerCase(); if (seenT.has(k) || (per[n.tk] = (per[n.tk] || 0) + 1) > 2) return false; seenT.add(k); return true; })
     .slice(0, 6).map(n => nl(n, n.nm)).join("");
