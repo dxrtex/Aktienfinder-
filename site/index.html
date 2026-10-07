@@ -109,6 +109,31 @@
   .chk.tone-g { --c: var(--up); } .chk.tone-r { --c: var(--red); }
   .chk-h { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; } .chk-h span { color: var(--c); font-weight: 600; font-size: .9em; }
   .chk-bar { height: 6px; border-radius: 3px; background: var(--line); margin: 6px 0; overflow: hidden; } .chk-bar i { display: block; height: 100%; background: var(--c); border-radius: 3px; }
+  .g-intro { text-align: center; padding: 28px 18px; } .g-intro p { max-width: 560px; margin: 10px auto 16px; } .g-big { font-size: 40px; font-weight: 800; letter-spacing: -.02em; color: var(--accent); margin-bottom: 6px; }
+  .g-head .g-tot { display: flex; flex-direction: column; gap: 2px; } .g-tot span { color: var(--muted); font-size: 13px; } .g-tot b { font-size: 30px; letter-spacing: -.02em; } .g-tot em { font-style: normal; font-weight: 600; }
+  .g-spark { width: 100%; height: 90px; margin: 10px 0 4px; display: block; } .g-spark polyline { fill: none; stroke-width: 2.5; vector-effect: non-scaling-stroke; } .g-spark .up { stroke: var(--up); } .g-spark .down { stroke: var(--red); } .g-spark .g-base { stroke: var(--line); stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+  .g-bench { margin-top: 10px; font-size: 13px; color: var(--muted); display: flex; gap: 14px; flex-wrap: wrap; }
+  .g-ideas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; margin-bottom: 8px; } .g-sub { grid-column: 1 / -1; font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 6px; }
+  .g-idea { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; text-align: left; padding: 10px 12px; border-radius: var(--radius-s); border: 1px solid var(--line); background: var(--card, transparent); color: var(--text); font: inherit; cursor: pointer; }
+  .g-idea small { grid-column: 1; color: var(--muted); font-size: 12px; } .g-idea span { grid-row: 1 / 3; grid-column: 2; align-self: center; font-weight: 600; } .g-idea.on { outline: 2px solid var(--accent); }
+  .g-pos, .g-buy { border: 1px solid var(--line); border-radius: var(--radius-s); padding: 12px; margin-bottom: 8px; background: var(--card, transparent); }
+  .g-buy { outline: 1px solid var(--accent); margin: 10px 0 16px; }
+  .g-pos-h { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; } .g-nm { background: none; border: 0; color: var(--text); font: inherit; text-align: left; padding: 0; cursor: pointer; } .g-nm small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .g-pl { text-align: right; } .g-pl small { display: block; font-weight: 600; }
+  .g-row { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 13px; margin-top: 6px; }
+  .g-tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, currentColor 14%, transparent); }
+  .g-act { margin-top: 8px; display: flex; justify-content: flex-end; } .btn.sm { padding: 6px 12px; font-size: 13px; }
+  .g-amts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; } .g-opt { display: flex; gap: 8px; align-items: flex-start; font-size: 14px; }
+  #main.sec-in > * { animation: secin .42s cubic-bezier(.2, .8, .2, 1) both; }
+  #main.sec-in > *:nth-child(2) { animation-delay: .04s; } #main.sec-in > *:nth-child(3) { animation-delay: .08s; } #main.sec-in > *:nth-child(4) { animation-delay: .12s; }
+  #main.sec-in > *:nth-child(5) { animation-delay: .16s; } #main.sec-in > *:nth-child(n+6) { animation-delay: .2s; }
+  @keyframes secin { from { opacity: 0; transform: translateY(10px); } }
+  .btn, .opt, .kchip, .tab, .g-idea, .bf-r, .hlink { transition: transform .12s ease, background-color .2s, color .2s; }
+  .btn:active, .opt:active, .kchip:active, .g-idea:active, .bf-r:active { transform: scale(.97); } .tab:active svg { transform: scale(.88); } .tab svg { transition: transform .15s; }
+  @media (prefers-reduced-motion: reduce) { #main.sec-in > * { animation: none; } .btn:active, .opt:active, .kchip:active, .g-idea:active, .bf-r:active { transform: none; } }
+  .emo-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; } .emo-pick .opt { min-width: 42px; font-size: 18px; padding: 6px 8px; } .emo-pick .opt:last-child { font-size: 13px; }
+  .g-emo { display: inline-block; transform-origin: 70% 70%; } .g-emo.wave { animation: wave 1.6s ease-in-out .5s 1; } @media (prefers-reduced-motion: reduce) { .g-emo.wave { animation: none; } }
+  @keyframes wave { 0%,100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-8deg); } 45% { transform: rotate(14deg); } 60% { transform: rotate(-4deg); } 75% { transform: rotate(10deg); } }
   .trendbox { background: var(--surface-2, rgba(255,255,255,.04)); border-radius: var(--radius-s); padding: 10px 12px; margin: 8px 0; } .trendbox.ok { outline: 1px solid var(--accent); }
   .status.st-trend { background: rgba(10,132,255,.15); color: var(--accent); } .st.trend { background: rgba(10,132,255,.15); color: var(--accent); margin-left: 4px; }
   .score.flt { background: conic-gradient(var(--red) 100%, var(--surface-3) 0); grid-template-rows: auto auto; align-content: center; gap: 1px; } .score.flt span { line-height: 1; } .score.flt small { position: relative; font-size: 9px; color: var(--red); font-weight: 700; line-height: 1; }
@@ -245,7 +270,7 @@
   nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: rgba(22, 22, 24, .82);
                -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px); border-top: 1px solid var(--line);
                padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); }
-  .tabs { max-width: 620px; margin: 0 auto; display: grid; grid-template-columns: repeat(6, 1fr); gap: 2px; }
+  .tabs { max-width: 680px; margin: 0 auto; display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
   .tab { border: 0; background: none; cursor: pointer; color: var(--muted); display: flex; flex-direction: column; align-items: center;
          gap: 3px; font-size: 12px; font-weight: 600; padding: 6px 0; border-radius: 16px; position: relative; }
   .tab svg { width: 24px; height: 24px; }
@@ -271,7 +296,7 @@
   .opt.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 650; }
   .sheet .btn { width: 100%; margin-top: 26px; display: block; }
 
-  .tabs { max-width: 760px; grid-template-columns: repeat(6, 1fr); }
+  .tabs { max-width: 820px; grid-template-columns: repeat(7, 1fr); }
   .card h2 a { color: inherit; text-decoration: none; }
   .ampel { display: flex; gap: 5px; flex-wrap: wrap; }
   .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--up); display: inline-block; }
@@ -913,6 +938,9 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
     <button class="tab" data-sec="journal">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z"/><path d="M5 19.5A1.5 1.5 0 0 0 6.5 21H19v-3M9 8h6M9 11.5h4"/></svg>
       Journal</button>
+    <button class="tab" data-sec="game">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="7" width="19" height="11" rx="5"/><path d="M7.5 10.5v4M5.5 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor"/><circle cx="17.5" cy="13.5" r="1" fill="currentColor"/></svg>
+      Spiel</button>
     <div class="sb-only sb-sep"></div>
     <button class="tab sb-only" data-sec="bilanz">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
@@ -2154,9 +2182,16 @@ document.addEventListener("click", e => {
   }
   render();
 });
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-emoji]"); if (!b) return;
+  state.emoji = b.dataset.emoji; save(); renderHead(); appleHead();
+  const inp = $("cfgEmoji"); if (inp) inp.value = state.emoji;
+  document.querySelectorAll("[data-emoji]").forEach(x => x.classList.toggle("on", x.dataset.emoji === state.emoji));
+});
 document.addEventListener("input", e => {
   if (e.target.dataset && e.target.dataset.jnote) { const o = jnLoad(), k = e.target.dataset.jnote; (o[k] = o[k] || {}).note = e.target.value; jnSave(o); return; }
   if (e.target.id === "cfgName") { state.name = e.target.value.trim(); save(); renderHead(); }
+  if (e.target.id === "cfgEmoji") { state.emoji = e.target.value.trim(); save(); renderHead(); appleHead(); document.querySelectorAll("[data-emoji]").forEach(b => b.classList.toggle("on", b.dataset.emoji === state.emoji)); }
   if (e.target.id === "cfgDesign") { state.design = e.target.value; save(); applyDesign(); renderHead(); render(); }
 });
 document.addEventListener("change", async e => {
@@ -2454,6 +2489,163 @@ function journalHtml() {
     + txTbl + `<div class="note" style="margin:16px 2px 0">Berechnung: Käufe und Verkäufe je Wertpapier nach FIFO zugeordnet, ein Trade läuft von der Eröffnung bis der Bestand wieder 0 ist. Ergebnis = Verkaufserlös − Kaufpreis, jeweils inklusive Ordergebühren, vor Steuern. Alles bleibt nur auf diesem Gerät gespeichert.</div>`;
 }
 
+// ---------- Spiel: Depot-Simulation mit 100.000 € (nur auf diesem Gerät) ----------
+// Gehandelt wird zum Schlusskurs des letzten Scans (wie bei einer Order am nächsten Morgen ungefähr). Gebühr wie Scalable: 0,99 € je Order.
+const GKEY = "kairo-game", G_START = 100000, G_FEE = 0.99;
+const gLoad = () => { try { return JSON.parse(localStorage.getItem(GKEY)) || null; } catch (e) { return null; } };
+const gSave = g => { try { localStorage.setItem(GKEY, JSON.stringify(g)); } catch (e) {} };
+function gNew() {
+  const m = anaData && anaData.market;
+  return { v: 1, start: new Date().toISOString(), cash: G_START, pos: [], closed: [], hist: [],
+           bench: m ? Object.fromEntries(["^GSPC", "^GDAXI"].filter(k => m[k]).map(k => [k, m[k].c])) : {}, auto: false };
+}
+// Kurs in Landeswährung + Euro aus Scan-Ergebnis oder Suchindex
+function gPx(t) {
+  const r = byTicker(t), s = rowOf(t);
+  const c = r ? r.close : s ? s.c : null, cur = (r && r.currency) || (s && s.cur) || "EUR";
+  const e = c == null ? null : toEur(c, cur);
+  return { c, cur, eur: e == null || isNaN(e) ? null : e, n: (r && r.name) || (s && s.n) || t };
+}
+// Setup und Trade-Plan am Kauftag
+function gSetup(t) {
+  const r = byTicker(t);
+  if (!r) return { k: "frei" };
+  if (r.passed) return { k: "Kairo", score: r.score, grade: r.grade && r.grade.g, plan: r.plan || {} };
+  if (isTrend(r)) return { k: r.tr.top ? "Trend Top" : "Trend", chk: r.tr.chk ? r.tr.chk.p : null, plan: r.tr.plan || {} };
+  if (r.fast_hit) return { k: "Fast", plan: {} };
+  return { k: "Watchlist", plan: {} };
+}
+const gVal = p => { const x = gPx(p.t); return x.c == null ? p.eur : p.qty * (toEur(x.c, p.cur) ?? p.px); };
+function gTotals(g) {
+  const inv = g.pos.reduce((a, p) => a + gVal(p), 0), cost = g.pos.reduce((a, p) => a + p.eur, 0);
+  return { inv, cost, total: g.cash + inv, open: inv - cost, real: g.closed.reduce((a, c) => a + c.pnl, 0) };
+}
+// Einmal je Scan: Verlauf festhalten und – falls gewünscht – den Plan automatisch ausführen (Stop / Ziel 2 zum Schlusskurs)
+function gTick(g) {
+  if (!data) return;
+  const d = String(data.generated).slice(0, 10);
+  if (g.auto) [...g.pos].forEach(p => {
+    const x = gPx(p.t); if (x.c == null || p.scan === d) return;
+    if (p.stop && x.c <= p.stop) gSell(g, p.id, "Stop (automatisch)");
+    else if (p.t2 && x.c >= p.t2) gSell(g, p.id, "Ziel 2 (automatisch)");
+  });
+  const tot = gTotals(g).total;
+  const last = g.hist[g.hist.length - 1];
+  if (!last || last.d !== d) g.hist.push({ d, v: Math.round(tot) }); else last.v = Math.round(tot);
+  if (g.hist.length > 400) g.hist = g.hist.slice(-400);
+}
+function gBuy(g, t, eurAmt) {
+  const x = gPx(t), su = gSetup(t), pl = su.plan || {};
+  if (x.eur == null || !(eurAmt > 0)) return "Kein Kurs für diese Aktie.";
+  const qty = Math.floor(eurAmt / x.eur);
+  if (qty < 1) return "Betrag reicht nicht für 1 Aktie.";
+  const cost = qty * x.eur + G_FEE;
+  if (cost > g.cash + 1e-6) return "Nicht genug Guthaben.";
+  g.cash -= cost;
+  g.pos.push({ id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), t, n: x.n, cur: x.cur, qty, px: x.c, eur: cost,
+               d: new Date().toISOString().slice(0, 10), scan: String(data.generated).slice(0, 10), k: su.k, score: su.score ?? null,
+               grade: su.grade ?? null, chk: su.chk ?? null, stop: pl.stop ?? null, t1: pl.target1 ?? null, t2: pl.target2 ?? null });
+  return "";
+}
+function gSell(g, id, why) {
+  const i = g.pos.findIndex(p => p.id === id); if (i < 0) return;
+  const p = g.pos[i], x = gPx(p.t), px = x.c ?? p.px, got = p.qty * (toEur(px, p.cur) ?? 0) - G_FEE;
+  g.cash += got;
+  g.closed.unshift({ ...p, xpx: px, xd: new Date().toISOString().slice(0, 10), got, pnl: got - p.eur, ret: got / p.eur - 1, why: why || "manuell" });
+  g.pos.splice(i, 1);
+}
+// Vorschläge: Kairo-Treffer (Score) und Trend-Rücksetzer (Top, Rücksetzer-Check)
+function gIdeas() {
+  const hits = data.results.filter(r => r.passed).sort((a, b) => (b.score ?? 0) - (a.score ?? 0)).slice(0, 8);
+  const tr = data.results.filter(r => isTrend(r) && !r.passed)
+    .sort((a, b) => !!b.tr.top - !!a.tr.top || ((b.tr.chk && b.tr.chk.p) ?? 0) - ((a.tr.chk && a.tr.chk.p) ?? 0)).slice(0, 8);
+  return { hits, tr };
+}
+function gSpark(h) {
+  if (h.length < 2) return "";
+  const v = h.map(x => x.v), lo = Math.min(...v, G_START), hi = Math.max(...v, G_START), W = 600, H = 90, y = z => H - 6 - (z - lo) / ((hi - lo) || 1) * (H - 12);
+  const pts = v.map((z, i) => `${(i / (v.length - 1) * W).toFixed(1)},${y(z).toFixed(1)}`).join(" ");
+  const up = v[v.length - 1] >= G_START;
+  return `<svg class="g-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="0" x2="${W}" y1="${y(G_START)}" y2="${y(G_START)}" class="g-base"/><polyline points="${pts}" class="${up ? "up" : "down"}"/></svg>`;
+}
+function gameHtml() {
+  if (!searchIdx) loadSearch();
+  if (!anaData) loadAnalysis();
+  let g = gLoad();
+  if (!g) return `<div class="section-title"><span>Spiel</span><span>Depot-Simulation</span></div>
+    <div class="card g-intro"><div class="g-big">100.000 €</div><b>Teste Kairos Vorschläge ohne echtes Geld.</b>
+      <p class="note">Du bekommst ein fiktives Konto und kaufst Aktien aus den Kairo-Treffern und Trend-Rücksetzern. Jeder Kauf merkt sich Setup, Score, Rücksetzer-Check und Trade-Plan – so siehst du nach einigen Wochen, welche Signale bei dir wirklich funktionieren. Gehandelt wird zum Schlusskurs des letzten Scans, 0,99 € Gebühr je Order. Alles bleibt auf diesem Gerät.</p>
+      <button class="btn" data-g="start">Spiel starten</button></div>`;
+  gTick(g); gSave(g);
+  const T = gTotals(g), perf = T.total / G_START - 1, m = anaData && anaData.market;
+  const bench = Object.entries(g.bench || {}).map(([k, v]) => m && m[k] ? `<span>${esc(m[k].name)} <b class="${m[k].c >= v ? "up" : "down"}">${sgnPct(m[k].c / v - 1, 1)}</b></span>` : "").join("");
+  const days = Math.max(0, Math.round((Date.now() - new Date(g.start)) / 864e5));
+  const pos = g.pos.map(p => {
+    const x = gPx(p.t), val = gVal(p), pnl = val - p.eur, r = val / p.eur - 1;
+    const st = x.c == null ? "" : p.stop && x.c <= p.stop ? `<span class="g-tag down">Stop unterschritten</span>` : p.t2 && x.c >= p.t2 ? `<span class="g-tag up">Ziel 2 erreicht</span>` : p.t1 && x.c >= p.t1 ? `<span class="g-tag up">Ziel 1 erreicht</span>` : "";
+    return `<div class="g-pos"><div class="g-pos-h"><button class="g-nm" data-card="${esc(p.t)}"><b>${esc(p.n)}</b><small>${esc(p.t)} · ${esc(p.k)}${p.score != null ? ` · Score ${p.score}` : ""}${p.chk != null ? ` · Check ${pct(p.chk, 0)}` : ""} · seit ${dateDE(p.d)}</small></button>
+      <div class="g-pl ${pnl >= 0 ? "up" : "down"}"><b>${sEur2(pnl)}</b><small>${sgnPct(r, 1)}</small></div></div>
+      <div class="g-row"><span>${p.qty} Stk. · Kauf ${fmt(p.px)} → jetzt ${fmt(x.c)} ${esc(p.cur || "")}</span><span>Wert ${eur2(val)}</span></div>
+      ${p.stop || p.t1 ? `<div class="g-row muted"><span>Plan: Stop ${fmt(p.stop)} · Ziel 1 ${fmt(p.t1)} · Ziel 2 ${fmt(p.t2)}</span>${st}</div>` : st ? `<div class="g-row">${st}</div>` : ""}
+      <div class="g-act"><button class="btn ghost sm" data-g="sell" data-id="${p.id}">Verkaufen</button></div></div>`;
+  }).join("");
+  // Auswertung abgeschlossener Trades je Setup
+  const grp = {};
+  g.closed.forEach(c => { const k = c.k.startsWith("Trend") && c.chk != null ? `${c.k} · Check ${c.chk >= .55 ? "↑" : c.chk >= .4 ? "→" : "↓"}` : c.k;
+    (grp[k] = grp[k] || []).push(c); });
+  const stat = Object.entries(grp).map(([k, l]) => { const w = l.filter(c => c.pnl > 0).length, s = l.reduce((a, c) => a + c.pnl, 0), ar = l.reduce((a, c) => a + c.ret, 0) / l.length;
+    return `<tr><td>${esc(k)}</td><td class="num">${l.length}</td><td class="num">${pct(w / l.length, 0)}</td><td class="num ${ar >= 0 ? "up" : "down"}">${sgnPct(ar, 1)}</td><td class="num ${s >= 0 ? "up" : "down"}">${sEur2(s)}</td></tr>`; }).join("");
+  const closed = g.closed.slice(0, 15).map(c => `<tr><td><b>${esc(c.n)}</b><small class="muted" style="display:block">${esc(c.k)} · ${dateDE(c.d)} → ${dateDE(c.xd)} · ${esc(c.why)}</small></td><td class="num ${c.pnl >= 0 ? "up" : "down"}">${sEur2(c.pnl)}<small style="display:block">${sgnPct(c.ret, 1)}</small></td></tr>`).join("");
+  const id = gIdeas(), sel = state.gSel;
+  const idea = r => { const su = gSetup(r.ticker), pl = su.plan || {}, x = gPx(r.ticker), own = g.pos.some(p => p.t === r.ticker);
+    const risk = pl.stop && x.c ? (x.c - pl.stop) / x.c : null;
+    return `<button class="g-idea${sel === r.ticker ? " on" : ""}" data-g="pick" data-t="${esc(r.ticker)}"><b>${esc(r.name || r.ticker)}</b>
+      <small>${esc(su.k)}${su.score != null ? ` · Score ${su.score}` : ""}${su.chk != null ? ` · Check ${pct(su.chk, 0)}` : ""}${risk ? ` · Stop −${pct(risk, 1)}` : ""}${own ? " · im Depot" : ""}</small><span>${x.eur != null ? eur2(x.eur) : "–"}</span></button>`; };
+  let form = "";
+  if (sel) { const x = gPx(sel), su = gSetup(sel), pl = su.plan || {};
+    const amt = +state.gAmt || 10000, qty = x.eur ? Math.floor(amt / x.eur) : 0;
+    const rq = pl.stop && x.c && x.c > pl.stop ? Math.floor(G_START * 0.01 / ((x.c - pl.stop) * (x.eur / x.c))) : null;
+    form = `<div class="card g-buy"><div class="g-pos-h"><div><b>${esc(x.n)}</b><small class="muted" style="display:block">${esc(sel)} · ${esc(su.k)} · Kurs ${fmt(x.c)} ${esc(x.cur)} = ${eur2(x.eur)}</small></div><button class="btn ghost sm" data-g="pick" data-t="">✕</button></div>
+      ${pl.stop ? `<div class="g-row muted"><span>Plan: Stop ${fmt(pl.stop)} · Ziel 1 ${fmt(pl.target1)} · Ziel 2 ${fmt(pl.target2)}${pl.crv ? ` · CRV ${fmt(pl.crv, 1)}` : ""}</span></div>` : ""}
+      <div class="g-amts">${[2500, 5000, 10000, 20000].map(a => `<button class="opt${amt === a ? " on" : ""}" data-g="amt" data-v="${a}">${fmt(a, 0)} €</button>`).join("")}
+        ${rq ? `<button class="opt" data-g="amt" data-v="${Math.round(rq * x.eur)}" title="So viele Stück, dass ein Stop-Verlust 1 % des Startkapitals (1.000 €) kostet">1 % Risiko: ${fmt(rq * x.eur, 0)} €</button>` : ""}</div>
+      <div class="form" style="margin:8px 0 0"><label class="full">Betrag in €<input id="gAmt" type="number" inputmode="decimal" min="0" step="100" value="${amt}"></label></div>
+      <div class="g-row"><span>${qty} Stück · ${eur2(qty * (x.eur || 0) + G_FEE)} inkl. Gebühr</span><span class="muted">frei: ${eur2(g.cash)}</span></div>
+      <button class="btn" data-g="buy" data-t="${esc(sel)}"${qty < 1 ? " disabled" : ""}>Kaufen</button>${state.gMsg ? `<div class="note down">${esc(state.gMsg)}</div>` : ""}</div>`; }
+  return `<div class="section-title"><span>Spiel · Depot-Simulation</span><span>seit ${days} ${days === 1 ? "Tag" : "Tagen"}</span></div>
+    <div class="card g-head"><div class="g-tot"><span>Gesamtwert</span><b data-count="${T.total}" data-fmt="eur2">${eur2(T.total)}</b>
+      <em class="${perf >= 0 ? "up" : "down"}">${sEur2(T.total - G_START)} · ${sgnPct(perf, 2)}</em></div>
+      ${gSpark(g.hist)}
+      <div class="mtiles"><div class="mt"><span>Guthaben</span><b>${eur2(g.cash)}</b></div><div class="mt"><span>Investiert</span><b>${eur2(T.inv)}</b><em>${g.pos.length} Positionen</em></div>
+        <div class="mt"><span>Offen</span><b class="${T.open >= 0 ? "up" : "down"}">${sEur2(T.open)}</b></div><div class="mt"><span>Realisiert</span><b class="${T.real >= 0 ? "up" : "down"}">${sEur2(T.real)}</b><em>${g.closed.length} Trades</em></div></div>
+      ${bench ? `<div class="g-bench">Zum Vergleich seit Start: ${bench}</div>` : ""}</div>
+    ${form}
+    <div class="section-title"><span>Kairo-Vorschläge</span><span>antippen zum Kaufen</span></div>
+    <div class="g-ideas">${id.hits.length ? `<div class="g-sub">Kairo-Treffer</div>${id.hits.map(idea).join("")}` : ""}${id.tr.length ? `<div class="g-sub">Trend-Rücksetzer</div>${id.tr.map(idea).join("")}` : ""}</div>
+    <div class="section-title"><span>Deine Positionen</span><span>${g.pos.length}</span></div>
+    ${pos || `<div class="empty">Noch keine Positionen – wähle oben einen Vorschlag.</div>`}
+    ${stat ? `<div class="section-title"><span>Was funktioniert?</span><span>abgeschlossene Trades</span></div><div class="table-wrap"><table><thead><tr><th>Setup</th><th class="num">Trades</th><th class="num">Treffer</th><th class="num">Ø Rendite</th><th class="num">Summe</th></tr></thead><tbody>${stat}</tbody></table></div>` : ""}
+    ${closed ? `<div class="section-title"><span>Verlauf</span><span>letzte ${Math.min(15, g.closed.length)}</span></div><div class="table-wrap"><table><tbody>${closed}</tbody></table></div>` : ""}
+    <div class="card" style="margin-top:18px"><label class="g-opt"><input type="checkbox" data-g="auto"${g.auto ? " checked" : ""}> Plan automatisch befolgen – verkauft beim nächsten Scan, wenn der Schlusskurs unter dem Stop oder über Ziel 2 liegt</label>
+      <div class="note">Kurse: Schlusskurs des letzten Scans (werktags 22:30 Uhr), umgerechnet in Euro. 0,99 € Gebühr je Order, keine Steuern. Spielgeld – keine Anlageberatung.</div>
+      <div class="row-actions" style="margin-top:10px"><button class="btn ghost" data-g="reset">Spiel neu starten</button></div></div>`;
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-g]"); if (!b || b.tagName === "INPUT") return;
+  const a = b.dataset.g; let g = gLoad();
+  if (a === "start") { gSave(gNew()); render(); return; }
+  if (!g) return;
+  if (a === "pick") { state.gSel = b.dataset.t || ""; state.gMsg = ""; save(); render(); if (state.gSel) setTimeout(() => { const f = document.querySelector(".g-buy"); f && f.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30); return; }
+  if (a === "amt") { state.gAmt = +b.dataset.v; save(); render(); return; }
+  if (a === "buy") { const msg = gBuy(g, b.dataset.t, +state.gAmt || 10000); state.gMsg = msg; if (!msg) { state.gSel = ""; gTick(g); gSave(g); } save(); render(); return; }
+  if (a === "sell") { const p = g.pos.find(x => x.id === b.dataset.id); if (p && confirm(`${p.n} verkaufen?`)) { gSell(g, p.id, "manuell"); gTick(g); gSave(g); render(); } return; }
+  if (a === "reset") { if (confirm("Spiel wirklich neu starten? Alle Spiel-Positionen und der Verlauf werden gelöscht.")) { localStorage.removeItem(GKEY); state.gSel = ""; save(); render(); } return; }
+});
+document.addEventListener("change", e => {
+  if (e.target.matches && e.target.matches('[data-g="auto"]')) { const g = gLoad(); if (g) { g.auto = e.target.checked; gSave(g); } }
+  if (e.target.id === "gAmt") { state.gAmt = Math.max(0, +e.target.value || 0); save(); render(); }
+});
+
 // ---------- Zusatzdaten (Bilanz, Alarme, Änderungen) ----------
 const jsonData = {};
 function getJson(name) {
@@ -2536,6 +2728,23 @@ async function openBrief() {
   await Promise.all(miss.map(t => loadChart(t).then(c => { const n = c.c.length; briefD1[t] = n > 1 ? c.c[n - 1] / c.c[n - 2] - 1 : null; }).catch(() => { briefD1[t] = null; })));
   $("briefBody").innerHTML = briefHtml(); $("brief").hidden = false;
   state.briefSeen = data.generated; state.briefAt = Date.now(); save();
+}
+// Dezente Bewegung: Inhalte gleiten beim Reiterwechsel gestaffelt herein, große Zahlen zählen hoch (aus bei „Bewegung reduzieren“)
+const calm = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+function secIn() {
+  const m = $("main"); if (!m || calm()) return;
+  m.classList.remove("sec-in"); void m.offsetWidth; m.classList.add("sec-in");
+  clearTimeout(secIn.t); secIn.t = setTimeout(() => m.classList.remove("sec-in"), 900);
+  countUp(m);
+}
+function countUp(root) {
+  if (calm()) return;
+  root.querySelectorAll("[data-count]").forEach(el => {
+    const to = +el.dataset.count, f = el.dataset.fmt === "eur2" ? eur2 : v => fmt(v, 0), t0 = performance.now(), D = 700;
+    if (!isFinite(to)) return;
+    const step = now => { const k = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = f(to * e); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
 }
 function closeBrief() { $("brief").hidden = true; }
 // Automatisch beim Öffnen: bei neuem Scan oder wenn das letzte Briefing mehr als 6 Stunden her ist
@@ -2830,6 +3039,9 @@ function settingsHtml() {
     <div class="card" style="margin-bottom:18px"><div class="form" style="margin:0">
       <label class="full">Wie soll Kairo dich nennen?<input id="cfgName" value="${esc(state.name || "")}" placeholder="z. B. Jonny" maxlength="24" autocomplete="given-name"></label></div>
       <div class="note">Erscheint in der Begrüßung oben („Guten Abend, ${esc(state.name || "…")}“). Leer lassen = ohne Namen.</div>
+      <div class="form" style="margin:14px 0 0"><label class="full">Emoji in der Begrüßung<input id="cfgEmoji" value="${esc(state.emoji == null ? (isApple() ? "" : "👋") : state.emoji)}" placeholder="z. B. 🚀 – leer = kein Emoji" maxlength="8"></label></div>
+      <div class="emo-pick">${EMOJIS.map(e => `<button type="button" class="opt${(state.emoji ?? "👋") === e ? " on" : ""}" data-emoji="${e}">${e}</button>`).join("")}<button type="button" class="opt${state.emoji === "" ? " on" : ""}" data-emoji="">keins</button></div>
+      <div class="note">Antippen oder ein eigenes Emoji ins Feld tippen (Emoji-Tastatur 🌐).</div>
       <div class="form" style="margin:14px 0 0"><label class="full">Design<select id="cfgDesign">
         ${DESIGNS.map(([k, l]) => `<option value="${k}"${state.design === k ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
       <div class="note">Wechselt sofort, alle Funktionen und Daten bleiben gleich.</div></div>
@@ -2955,6 +3167,7 @@ function renderMain() {
   if (state.sec === "entry") { $("main").innerHTML = einHtml(); return; }
   if (state.sec === "depot") { $("main").innerHTML = depotHtml(); mountDepotCharts(); return; }
   if (state.sec === "journal") { $("main").innerHTML = journalHtml(); return; }
+  if (state.sec === "game") { $("main").innerHTML = gameHtml(); return; }
   if (depCharts.size) { depCharts.forEach(ch => ch.remove()); depCharts.clear(); }
   KIND_BTNS = trendOn() ? KIND_BTNS_ALL : KIND_BTNS_ALL.filter(x => x[0] !== "trend");
   if (trendOn() && !state.trendSeen) { state.trendSeen = 1; state.kinds = [...new Set([...(state.kinds || []), "trend"])]; save(); }
@@ -3036,11 +3249,14 @@ function sheetExtras() {
   const hid = new Set(state.hiddenCols || []);
   $("colOpts").innerHTML = COLS.filter(c => c.k !== "ticker").map(c => `<button class="opt${hid.has(c.k) ? "" : " on"}" data-col="${c.k}">${esc(c.l)}</button>`).join("");
 }
+// Begrüßungs-Emoji: frei wählbar in den Einstellungen (leer = keins; nicht gesetzt = 👋, im Apple-Design keins)
+const EMOJIS = ["👋", "😎", "🚀", "📈", "💰", "🔥", "⚡", "🦁", "🐂", "🌙", "☀️", "☕", "🎯", "💎", "🏆", "🤑"];
+const greetEmoji = () => { const e = state.emoji == null ? (isApple() ? "" : "👋") : String(state.emoji).trim(); if (!e) return ""; const w = !greetEmoji.done; greetEmoji.done = 1; return ` <span class="g-emo${w ? " wave" : ""}">${esc(e)}</span>`; };
 function greetText() {
   const h = new Date().getHours(), nm = String(state.name || "").trim();
-  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <span class="nm">${esc(nm)}</span>` : "") + (isApple() ? "" : " 👋");
+  return esc(h < 5 ? "Gute Nacht" : h < 11 ? "Guten Morgen" : h < 18 ? "Guten Tag" : "Guten Abend") + (nm ? `, <span class="nm">${esc(nm)}</span>` : "") + greetEmoji();
 }
-const SEC_T = { today: "Heute", scanner: "Scanner", entry: "Einstieg", calendar: "Kalender", depot: "Depot", journal: "Journal", settings: "Einstellungen", bilanz: "Bilanz" };
+const SEC_T = { today: "Heute", scanner: "Scanner", entry: "Einstieg", calendar: "Kalender", depot: "Depot", journal: "Journal", game: "Spiel", settings: "Einstellungen", bilanz: "Bilanz" };
 function appleHead() {
   document.body.dataset.sec = state.sec;
   if (!isApple()) return;
@@ -3257,7 +3473,7 @@ $("backdrop").onclick = () => document.body.classList.remove("filters-open");
 $("reset").onclick = () => { Object.assign(state, DEFAULTS); syncOpts(); save(); render(); };
 $("search").addEventListener("input", () => { if ($("search").value.trim().length >= 2) loadSearch(); render(); });
 function goSec(sec) {
-  state.sec = sec; syncOpts(); save(); render(); window.scrollTo({ top: 0 });
+  state.sec = sec; syncOpts(); save(); render(); window.scrollTo({ top: 0 }); secIn();
   if (sec === "calendar") loadCalendar();
   if (sec === "depot" || sec === "today" || sec === "entry") loadSearch();
 }
