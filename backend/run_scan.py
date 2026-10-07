@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import briefing, company, trend_study, forecast, grade, live, sentiment, state, telegram
+from . import briefing, company, forecast, grade, live, sentiment, state, telegram
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -383,10 +383,6 @@ def main(argv=None) -> int:
         print(f"Allzeithochs: {len(aths)} von {len(watch)} Watchlist-Aktien")
     ctx_hist = yf.history([t for t, _ in MARKET] + sorted(set(SECTOR_ETF.values())), CONFIG.history.period, end=args.end)
     market = market_context(ctx_hist)
-    try:
-        vix_now = float(ctx_hist["^VIX"]["Close"].dropna().iloc[-1])
-    except Exception:
-        vix_now = None
     lage = ", ".join(v["name"] + " " + v["label"] for k, v in market.items() if k != "regime")
     print(f"Markt: {lage}; Lage: {market.get('regime', {}).get('label', '?')}")
     sec_cache: dict = {}
@@ -447,12 +443,7 @@ def main(argv=None) -> int:
         rows[-1]["trend"] = score_trend(df, info, t, res)
         if TREND_ON:                                  # zweites Setup: Rücksetzer im Aufwärtstrend
             try:
-                _tr = evaluate_trend(df, res)
-                rows[-1]["tr"] = trend_row(_tr)
-                if _tr.passed:                        # Rücksetzer-Check (Studie: nur Rücksetzer oder richtige Korrektur?)
-                    chk = trend_study.predict(df, bool(_tr.flags.get("trend_top")), vix_now)
-                    if chk:
-                        rows[-1]["tr"]["chk"] = chk
+                rows[-1]["tr"] = trend_row(evaluate_trend(df, res))
             except Exception as exc:
                 print(f"{t}: Trend-Fehler {exc!r}")
         if about.get(t):
