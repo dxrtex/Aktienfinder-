@@ -51,9 +51,6 @@ LABELS = {
     "worst": "größter Tagesverlust (10 T.)",
     "e50slope": "Steigung der EMA 50",
     "wk": "Wochentrend (EMA 100 steigt)",
-    "rs63": "relative Stärke zum Index (3 Mon.)",
-    "mkt50": "Index über seiner EMA 50",
-    "mkt20": "Index-Entwicklung 20 Tage",
     "vix": "VIX",
     "top": "Stufe „Top“",
 }
@@ -69,6 +66,39 @@ def _ind(df: pd.DataFrame) -> dict:
 def _index_feats(idx: pd.DataFrame) -> pd.DataFrame:
     s = idx["Close"]
     return pd.DataFrame({"mkt50": (s > ema(s, 50)).astype(float), "mkt20": s / s.shift(20) - 1, "ret63": s / s.shift(63) - 1})
+
+
+CLIP = {"dnvol": (0, 5), "leg": (0, 5), "speed": (0, 10), "vol5": (0, 4), "atrp": (0, .2), "worst": (-.3, 0), "vix": (9, 60)}
+
+
+def leg_at(h: np.ndarray, l: np.ndarray, i: int):
+    """Letztes Hoch R (30 T.) und das Tief L davor (120 T.) – der zuletzt gelaufene Anstieg."""
+    j0 = max(0, i - 29)
+    ri = j0 + int(np.argmax(h[j0:i + 1]))
+    li = max(0, ri - 120) + int(np.argmin(l[max(0, ri - 120):ri + 1]))
+    return ri, float(h[ri]), float(l[li])
+
+
+def feats_at(x: dict, i: int, ri: int, R: float, L: float, top: bool, vix: float) -> dict:
+    c, v, r = x["c"], x["v"], x["rsi"]
+    chg = c[i - 9:i + 1] / c[i - 10:i] - 1
+    vv = v[i - 9:i + 1]
+    upv = float(np.sum(vv[chg > 0]))
+    dnv = float(np.sum(vv[chg < 0]))
+    days = i - ri
+    f = {
+        "g200": c[i] / x["e200"][i] - 1, "g50": c[i] / x["e50"][i] - 1, "rsi": float(r[i]),
+        "rsi_drop": float(np.nanmax(r[max(0, ri - 2):ri + 3]) - r[i]),
+        "atrp": float(x["atr"][i] / c[i]), "retr": (R - c[i]) / (R - L), "days": float(days),
+        "speed": (R - c[i]) / R / max(days, 1) * 100, "leg": R / L - 1,
+        "vol5": float(np.mean(v[i - 4:i + 1]) / (np.mean(v[i - 49:i + 1]) or 1)),
+        "dnvol": dnv / upv if upv > 0 else 5.0, "red10": float(np.sum(chg < 0)), "worst": float(np.min(chg)),
+        "e50slope": x["e50"][i] / x["e50"][i - 10] - 1, "wk": float(x["e100"][i] > x["e100"][i - 10]),
+        "vix": vix, "top": float(top),
+    }
+    for k, (lo, hi) in CLIP.items():
+        f[k] = float(min(hi, max(lo, f[k])))
+    return {k: float(val) for k, val in f.items()}
 
 
 def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[dict]:
@@ -93,11 +123,7 @@ def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[
             continue
         last = i
         # letztes Hoch R (30 T.) und Tief L davor (120 T.) → Fibonacci des letzten Anstiegs
-        j0 = i - 29
-        ri = j0 + int(np.argmax(h[j0:i + 1]))
-        R = h[ri]
-        li = max(0, ri - 120) + int(np.argmin(l[max(0, ri - 120):ri + 1]))
-        L = l[li]
+        ri, R, L = leg_at(h, l, i)
         if R <= L:
             continue
         f50, f618, f786 = R - .5 * (R - L), R - .618 * (R - L), R - .786 * (R - L)
@@ -152,26 +178,76 @@ def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[
                     C = trade(k, ent, min(stC, ent - a[k]))
                     break
         ret60 = c[min(n - 1, i + HZ)] / c[i] - 1
-        # ----- Merkmale am Signaltag
-        w = slice(i - 9, i + 1)
-        chg = c[i - 9:i + 1] / c[i - 10:i] - 1
-        upv = float(np.sum(v[w][chg > 0])) or 1.0
-        dnv = float(np.sum(v[w][chg < 0]))
-        rs_idx = mk["ret63"].iloc[i] if not pd.isna(mk["ret63"].iloc[i]) else 0.0
-        days = i - ri
-        feat = {
-            "g200": g200[i], "g50": g50[i], "rsi": r[i], "rsi_drop": float(np.nanmax(r[ri - 2:ri + 3]) - r[i]) if ri >= 2 else 0.0,
-            "atrp": atrp, "retr": (R - c[i]) / (R - L), "days": days, "speed": (R - c[i]) / R / max(days, 1) * 100,
-            "leg": R / L - 1, "vol5": float(np.mean(v[i - 4:i + 1]) / (np.mean(v[i - 49:i + 1]) or 1)),
-            "dnvol": dnv / upv, "red10": float(np.sum(chg < 0)), "worst": float(np.min(chg)),
-            "e50slope": e50[i] / e50[i - 10] - 1, "wk": float(x["e100"][i] > x["e100"][i - 10]),
-            "rs63": (c[i] / c[i - 63] - 1) - rs_idx, "mkt50": float(mk["mkt50"].iloc[i] or 0), "mkt20": float(mk["mkt20"].iloc[i] or 0),
-            "vix": float(vx[i]) if not math.isnan(vx[i]) else 20.0, "top": float(top),
-        }
+        feat = feats_at(x, i, ri, R, L, top, float(vx[i]) if not math.isnan(vx[i]) else 20.0)
         if any(isinstance(val, float) and (math.isnan(val) or math.isinf(val)) for val in feat.values()):
             continue
         out.append({"t": t, "d": str(dates[i].date()), "res": res, "A": A, "B": B, "C": C, "ret60": ret60, "x": feat})
     return out
+
+
+# Begründungen für die App: (spricht dafür, spricht dagegen) – {v} = Wert
+REASON = {
+    "retr": ("erst flacher Rücksetzer ({p:.0f} % des letzten Anstiegs)", "schon tief korrigiert ({p:.0f} % des letzten Anstiegs)"),
+    "speed": ("ruhiger, langsamer Rücksetzer", "schneller Abverkauf"),
+    "worst": ("kein großer Verlusttag", "großer Verlusttag zuletzt ({p:.0f} %)"),
+    "atrp": ("ruhige Aktie (geringe Schwankung)", "stark schwankende Aktie"),
+    "rsi_drop": ("RSI nur leicht gefallen", "RSI stark eingebrochen seit dem Hoch"),
+    "leg": ("gesunder letzter Anstieg", "letzter Anstieg sehr steil – Gewinnmitnahmen drohen"),
+    "e50slope": ("EMA 50 steigt gleichmäßig", "EMA 50 steigt sehr steil – Trend überhitzt"),
+    "dnvol": ("wenig Volumen an roten Tagen", "hohes Volumen an roten Tagen (Verkaufsdruck)"),
+    "vol5": ("Volumen zuletzt erhöht", "Volumen zuletzt niedrig"),
+    "wk": ("Wochentrend intakt", "Wochentrend dreht nach unten"),
+    "vix": ("Angst im Markt (VIX hoch) – Rücksetzer werden oft gekauft", "Markt sorglos (VIX niedrig)"),
+    "g200": ("Trend nicht überdehnt", "Kurs weit über der EMA 200 – überdehnt"),
+    "g50": ("Kurs nah an der EMA 50", "Kurs schon deutlich unter der EMA 50"),
+    "top": ("Stufe „Top“", "nicht Stufe „Top“"),
+    "days": ("Rücksetzer schon einige Tage alt", "Rücksetzer noch jung"),
+    "red10": ("wenige rote Tage", "viele rote Tage in Folge"),
+    "rsi": ("RSI im oberen Bereich", "RSI im unteren Bereich"),
+}
+
+
+def predict(df: pd.DataFrame, top: bool, vix: float | None, model: dict | None = None) -> dict | None:
+    """Rücksetzer-Check für das aktuelle Signal: Wahrscheinlichkeit „nur Rücksetzer“ + wichtigste Gründe."""
+    model = model or load_model()
+    if not model or len(df) < 260:
+        return None
+    x = _ind(df)
+    i = len(x["c"]) - 1
+    ri, R, L = leg_at(x["h"], x["l"], i)
+    if R <= L:
+        return None
+    f = feats_at(x, i, ri, R, L, top, vix if vix else 20.0)
+    names, mu, sd, w = model["names"], np.array(model["mu"]), np.maximum(np.array(model["sd"]), 1e-3), np.array(model["w"])
+    z = (np.array([f[k] for k in names]) - mu) / sd
+    contrib = w[1:] * z
+    p = float(1 / (1 + np.exp(-(w[0] + contrib.sum()))))
+    fmt = {"retr": f["retr"] * 100, "worst": f["worst"] * 100}
+    order = np.argsort(-np.abs(contrib))
+    pro, con = [], []
+    for j in order:
+        k = names[j]
+        if k not in REASON or abs(contrib[j]) < 0.08:
+            continue
+        txt = REASON[k][0 if contrib[j] > 0 else 1].format(p=fmt.get(k, 0))
+        (pro if contrib[j] > 0 else con).append(txt)
+    q = model.get("quint") or []
+    grp = next((g for g in q if p <= g["p_hi"]), q[-1] if q else None)
+    return {"p": round(p, 3), "pro": pro[:3], "con": con[:3], "fib50": round(R - .5 * (R - L), 4), "hi": round(R, 4),
+            "korr": grp and grp.get("korr"), "ok": grp and grp.get("ok")}
+
+
+_MODEL = None
+
+
+def load_model() -> dict | None:
+    global _MODEL
+    if _MODEL is None:
+        try:
+            _MODEL = json.loads(OUT.read_text(encoding="utf-8")).get("model") or {}
+        except Exception:
+            _MODEL = {}
+    return _MODEL or None
 
 
 def _auc(p, y):
@@ -253,7 +329,7 @@ def study(n: int, period: str, seed: int = 11) -> dict:
             single[f] = rows
     # Modell: Hälfte der Aktien lernen, andere Hälfte prüfen; zusätzlich zeitlich (vor/nach Mitte)
     X = np.array([[e["x"][f] for f in names] for e in ev], float)
-    mu, sd = X.mean(0), X.std(0) + 1e-9
+    mu, sd = X.mean(0), np.maximum(X.std(0), 1e-3)
     Z = np.c_[np.ones(len(X)), (X - mu) / sd]
     ticks = sorted({e["t"] for e in ev})
     test_t = set(ticks[1::2])
@@ -283,6 +359,7 @@ def study(n: int, period: str, seed: int = 11) -> dict:
              "auc_train": _auc(p[~te], y[~te]), "auc_test": _auc(p[te], y[te]),
              "auc_time_test": _auc(p_time[late], y[late]), "split_date": dmid,
              "calib_test": calib(p, te), "calib_time_test": calib(p_time, late),
+             "quint": [{"p_hi": q["p_hi"], "ok": q["ok"], "korr": q["korr"]} for q in calib(p, te)],
              "coef": sorted([[f, round(float(wi), 3)] for f, wi in zip(names, w[1:])], key=lambda z: -abs(z[1]))}
     entries = {k: _var(ev, k) for k in ("A", "B", "C")}
     entries_top = {k: _var(top, k) for k in ("A", "B", "C")}
