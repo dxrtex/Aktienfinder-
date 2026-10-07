@@ -2557,7 +2557,13 @@ function gPx(t) {
 // Setup und Trade-Plan am Kauftag
 function gSetup(t) {
   const r = byTicker(t);
-  if (!r) return { k: "frei" };
+  if (!r) { // nicht in der Scan-Tabelle: Setup aus dem Suchindex (alle geprüften Aktien)
+    const s = rowOf(t);
+    if (s && s.tr) return { k: s.tr === 2 ? "Trend Top" : "Trend", plan: s.tp || {} };
+    if (s && s.s === "hit") return { k: "Kairo", score: s.sc ?? null, plan: s.kp || {} };
+    if (s && s.s === "fast") return { k: "Fast", plan: {} };
+    return { k: "frei" };
+  }
   if (r.passed) return { k: "Kairo", score: r.score, grade: r.grade && r.grade.g, plan: r.plan || {} };
   if (isTrend(r)) return { k: r.tr.top ? "Trend Top" : "Trend", chk: r.tr.chk ? r.tr.chk.p : null, plan: r.tr.plan || {} };
   if (r.fast_hit) return { k: "Fast", plan: {} };
@@ -2627,6 +2633,14 @@ function gSell(g, id, why, atPx) {
   g.cash += got;
   g.closed.unshift({ ...p, xpx: px, xd: new Date().toISOString().slice(0, 10), got, pnl: got - p.eur, ret: got / p.eur - 1, why: why || "manuell" });
   g.pos.splice(i, 1);
+}
+// Suche im Spiel: jede geprüfte Aktie kaufen
+function gListHtml() {
+  const q = state.gQ || "";
+  if (q.length < 2) return "";
+  const m = einMatches(q);
+  if (!m.length) return `<div class="note" style="margin:6px 2px">Keine Aktie gefunden – gesucht wird in allen ${fmt(searchIdx.length, 0)} geprüften Aktien.</div>`;
+  return `<div class="ein-list">${m.map(r => `<button class="ein-opt" data-g="pick" data-t="${esc(r.t)}"><b>${esc(r.n)}</b><span>${esc(r.t)} · ${fmt(r.c)} ${esc(r.cur || "")}</span>${einTag(r)}</button>`).join("")}</div>`;
 }
 // Vorschläge: Kairo-Treffer (Score) und Trend-Rücksetzer (Top, Rücksetzer-Check)
 function gIdeas() {
@@ -2701,6 +2715,8 @@ function gameHtml() {
         <div class="mt"><span>Offen</span><b class="${T.open >= 0 ? "up" : "down"}">${sEur2(T.open)}</b></div><div class="mt"><span>Realisiert</span><b class="${T.real >= 0 ? "up" : "down"}">${sEur2(T.real)}</b><em>${g.closed.length} Trades</em></div></div>
       ${bench ? `<div class="g-bench">Zum Vergleich seit Start: ${bench}</div>` : ""}</div>
     ${form}
+    <div class="section-title"><span>Aktie suchen</span><span>alle ${searchIdx ? fmt(searchIdx.length, 0) : ""} Aktien</span></div>
+    <div class="ein-search"><input id="gQ" type="search" placeholder="Aktie eingeben – z. B. Apple, SAP, Rheinmetall" autocomplete="off" value="${esc(state.gQ || "")}"><div id="gList">${searchIdx ? gListHtml() : ""}</div></div>
     <div class="section-title"><span>Kairo-Vorschläge</span><span>antippen zum Kaufen</span></div>
     <div class="g-ideas">${id.hits.length ? `<div class="g-sub">Kairo-Treffer</div>${id.hits.map(idea).join("")}` : ""}${id.tr.length ? `<div class="g-sub">Trend-Rücksetzer</div>${id.tr.map(idea).join("")}` : ""}</div>
     <div class="section-title"><span>Deine Positionen</span><span>${g.pos.length}</span></div>
@@ -2716,7 +2732,7 @@ document.addEventListener("click", e => {
   const a = b.dataset.g; let g = gLoad();
   if (a === "start") { gSave(gNew()); render(); return; }
   if (!g) return;
-  if (a === "pick") { state.gSel = b.dataset.t || ""; state.gMsg = ""; save(); render(); if (state.gSel) setTimeout(() => { const f = document.querySelector(".g-buy"); f && f.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30); return; }
+  if (a === "pick") { state.gSel = b.dataset.t || ""; if (state.gSel) state.gQ = ""; state.gMsg = ""; save(); render(); if (state.gSel) setTimeout(() => { const f = document.querySelector(".g-buy"); f && f.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30); return; }
   if (a === "amt") { state.gAmt = +b.dataset.v; save(); render(); return; }
   if (a === "mode") { state.gMode = b.dataset.v; state.gAmt = b.dataset.v === "turbo" ? 2000 : 10000; save(); render(); return; }
   if (a === "lev") { state.gLev = +b.dataset.v; save(); render(); return; }
@@ -3290,6 +3306,7 @@ function einHtml() {
       ${best.length ? `<div class="plan-h" style="margin:14px 2px 6px">Heute die besten Einstiege · Trend Top</div><div class="ein-list">${best.map(x => `<button class="ein-opt" data-ein="${esc(x.t)}"><b>${esc(x.n)}</b><span>${esc(x.t)} · ${fmt(x.c)} ${esc(x.cur || "")}</span>${einTag(x)}</button>`).join("")}</div>` : ""}`}`;
 }
 document.addEventListener("input", e => {
+  if (e.target.id === "gQ") { state.gQ = e.target.value; const l = $("gList"); if (l) l.innerHTML = gListHtml(); }
   if (e.target.id === "einQ") { state.einQ = e.target.value; if (!state.einQ) state.einT = null; $("einList").innerHTML = einListHtml(); }
   if (e.target.id === "einBudget") { state.budget = Math.max(0, parseFloat(e.target.value) || 0); save(); }
 });
@@ -3297,6 +3314,7 @@ document.addEventListener("change", e => { if (e.target.id === "einBudget") rend
   if (e.target.id === "briefAuto") { state.briefOff = !e.target.checked; save(); }
   if (e.target.id === "mSort") { state.tableSort = e.target.value; state.tableAsc = false; save(); render(); } });
 document.addEventListener("keydown", e => {
+  if (e.target.id === "gQ" && e.key === "Enter") { const m = einMatches(e.target.value); if (m[0]) { state.gSel = m[0].t; state.gQ = ""; state.gMsg = ""; save(); render(); setTimeout(() => { const f = document.querySelector(".g-buy"); f && f.scrollIntoView({ behavior: "smooth", block: "center" }); }, 30); } }
   if (e.target.id === "einQ" && e.key === "Enter") { const m = einMatches(e.target.value); if (m[0]) { state.einT = m[0].t; state.einQ = m[0].n; save(); render(); } }
 });
 
