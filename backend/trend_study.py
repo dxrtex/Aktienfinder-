@@ -199,6 +199,70 @@ def signals(t: str, df: pd.DataFrame, mk: pd.DataFrame, vix: pd.Series) -> list[
     return out
 
 
+# Gründe für die App aus den gemessenen Quoten der Studie (Einzelmerkmale): (Text, Wert-Format)
+REASON = {
+    "retr": lambda f: f"Rücksetzer bisher {f['retr'] * 100:.0f} % des letzten Anstiegs",
+    "speed": lambda f: "langsamer Rücksetzer" if f["speed"] < 1 else "schneller Abverkauf",
+    "worst": lambda f: f"größter Tagesverlust zuletzt {f['worst'] * 100:.0f} %".replace(".", ","),
+    "atrp": lambda f: f"Tagesschwankung (ATR) {f['atrp'] * 100:.1f} %".replace(".", ","),
+    "rsi_drop": lambda f: f"RSI seit dem Hoch um {f['rsi_drop']:.0f} Punkte gefallen",
+    "e50slope": lambda f: "EMA 50 steigt sehr steil – Trend überhitzt" if f["e50slope"] > .0357 else "EMA 50 steigt gleichmäßig",
+    "vix": lambda f: f"VIX bei {f['vix']:.0f}" + (" – Angst im Markt" if f["vix"] > 24 else ""),
+    "g50": lambda f: f"Kurs {abs(f['g50']) * 100:.1f} % unter der EMA 50".replace(".", ","),
+    "wk": lambda f: "Wochentrend intakt" if f["wk"] else "Wochentrend dreht nach unten",
+}
+
+
+def predict(df: pd.DataFrame, top: bool, vix: float | None, model: dict | None = None) -> dict | None:
+    """Rücksetzer-Check für das aktuelle Signal: Wahrscheinlichkeit „nur Rücksetzer“ + wichtigste Gründe."""
+    model = model or load_model()
+    if not model or len(df) < 260:
+        return None
+    x = _ind(df)
+    i = len(x["c"]) - 1
+    ri, R, L = leg_at(x["h"], x["l"], i)
+    if R <= L:
+        return None
+    f = feats_at(x, i, ri, R, L, top, vix if vix else 20.0)
+    names, mu, sd, w = model["names"], np.array(model["mu"]), np.maximum(np.array(model["sd"]), 1e-3), np.array(model["w"])
+    z = (np.array([f[k] for k in names]) - mu) / sd
+    contrib = w[1:] * z
+    p = float(1 / (1 + np.exp(-(w[0] + contrib.sum()))))
+    base = model.get("base_ok", .46)
+    pro, con = [], []
+    for k, bins in (model.get("single") or {}).items():
+        if k not in REASON or k not in f:
+            continue
+        v = f[k]
+        if k == "g50" and v > 0:
+            continue
+        hit = next((g for g in bins if ("bin" in g and v == g["bin"]) or ("lo" in g and g["lo"] <= v <= g["hi"])),
+                   None if "bin" in bins[0] else (bins[0] if v < bins[0]["lo"] else bins[-1]))
+        if not hit or abs(hit["ok"] - base) < .06:
+            continue
+        item = (abs(hit["ok"] - base), f"{REASON[k](f)} – in der Studie {hit['ok'] * 100:.0f} % reine Rücksetzer")
+        (pro if hit["ok"] > base else con).append(item)
+    pro = [t for _, t in sorted(pro, reverse=True)]
+    con = [t for _, t in sorted(con, reverse=True)]
+    q = model.get("quint") or []
+    grp = next((g for g in q if p <= g["p_hi"]), q[-1] if q else None)
+    return {"p": round(p, 3), "pro": pro[:3], "con": con[:3], "fib50": round(R - .5 * (R - L), 4), "hi": round(R, 4),
+            "korr": grp and grp.get("korr"), "ok": grp and grp.get("ok")}
+
+
+_MODEL = None
+
+
+def load_model() -> dict | None:
+    global _MODEL
+    if _MODEL is None:
+        try:
+            _MODEL = json.loads(OUT.read_text(encoding="utf-8")).get("model") or {}
+        except Exception:
+            _MODEL = {}
+    return _MODEL or None
+
+
 def _auc(p, y):
     o = np.argsort(p)
     ranks = np.empty(len(p)); ranks[o] = np.arange(1, len(p) + 1)
@@ -308,6 +372,8 @@ def study(n: int, period: str, seed: int = 11) -> dict:
              "auc_train": _auc(p[~te], y[~te]), "auc_test": _auc(p[te], y[te]),
              "auc_time_test": _auc(p_time[late], y[late]), "split_date": dmid,
              "calib_test": calib(p, te), "calib_time_test": calib(p_time, late),
+             "quint": [{"p_hi": q["p_hi"], "ok": q["ok"], "korr": q["korr"]} for q in calib(p, te)],
+             "base_ok": base["ok"], "single": {k: single[k] for k in REASON if k in single},
              "coef": sorted([[f, round(float(wi), 3)] for f, wi in zip(names, w[1:])], key=lambda z: -abs(z[1]))}
     def tstats(sel, key):
         xs = [e[key] for e in sel if e[key] is not None]
