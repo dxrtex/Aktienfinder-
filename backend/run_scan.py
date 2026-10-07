@@ -16,7 +16,7 @@ import argparse
 import json
 import math
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import numpy as np
 import pandas as pd
@@ -25,7 +25,7 @@ from .config import CONFIG, ROOT, as_dict
 from .data_provider import CachedProvider, YFinanceProvider
 from .hints import hint
 from .macro import fetch_macro_events
-from . import briefing, company, trend_study, forecast, grade, live, sentiment, state, telegram
+from . import briefing, company, push, trend_study, forecast, grade, live, sentiment, state, telegram
 from .analysis import MARKET, SECTOR_DE, SECTOR_ETF, add_context, analyze, finalize, market_context, trend_state
 from .indicators import ema, macd, rsi, sma
 from .mbi import momentum_bias_index
@@ -111,7 +111,11 @@ def day_moves(df) -> dict:
     """Kursveränderung zum Vortag und über 5 Handelstage (für das Tagesbriefing in der App)."""
     try:
         c = df["Close"].dropna()
-        return {"d1": round(float(c.iloc[-1] / c.iloc[-2] - 1), 4), "d5": round(float(c.iloc[-1] / c.iloc[-6] - 1), 4)} if len(c) > 6 else {}
+        if len(c) <= 6:
+            return {}
+        tail = df.dropna(subset=["Low", "High"]).tail(5)       # Tagestiefs/-hochs der letzten 5 Tage (Spiel: K.-o. untertags)
+        return {"d1": round(float(c.iloc[-1] / c.iloc[-2] - 1), 4), "d5": round(float(c.iloc[-1] / c.iloc[-6] - 1), 4),
+                "lw": [[str(i.date()), round(float(r["Low"]), 4), round(float(r["High"]), 4)] for i, r in tail.iterrows()]}
     except Exception:
         return {}
 
@@ -425,12 +429,31 @@ def main(argv=None) -> int:
         tr_hit = bool(tres and tres.passed)
         try:
             search[t] = {**search_row(res, m, hint(res)), **entry_fields(res, tres, m), **day_moves(df)}
+            if not (res.passed or res.fast_hit or m.get("in_watchlist") or tr_hit):
+                search[t].pop("lw", None)                # Tagestiefs nur für Kandidaten (hält search.json klein)
         except Exception as exc:
             print(f"{t}: Hinweis-Fehler {exc!r}")
         if res.passed or res.fast_hit or m.get("in_watchlist") or tr_hit:
             results.append((t, df, res))
     # Earnings-Termin, Name und Sektor nur für Treffer/Fast-Treffer abfragen (eine Anfrage je Aktie)
     infos = yf.infos([t for t, _, _ in results])
+    # Stammdaten-Cache (Zustands-Branch): blockt Yahoo die Einzelabfragen, gelten die Daten vom letzten erfolgreichen Abruf
+    icache, day = state.load("info_cache.json", {}), datetime.now().date().isoformat()
+    info_fresh = info_cached = 0
+    for t, i in list(infos.items()):
+        if i.get("currency") or i.get("market_cap") or i.get("earnings_date"):
+            icache[t] = {**i, "ts": day}
+            info_fresh += 1
+        elif t in icache:
+            c = {k: v for k, v in icache[t].items() if k != "ts"}
+            for k in ("earnings_date", "ex_dividend_date", "dividend_date"):
+                if c.get(k) and str(c[k]) < day:
+                    c[k] = None
+            infos[t] = c
+            info_cached += 1
+    cutoff = (datetime.now() - timedelta(days=90)).date().isoformat()
+    state.save("info_cache.json", {t: v for t, v in icache.items() if v.get("ts", "") >= cutoff})
+    print(f"Stammdaten: {info_fresh} frisch, {info_cached} aus dem Cache, {len(infos) - info_fresh - info_cached} fehlen")
     rows, final = [], {}
     (SITE / "charts").mkdir(parents=True, exist_ok=True)
     for old in (SITE / "charts").glob("*.json"):
@@ -504,6 +527,8 @@ def main(argv=None) -> int:
     stats.update(hits=sum(r["passed"] for r in rows), fast_hits=sum(r["fast_hit"] for r in rows),
                  watchlist=sum(r["in_watchlist"] for r in rows),
                  duration_s=round(time.time() - started))
+    stats["health"] = {"loaded": len(data), "universe": len(tickers), "info_fresh": info_fresh, "info_cached": info_cached,
+                       "info_total": len(infos), "news": (len(brief["stocks"]) if brief else None), "errors": stats["errors"]}
     out = {"generated": datetime.now(timezone.utc).isoformat(timespec="seconds"), "stats": stats,
            "config": as_dict(CONFIG), "results": rows}
     SITE.mkdir(parents=True, exist_ok=True)
@@ -570,6 +595,10 @@ def main(argv=None) -> int:
         except Exception as exc:
             print(f"Telegram: Fehler {exc!r}")
             alerts = {"enabled": False, "error": True}
+        try:                                          # Mitteilungen aufs iPad (Web Push)
+            alerts["push"] = push.run(rows, market, cal["events"], search, last, today_iso)
+        except Exception as exc:
+            print(f"Push: Fehler {exc!r}")
         try:
             bil = live.update(rows, data, today_iso)
             print(f"Live-Bilanz: {bil['live']['n']} Signale seit {bil['live']['since']}, neu: {len(bil['new'])}")

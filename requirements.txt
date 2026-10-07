@@ -4,3 +4,4 @@ yfinance>=0.2.54
 requests>=2.31
 lxml>=5
 pyyaml>=6
+cryptography>=41

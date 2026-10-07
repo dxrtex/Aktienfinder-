@@ -10,3 +10,20 @@ self.addEventListener("fetch", e => {
     return r;
   }).catch(() => caches.match(e.request, { ignoreSearch: true }).then(r => r || caches.match("index.html"))));
 });
+
+/* Mitteilungen (Web Push) – kommen nach dem Abendscan, auch wenn die App geschlossen ist (iPadOS ab 16.4, Home-Bildschirm) */
+self.addEventListener("push", e => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { title: "Kairo", body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(d.title || "Kairo", {
+    body: d.body || "", icon: "icon-192.png", badge: "icon-192.png", tag: d.tag || "kairo", renotify: true, data: { url: d.url || "./" }
+  }));
+});
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || "./";
+  e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+    for (const c of list) if ("focus" in c) { c.navigate ? c.navigate(url).catch(() => {}) : 0; return c.focus(); }
+    return self.clients.openWindow(url);
+  }));
+});

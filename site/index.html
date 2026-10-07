@@ -133,6 +133,17 @@
   .btn, .opt, .kchip, .tab, .g-idea, .bf-r, .hlink { transition: transform .12s ease, background-color .2s, color .2s; }
   .btn:active, .opt:active, .kchip:active, .g-idea:active, .bf-r:active { transform: scale(.97); } .tab:active svg { transform: scale(.88); } .tab svg { transition: transform .15s; }
   @media (prefers-reduced-motion: reduce) { #main.sec-in > * { animation: none; } .btn:active, .opt:active, .kchip:active, .g-idea:active, .bf-r:active { transform: none; } }
+  .gl { border: 0; background: none; color: var(--muted); font-size: 12px; padding: 0 2px; margin-left: 2px; cursor: pointer; vertical-align: 1px; line-height: 1; }
+  .gl:hover { color: var(--accent); }
+  .glpop { position: fixed; z-index: 90; background: var(--surface-2); color: var(--text); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; box-shadow: 0 12px 40px rgba(0,0,0,.45); font-size: 14px; line-height: 1.45; text-transform: none; letter-spacing: 0; font-weight: 400; animation: secin .18s ease both; }
+  .glpop b { display: block; margin-bottom: 4px; } .glpop p { margin: 0; color: var(--muted); }
+  .gloss details { border-bottom: 1px solid var(--line); padding: 8px 0; } .gloss details:last-child { border-bottom: 0; } .gloss summary { cursor: pointer; font-weight: 600; } .gloss p { margin: 6px 0 2px; color: var(--muted); font-size: 14px; }
+  .tfind { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .tf-grid { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; font-size: 14px; } .tf-grid > span { color: var(--muted); }
+  .tfind .btn.sm { width: auto; display: inline-flex; text-decoration: none; }
+  .hpill { border: 0; font: inherit; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; margin-left: 4px; cursor: pointer; vertical-align: 1px; }
+  .hpill.g { color: var(--up); background: color-mix(in srgb, var(--up) 12%, transparent); } .hpill.y { color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, transparent); } .hpill.r { color: var(--red); background: color-mix(in srgb, var(--red) 13%, transparent); }
+  .hrow { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; } .hrow i { flex: 0 0 8px; height: 8px; border-radius: 50%; } .hrow i.g { background: var(--up); } .hrow i.y { background: var(--gold); } .hrow i.r { background: var(--red); }
   .emo-pick { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 4px; } .emo-pick .opt { min-width: 42px; font-size: 18px; padding: 6px 8px; } .emo-pick .opt:last-child { font-size: 13px; }
   .g-emo { display: inline-block; transform-origin: 70% 70%; } .g-emo.wave { animation: wave 1.6s ease-in-out .5s 1; } @media (prefers-reduced-motion: reduce) { .g-emo.wave { animation: none; } }
   @keyframes wave { 0%,100% { transform: rotate(0); } 15% { transform: rotate(14deg); } 30% { transform: rotate(-8deg); } 45% { transform: rotate(14deg); } 60% { transform: rotate(-4deg); } 75% { transform: rotate(10deg); } }
@@ -1060,6 +1071,39 @@ try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () 
 if ("IntersectionObserver" in window) new IntersectionObserver(es => document.body.classList.toggle("scrolled", !es[0].isIntersecting), { rootMargin: "-50px 0px 0px 0px" }).observe(document.getElementById("greet"));
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
+// ---------- Begriffe kurz erklärt (ⓘ antippen) ----------
+const GLOSS = {
+  score: ["Score", "Kairo-Bewertung 0–100 für Treffer: je näher am idealen Einstieg (Zone, Divergenz, MACD-Wende, CRV), desto höher. Nur für Kairo-Treffer, nicht für Trend-Rücksetzer."],
+  crv: ["CRV (Chance-Risiko)", "Möglicher Gewinn bis Ziel 2 geteilt durch das Risiko bis zum Stop. CRV 3 heißt: 3 € Chance je 1 € Risiko. Kairo verlangt mindestens 2."],
+  chk: ["Rücksetzer-Check", "Nur bei Trend-Rücksetzern: Wahrscheinlichkeit, dass es ein kurzer Rücksetzer bleibt (neues Hoch, bevor der Kurs unter 50 % Fibonacci fällt). ↑ ab 55 %, → 40–55 %, ↓ unter 40 %. Studie mit 3.354 Signalen aus 6 Jahren – Einordnung, kein Ausschlusskriterium."],
+  vola: ["Volatilität", "Wie stark die Aktie schwankt: Standardabweichung der Tagesrenditen der letzten 30 Tage, aufs Jahr hochgerechnet. Über 50 % = sehr unruhig – mit Hebel besonders riskant."],
+  atr: ["ATR (Tagesspanne)", "Average True Range: durchschnittliche Tagesschwankung in Kurs-Einheiten (14 Tage). Kairo setzt Stops und K.-o.-Abstände in ATR, damit normale Schwankungen nicht sofort auslösen."],
+  rsi: ["RSI", "Relative Stärke 0–100 (14 Tage). Unter 30 überverkauft, über 70 überkauft. Kairo sucht Wenden im Bereich 28–48, Trend-Rücksetzer 35–50."],
+  mbi: ["MBI", "Momentum Bias Index (AlgoAlpha): misst, ob Kauf- oder Verkaufsdruck überwiegt. Ein grünes X nach einer Korrektur zeigt nachlassenden Verkaufsdruck."],
+  macd: ["MACD", "Trendfolge-Indikator aus zwei gleitenden Durchschnitten. Kairo will das MACD-Kreuz nach oben unter der Nulllinie – eine frühe Wende."],
+  div: ["Divergenz", "Kurs macht ein tieferes Tief, der RSI aber ein höheres: die Abwärtsbewegung verliert Kraft (klassisch). Versteckte Divergenz: Bestätigung im Aufwärtstrend."],
+  zone: ["Zone", "Einstiegsbereich: Fibonacci (Rücklauf 0,5–0,786 des letzten Anstiegs) oder Support (frühere Tiefs/Unterstützung)."],
+  trend: ["Prognose", "Wohin sich die Zahl der erfüllten Kriterien in den nächsten 5 Tagen voraussichtlich bewegt: ▲ mehr, ▼ weniger, ► gleich. Hilft bei Fast-Treffern einzuschätzen, ob bald ein Treffer daraus wird."],
+  grade: ["Stufe A/B/C", "Qualitätsstufe der Treffer aus einem geprüften Modell. A = im Test die besten Signale."],
+  status: ["Treffer, Fast, Trend", "Treffer: alle 11 Kairo-Kriterien erfüllt (Wende nach Korrektur). Fast: 1–2 fehlen. Trend: zweites Setup – Rücksetzer an die EMA 50 im klaren Aufwärtstrend; „Top“ = im Test stärkste Stufe."],
+  ko: ["Knock-out (K.-o.)", "Fällt der Kurs auf die K.-o.-Schwelle, verfällt der Turbo fast wertlos – auch untertags. Je näher die Schwelle am Kurs, desto höher der Hebel und das Risiko."],
+  lev: ["Hebel", "Um wie viel stärker sich der Turbo bewegt als die Aktie: Hebel 5 → +2 % Aktie ≈ +10 % Turbo. Ergibt sich aus dem Abstand zur K.-o.-Schwelle (Kurs ÷ Abstand)."],
+  r: ["R (Risiko-Einheit)", "Ergebnis gemessen am Risiko bis zum Stop: −1 R = Stop erreicht, +2 R = doppelt so viel gewonnen wie riskiert. Macht Trades unabhängig von der Positionsgröße vergleichbar."],
+  ema: ["EMA 20/50/200", "Exponentiell gleitende Durchschnitte über 20, 50 und 200 Tage. Über der EMA 200 = langfristiger Aufwärtstrend; die EMA 50 ist oft die Unterstützung bei Rücksetzern."],
+  fib: ["Fibonacci", "Rücklauf-Niveaus eines Anstiegs (38,2 %, 50 %, 61,8 %, 78,6 %). Kurze Rücksetzer drehen oft vor 50 %, richtige Korrekturen laufen bis 61,8 % oder tiefer."],
+};
+const gl = k => GLOSS[k] ? `<button type="button" class="gl" data-gl="${k}" aria-label="Erklärung: ${esc(GLOSS[k][0])}">ⓘ</button>` : "";
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-gl]"); const pop = $("glPop");
+  if (!b) { if (pop && !e.target.closest("#glPop")) pop.remove(); return; }
+  e.preventDefault(); e.stopPropagation(); if (pop) pop.remove();
+  const [t, x] = GLOSS[b.dataset.gl], d = document.createElement("div"); d.id = "glPop"; d.className = "glpop";
+  d.innerHTML = `<b>${esc(t)}</b><p>${esc(x)}</p>`; document.body.appendChild(d);
+  const r = b.getBoundingClientRect(), w = Math.min(320, innerWidth - 24);
+  d.style.width = w + "px"; d.style.left = Math.max(12, Math.min(innerWidth - w - 12, r.left + r.width / 2 - w / 2)) + "px";
+  const below = r.bottom + 8 + d.offsetHeight < innerHeight - 80; d.style.top = (below ? r.bottom + 8 : Math.max(12, r.top - d.offsetHeight - 8)) + "px";
+}, true);
+addEventListener("scroll", () => { const p = $("glPop"); if (p) p.remove(); }, { passive: true });
 // Rücksetzer-Check (nur Trend-Rücksetzer): ↑ grün ≥ 55 % · → gelb 40–55 % · ↓ rot < 40 %
 const chkP = r => isTrend(r) && r.tr.chk ? r.tr.chk.p : null;
 const chkCell = r => { const p = chkP(r); if (p == null) return `<span class="muted">–</span>`;
@@ -1259,7 +1303,7 @@ const chkLabel = c => c.p >= .55 ? "wahrscheinlich nur Rücksetzer" : c.p >= .4 
 function chkHtml(c) {
   if (!c) return "";
   const tn = chkTone(c), li = (a, cls) => a.map(x => `<li><i class="${cls}">${cls === "up" ? "+" : "–"}</i>${esc(x)}</li>`).join("");
-  return `<div class="chk tone-${tn}"><div class="chk-h"><b>Rücksetzer-Check: ${pct(c.p, 0)}</b><span>${chkLabel(c)}</span></div>
+  return `<div class="chk tone-${tn}"><div class="chk-h"><b>Rücksetzer-Check: ${pct(c.p, 0)} ${gl("chk")}</b><span>${chkLabel(c)}</span></div>
     <div class="chk-bar"><i style="width:${Math.round(c.p * 100)}%"></i></div>
     ${c.pro.length || c.con.length ? `<ul class="checks">${li(c.pro, "up")}${li(c.con, "down")}</ul>` : ""}
     <div class="note" style="margin:6px 0 0">Wahrscheinlichkeit für ein neues Hoch, bevor der Kurs unter das 50-%-Fibonacci-Niveau (${fmt(c.fib50)}) des letzten Anstiegs fällt. ${c.korr != null ? `In vergleichbaren Fällen der Studie fiel der Kurs in ${pct(c.korr, 0)} der Fälle zuerst darunter. ` : ""}${tn === "r" ? "Rechne mit einem tieferen Rücksetzer – K.-o. mit Abstand wählen (unter das 61,8-%-Niveau). " : ""}Zur Einordnung, nicht zum Aussortieren: Im Test (3.354 Signale, 6 J.) hätte Weglassen der roten Signale Rendite gekostet – sie korrigieren oft erst und steigen danach trotzdem.</div></div>`;
@@ -2536,9 +2580,19 @@ function gTotals(g) {
 function gTick(g) {
   if (!data) return;
   const d = String(data.generated).slice(0, 10);
-  [...g.pos].forEach(p => { if (p.lev) { const x = gPx(p.t); if (x.c != null && x.c <= gKo(p)) gSell(g, p.id, "Knock-out"); } });
+  // Tagestiefs/-hochs seit dem Kauf (aus dem Suchindex): K.-o. und Plan auch untertags, nicht nur zum Schlusskurs
+  const bars = p => { const s = rowOf(p.t); return (s && s.lw || []).filter(b => b[0] > p.scan); };
+  [...g.pos].forEach(p => {
+    if (!p.lev) return;
+    const x = gPx(p.t), hit = bars(p).some(b => b[1] <= gKo(p));
+    if (hit || (x.c != null && x.c <= gKo(p))) gSell(g, p.id, "Knock-out");
+  });
   if (g.auto) [...g.pos].forEach(p => {
     const x = gPx(p.t); if (x.c == null || p.scan === d) return;
+    for (const b of bars(p)) {
+      if (p.stop && b[1] <= p.stop) { gSell(g, p.id, "Stop (automatisch)", Math.min(p.stop, x.c)); return; }
+      if (p.t2 && b[2] >= p.t2) { gSell(g, p.id, "Ziel 2 (automatisch)", p.t2); return; }
+    }
     if (p.stop && x.c <= p.stop) gSell(g, p.id, "Stop (automatisch)");
     else if (p.t2 && x.c >= p.t2) gSell(g, p.id, "Ziel 2 (automatisch)");
   });
@@ -2562,9 +2616,12 @@ function gBuy(g, t, eurAmt, lev) {
                ...(lev ? { lev, ko0: x.c * (1 - 1 / lev), fx0: x.eur / x.c, fee: G_FEE } : {}) });
   return "";
 }
-function gSell(g, id, why) {
+function gSell(g, id, why, atPx) {
   const i = g.pos.findIndex(p => p.id === id); if (i < 0) return;
-  const p = g.pos[i], x = gPx(p.t), px = x.c ?? p.px, v = gVal(p), got = p.lev ? (v > 0 ? v - G_FEE : 0) : p.qty * (toEur(px, p.cur) ?? 0) - G_FEE;
+  const p = g.pos[i], x = gPx(p.t), px = atPx ?? x.c ?? p.px;
+  const fx = x.c ? (toEur(x.c, p.cur) ?? x.c) / x.c : p.fx0 || 1;
+  const tv = p.lev ? (why === "Knock-out" ? 0 : Math.max(0, (p.eur - (p.fee || 0)) * (px - gKo(p)) / (p.px - p.ko0) * fx / (p.fx0 || fx))) : 0;
+  const got = p.lev ? (tv > 0 ? tv - G_FEE : 0) : p.qty * px * fx - G_FEE;
   g.cash += got;
   g.closed.unshift({ ...p, xpx: px, xd: new Date().toISOString().slice(0, 10), got, pnl: got - p.eur, ret: got / p.eur - 1, why: why || "manuell" });
   g.pos.splice(i, 1);
@@ -2649,7 +2706,7 @@ function gameHtml() {
     ${stat ? `<div class="section-title"><span>Was funktioniert?</span><span>abgeschlossene Trades</span></div><div class="table-wrap"><table><thead><tr><th>Setup</th><th class="num">Trades</th><th class="num">Treffer</th><th class="num">Ø Rendite</th><th class="num">Summe</th></tr></thead><tbody>${stat}</tbody></table></div>` : ""}
     ${closed ? `<div class="section-title"><span>Verlauf</span><span>letzte ${Math.min(15, g.closed.length)}</span></div><div class="table-wrap"><table><tbody>${closed}</tbody></table></div>` : ""}
     <div class="card" style="margin-top:18px"><label class="g-opt"><input type="checkbox" data-g="auto"${g.auto ? " checked" : ""}> Plan automatisch befolgen – verkauft beim nächsten Scan, wenn der Schlusskurs unter dem Stop oder über Ziel 2 liegt</label>
-      <div class="note">Kurse: Schlusskurs des letzten Scans (werktags 22:30 Uhr), umgerechnet in Euro. 0,99 € Gebühr je Order, keine Steuern. Turbos: Open-End-Long, K.-o. = Kaufkurs × (1 − 1/Hebel), steigt täglich um ca. 3,5 % p. a. Finanzierungskosten; ein K.-o. wird zum Schlusskurs erkannt (im echten Handel kann er schon untertags auslösen). Spielgeld – keine Anlageberatung.</div>
+      <div class="note">Kurse: Schlusskurs des letzten Scans (werktags 22:30 Uhr), umgerechnet in Euro. 0,99 € Gebühr je Order, keine Steuern. Turbos: Open-End-Long, K.-o. = Kaufkurs × (1 − 1/Hebel), steigt täglich um ca. 3,5 % p. a. Finanzierungskosten; ein K.-o. wird über die Tagestiefs erkannt – also auch, wenn der Kurs nur untertags kurz unter die Schwelle fällt. Spielgeld – keine Anlageberatung.</div>
       <div class="row-actions" style="margin-top:10px"><button class="btn ghost" data-g="reset">Spiel neu starten</button></div></div>`;
 }
 document.addEventListener("click", e => {
@@ -2976,6 +3033,17 @@ function plansHtml(h, base) {
       <td class="num">${x.open != null ? pct(x.open, 0) : "–"}</td><td class="num">${x.days != null ? fmt(x.days, 0) : "–"}</td><td class="num ${x.avg_r >= 0 ? "up" : "down"}"><b>${R(x.avg_r)}</b>${x.avg_r === best ? " ★" : ""}</td></tr>`).join("")}</tbody></table></div>
     <div class="note">Gleicher Einstieg (Schluss am Signaltag) und Stop, verkauft wird am Tag, an dem Ziel oder Stop erreicht wird – höchstens 3 Monate, dann zum Kurs von dann. R = Gewinn/Verlust geteilt durch das Risiko bis zum Stop (−1 R = Stop). Ohne Gebühren und Hebel.</div></div>`;
 }
+// Live gegen Backtest: liegt das Live-Ergebnis im erwarteten Rahmen? (Ø R, Streuung je Trade ≈ 1,2 R → 95-%-Band)
+function liveVsBt(st, bt) {
+  const exp = { hit: [bt && bt.stats && bt.stats.hit && bt.stats.hit.avg_r, "Backtest 6 J."], trend: [0.24, "Trend-Studie 6 J."], fast: [bt && bt.stats && bt.stats.fast && bt.stats.fast.avg_r, "Backtest 6 J."] };
+  const rows = [["hit", "Kairo-Treffer"], ["trend", "Trend-Rücksetzer"], ["fast", "Fast-Treffer"]].map(([k, l]) => {
+    const x = st[k], [e, src] = exp[k]; if (e == null) return "";
+    const n = x && x.n || 0, band = n ? 1.96 * 1.2 / Math.sqrt(n) : null;
+    const [ic, txt] = n < 30 ? ["⏳", `noch zu früh (${n}/30 Trades)`] : x.avg_r < e - band ? ["🔴", "schwächer als erwartet"] : x.avg_r > e + band ? ["🟢", "besser als erwartet"] : ["🟢", "im erwarteten Rahmen"];
+    return `<tr><td>${l}</td><td class="num">${n ? `${x.avg_r >= 0 ? "+" : ""}${fmt(x.avg_r, 2)} R` : "–"}<small>${n} Trades</small></td><td class="num">${e >= 0 ? "+" : ""}${fmt(e, 2)} R<small>${src}</small></td><td>${ic} ${txt}${n >= 30 ? `<small>Spanne ±${fmt(band, 2)} R</small>` : ""}</td></tr>`; }).join("");
+  return rows ? `<div class="hh" style="margin-top:6px"><b>Live gegen Backtest ${gl("r")}</b></div><div class="table-wrap plain"><table class="jtrades"><thead><tr><th>Setup</th><th class="num">Live</th><th class="num">Erwartung</th><th>Bewertung</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="note" style="margin:4px 0 10px">Ø Ergebnis je abgeschlossenem Signal in R (Ziel 1 vor Stop, max. 3 Monate). Erst ab ~30 abgeschlossenen Trades aussagekräftig; „im Rahmen“ heißt: Abweichung im Bereich normaler Zufallsschwankung.</div>` : "";
+}
 function bilanzHtml() {
   const b = getJson("bilanz.json");
   const back = `<button class="backbtn" data-gosec="today">‹ Heute</button>`;
@@ -3011,7 +3079,8 @@ function bilanzHtml() {
       ${L.grade && "ABC".split("").some(g => L.grade[g] && L.grade[g].n) ? `<div class="mtiles" style="margin:10px 0">${"ABC".split("").map(g => { const x = L.grade[g]; return `<div class="mt"><span>Stufe <span class="grd g-${g}">${g}</span></span><b class="${x && x.n && x.avg_r >= 0 ? "up" : "down"}">${x && x.n ? (x.avg_r >= 0 ? "+" : "") + fmt(x.avg_r, 2) + " R" : "–"}</b><em>${x && x.n ? `${x.n} Signale · Ziel 1 ${pct(x.t1, 0)}` : "noch keine"}</em></div>`; }).join("")}</div>` : ""}` : `<div class="note" style="margin:0 0 8px">Jeder neue Treffer, Fast-Treffer und Trend-Rücksetzer wird ab jetzt am Signaltag gespeichert und täglich nachverfolgt – hier entsteht Kairos echte Erfolgsbilanz.</div>`}
     ${L && L.stats ? `<div class="mtiles" style="margin:10px 0">${[["hit", "Kairo-Treffer"], ["trend", "Trend-Rücksetzer"], ["fast", "Fast-Treffer"]].map(([k, l]) => { const x = L.stats[k];
       return `<div class="mt"><span>${l}</span><b class="${x && x.n ? (x.avg_r >= 0 ? "up" : "down") : ""}">${x && x.n ? (x.avg_r >= 0 ? "+" : "") + fmt(x.avg_r, 2) + " R" : "–"}</b><em>${x && x.n ? `${fmt(x.n, 0)} abgeschlossen · Ziel 1 ${pct(x.t1, 0)}` : "noch keine abgeschlossen"}</em></div>`; }).join("")}</div>
-      <div class="note" style="margin:0 0 8px">Direkter Vergleich der Setups im echten Markt – nach 2–3 Monaten zeigt sich, ob der Trend-Rücksetzer hält, was der Backtest verspricht.</div>` : ""}
+      <div class="note" style="margin:0 0 8px">Direkter Vergleich der Setups im echten Markt – nach 2–3 Monaten zeigt sich, ob der Trend-Rücksetzer hält, was der Backtest verspricht.</div>
+      ${liveVsBt(L.stats, b.backtest)}` : ""}
     ${sig.length ? `<div class="table-wrap"><table class="jtrades"><thead><tr><th>Signal</th><th>Aktie</th><th class="num">Entry</th><th class="num">Stop / Ziel 1</th><th class="num">Stand</th><th>Ergebnis</th></tr></thead><tbody>
       ${sig.map(s => { const [rt, rc] = RES_TXT[s.res] || RES_TXT.running; return `<tr><td>${dateDE(s.d)}<small>${s.k === "hit" ? "Treffer " + s.score : s.k === "trend" ? "Trend-Rücksetzer" : "Fast-Treffer"}</small></td>
         <td><a href="#" data-card="${esc(s.t)}"><b>${esc(s.n || s.t)}</b></a><small>${esc(s.t)}</small></td><td class="num">${fmt(s.entry)}</td><td class="num">${fmt(s.stop)}<small>${fmt(s.t1)}</small></td>
@@ -3023,6 +3092,47 @@ function bilanzHtml() {
 function syncText() {
   const dep = depotLoad().filter(p => p.t).map(p => p.d ? `${p.t}:${p.d.dir}:${p.d.ko}` : p.t);
   return `/sync M=${[...favs()].join(",")};D=${[...new Set(dep)].join(",")}`;
+}
+// ---------- Mitteilungen aufs iPad (Web Push) ----------
+const VAPID_PUB = "BFb_qTGdVUSowC4KWbBJ3lvbjKrspo80cI3zaG2Eed4YjUdkW0fq96UujxiqoZNwsjl4hOkOa3GHn2rbY0oCpkY";
+const pushOk = () => "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+const standalone = () => navigator.standalone === true || matchMedia("(display-mode: standalone)").matches;
+function pushCode(sub) {
+  const d = depotLoad().filter(p => p.t).map(p => p.d && p.d.ko ? { t: p.t, dir: p.d.dir, ko: p.d.ko } : { t: p.t });
+  const seen = new Set(), dep = d.filter(x => { const k = x.t + (x.ko || ""); if (seen.has(k)) return false; seen.add(k); return true; });
+  return JSON.stringify({ s: sub.toJSON ? sub.toJSON() : sub, m: [...favs()], d: dep });
+}
+let pushSub = null;
+async function pushInit() {
+  if (!pushOk()) return;
+  try { const reg = await navigator.serviceWorker.ready; pushSub = await reg.pushManager.getSubscription(); } catch (e) {}
+  if (state.sec === "settings") render();
+}
+async function pushEnable() {
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") { alert("Mitteilungen wurden nicht erlaubt. Du kannst sie in den iPad-Einstellungen → Mitteilungen → Kairo erlauben."); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const key = Uint8Array.from(atob(VAPID_PUB.replace(/-/g, "+").replace(/_/g, "/") + "==".slice(0, (4 - VAPID_PUB.length % 4) % 4)), c => c.charCodeAt(0));
+    pushSub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+    state.pushCodeShown = 1; save(); render();
+  } catch (e) { alert("Aktivieren hat nicht geklappt: " + e.message); }
+}
+function pushHtml() {
+  const a = getJson("alerts.json"), ps = a && a.push;
+  const live = ps && ps.enabled && ps.sent ? `● aktiv · zuletzt ${dateDE(ps.date)}` : ps && ps.enabled ? "eingerichtet" : "";
+  let body;
+  if (!pushOk() && !standalone()) body = `<div class="tgdesc">Mitteilungen funktionieren auf dem iPad nur, wenn Kairo als App auf dem Home-Bildschirm liegt: in Safari <b>Teilen ⬆︎ → „Zum Home-Bildschirm“</b>, dann Kairo von dort öffnen und hier aktivieren (ab iPadOS 16.4).</div>`;
+  else if (!pushOk()) body = `<div class="tgdesc">Dieses Gerät unterstützt keine Web-Mitteilungen (iPadOS 16.4 oder neuer nötig).</div>`;
+  else if (!pushSub) body = `<div class="tgdesc">Nach jedem Abendscan bekommst du eine Mitteilung direkt aufs iPad – auch wenn Kairo geschlossen ist:<br>⚠️ <b>K.-o. nah</b> bei deinen Turbos · 🟢 <b>deine Aktien</b> neu als Treffer/Trend-Rücksetzer, Quartalszahlen morgen · 🌙 <b>neue Top-Treffer</b> und Zinsentscheide.</div>
+    <div class="row-actions" style="margin-top:12px"><button class="btn" data-push="on">Mitteilungen aktivieren</button></div>`;
+  else body = `<div class="tgdesc">✓ Dieses iPad ist angemeldet. Damit der Scan die Mitteilungen senden kann, einmalig den Code als GitHub-Secret speichern:</div>
+    <ol class="steps"><li><button class="btn ghost sm" data-push="copy">Code kopieren</button> <span class="muted">(Geräte-Abo + Merkliste + Depot-Basiswerte mit K.-o., keine Beträge)</span></li>
+      <li><a href="${REPO}/settings/secrets/actions/new" target="_blank" rel="noopener">Neues Secret anlegen</a> → Name <code>PUSH_SUBS</code>, Wert = Code einfügen → speichern.</li>
+      <li>Falls noch nicht geschehen: Secret <code>VAPID_PRIVATE_KEY</code> anlegen (den Wert hat dir Claude im Chat gegeben).</li></ol>
+    <div class="note">Nach Änderungen an Merkliste oder Depot den Code erneut kopieren und das Secret <code>PUSH_SUBS</code> aktualisieren – sonst gelten die K.-o.-Warnungen für den alten Stand.</div>
+    <textarea id="pushText" class="tgtext" readonly hidden></textarea>`;
+  return `<div class="section-title"><span>Mitteilungen aufs iPad</span><span class="up">${live}</span></div><div class="card tgset">${body}</div>`;
 }
 function telegramHtml() {
   const a = getJson("alerts.json");
@@ -3069,7 +3179,12 @@ function settingsHtml() {
       <div class="form" style="margin:14px 0 0"><label class="full">Design<select id="cfgDesign">
         ${DESIGNS.map(([k, l]) => `<option value="${k}"${state.design === k ? " selected" : ""}>${l}</option>`).join("")}</select></label></div>
       <div class="note">Wechselt sofort, alle Funktionen und Daten bleiben gleich.</div></div>
-    ${telegramHtml()}${backupHtml()}
+    <div class="section-title"><span>Datenstatus</span><span>letzter Scan</span></div>
+    <div class="card" style="margin-bottom:18px">${health().length ? health().map(([c, t]) => `<div class="hrow"><i class="${c}"></i>${esc(t)}</div>`).join("") : `<div class="hrow"><i class="g"></i>Alle Daten vollständig – Kurse, Stammdaten, Termine und Nachrichten.</div>`}
+      ${(data.stats || {}).health ? `<div class="note">${fmt(data.stats.health.loaded, 0)} von ${fmt(data.stats.health.universe, 0)} Kursen · Stammdaten ${data.stats.health.info_fresh} frisch / ${data.stats.health.info_cached} aus Cache · Nachrichten für ${data.stats.health.news ?? "–"} Aktien</div>` : ""}</div>
+    ${pushHtml()}${backupHtml()}
+    <div class="section-title"><span>Begriffe A–Z</span><span>${Object.keys(GLOSS).length} Erklärungen</span></div>
+    <div class="card gloss">${Object.values(GLOSS).sort((a, b) => a[0].localeCompare(b[0], "de")).map(([t, x]) => `<details><summary>${esc(t)}</summary><p>${esc(x)}</p></details>`).join("")}</div>
     <div class="section-title"><span>Scanner-Parameter</span><span>aus config.yaml</span></div>
     <div class="card cfg">
       <div>Alle Parameter stehen zentral in <b>config.yaml</b>. Zum Ändern die Datei auf GitHub bearbeiten und danach den Scan neu starten – die Website zeigt dann die Ergebnisse mit den neuen Parametern.</div>
@@ -3134,14 +3249,20 @@ function einPlanHtml(r) {
         <div class="fig"><span>Setup ungültig unter</span><b class="down">${fmt(stop)}</b><em class="sub">${sgnPct(stop / c - 1, 1)}</em></div>
         <div class="fig"><span>Ziel 1</span><b class="up">${t1 ? fmt(t1) : "–"}</b><em class="sub">${t1 ? sgnPct(t1 / c - 1, 1) : ""}</em></div>
         <div class="fig"><span>Ziel 2</span><b class="up">${t2 ? fmt(t2) : "–"}</b><em class="sub">${t2 ? sgnPct(t2 / c - 1, 1) : ""}</em></div></div>
-      <div class="plan-h" style="margin-top:14px">Turbo & Hebel</div>
+      <div class="plan-h" style="margin-top:14px">Turbo & Hebel ${gl("ko")}${gl("lev")}</div>
       <div class="mtiles ein-tiles"><div class="mt rec"><span>Empfohlen: K.-o. 1 ATR unter Stop</span><b>${fmt(ko1)} ${cur}</b><em>Hebel ≈ <b>${fmt(lev(ko1), 1)}×</b> · im Test beste Ø-Rendite</em></div>
         <div class="mt"><span>Vorsichtiger: 1,5 ATR unter Stop</span><b>${fmt(ko15)} ${cur}</b><em>Hebel ≈ ${fmt(lev(ko15), 1)}× · seltener ausgeknockt</em></div></div>
       <div class="form tpform" style="margin-top:10px"><label>Einsatz in €<input id="einBudget" type="number" inputmode="decimal" min="0" step="50" value="${esc(state.budget ?? 400)}"></label></div>
       <div class="table-wrap plain"><table class="tpt ein-tpt"><thead><tr><th>Szenario · Aktie</th><th class="num">Turbo</th><th class="num">bei ${eur(bud)}</th></tr></thead><tbody>
         ${sc.map(([l, x, cl]) => `<tr><td>${l}<small>${fmt(x)} · <span class="${cl}">${sgnPct(x / c - 1, 1)}</span></small></td><td class="num ${cl}">${sgnPct(tv(x, ko1), 0)}</td><td class="num ${cl}"><b>${sgnEur(bud * tv(x, ko1))}</b></td></tr>`).join("")}</tbody></table></div>
       ${expR != null ? `<div class="tip tone-${S.k === "top" || S.k === "trend" ? "green" : "yellow"}" style="margin-top:10px"><b class="t">Erwartung laut 6-Jahres-Test</b>Ø ${sgnPct(expR, 0)} Turbo-Rendite je Trade – aber etwa ${pct(expKo, 0)} der Turbos wurden unterwegs ausgeknockt. Der Gewinn kommt von wenigen großen Gewinnern: <b>kleine Positionen, viele Trades</b> (Faustregel: je Trade höchstens 5 % deines Trading-Kapitals).</div>` : ""}
-      <div class="note">Turbo-Werte als Näherung (ohne Bezugsverhältnis, Spread, Finanzierung). Bei Scalable einen Long-Turbo mit K.-o. nahe ${fmt(ko1)} ${cur} wählen – der Hebel ergibt sich daraus automatisch: volatile Aktien bekommen weniger, ruhige mehr.</div></div>
+      <div class="note">Turbo-Werte als Näherung (ohne Bezugsverhältnis, Spread, Finanzierung). Bei Scalable einen Long-Turbo mit K.-o. nahe ${fmt(ko1)} ${cur} wählen – der Hebel ergibt sich daraus automatisch: volatile Aktien bekommen weniger, ruhige mehr.</div>
+      <div class="tfind"><div class="plan-h">Turbo finden</div>
+        <div class="tf-grid"><span>Basiswert</span><b>${esc(r.n || r.t)} <small class="muted">${esc(r.t)}</small></b><span>Typ</span><b>Turbo / Knock-out <span class="up">Long</span>, Open End</b>
+          <span>K.-o.-Schwelle</span><b>${fmt(ko15)} – ${fmt(ko1)} ${cur}</b><span>Hebel</span><b>≈ ${fmt(lev(ko15), 1)} – ${fmt(lev(ko1), 1)}×</b></div>
+        <div class="row-actions" style="margin-top:10px"><button class="btn ghost sm" data-tfcopy="${esc(`Turbo Long ${r.n || r.t} · K.-o. ${fmt(ko15)} – ${fmt(ko1)} ${cur} · Hebel ≈ ${fmt(lev(ko15), 1)}–${fmt(lev(ko1), 1)}×`)}">Suchwerte kopieren</button>
+          <a class="btn ghost sm" href="https://www.onvista.de/suche/?searchValue=${encodeURIComponent((r.n || r.t) + " Turbo Long")}" target="_blank" rel="noopener">Bei onvista suchen</a></div>
+        <div class="note">In Scalable: Basiswert suchen → <b>Derivate</b> → <b>Knock-out</b> → <b>Long</b> → nach K.-o.-Schwelle sortieren und einen Turbo mit K.-o. zwischen ${fmt(ko15)} und ${fmt(ko1)} wählen. Lieber den Emittenten mit dem kleinsten Spread nehmen.</div></div></div>
       <div class="hcard"><div class="plan-h">Ausstieg</div><div class="note" style="margin:0">Nach dem Kauf im Depot eintragen – der <b>Gewinnmitnahme-Check</b> sagt dir dann täglich, wann es Zeit ist: <b>mitnehmen ab 4 von 5 Kriterien</b> (im Test die beste Regel). Ziel 1 und 2 sind Orientierung, kein Verkaufszwang. Schließt die Aktie unter ${fmt(stop)}, ist das Setup vorbei.</div></div>`;
   }
   const days = r.ed ? daysUntil(r.ed) : null;
@@ -3214,7 +3335,7 @@ function renderMain() {
   const hid = new Set(state.hiddenCols || []);
   if (!(data.stats && data.stats.grade)) hid.add("grade");    // Stufen nur, wenn ein geprüftes Modell aktiv ist
   const cols = [...lead.map(x => COLS.find(c => c.k === x)), ...COLS.filter(c => !["ticker", "name", "grade", "status", "met", "trend", "miss"].includes(c.k))].filter(c => c.k === "ticker" || !hid.has(c.k));
-  $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}</th>`).join("")}</tr></thead>
+  $("main").innerHTML = head + `<div class="table-wrap"><table><thead><tr>${cols.map(c => `<th class="${c.n ? "num " : ""}${c.k === col.k ? "sorted" + (state.tableAsc ? " asc" : "") : ""}" data-k="${c.k}">${c.l}${gl(c.k === "dd" ? "" : c.k)}</th>`).join("")}</tr></thead>
     <tbody>${list.map(r => `<tr class="${r.passed ? "r-hit" : r.fast_hit ? "r-fast" : ""}">${cols.map(c => `<td class="${c.n ? "num" : ""}">${c.h(r)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>` + (isApple() ? "" : mListHtml(list, col)) + extra;
   if (isApple()) {
     const tools = `<div class="atools"><div class="aseg"><button data-aview="list" class="${state.aView !== "table" ? "on" : ""}">Liste</button><button data-aview="table" class="${state.aView === "table" ? "on" : ""}">Tabelle</button></div>${aSortHtml(col)}</div>`;
@@ -3289,12 +3410,27 @@ function appleHead() {
   $("adate").textContent = new Date().toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
   $("abarT").textContent = t;
 }
+// Datenstatus: wie frisch und vollständig ist der letzte Scan?
+function health() {
+  const h = (data.stats || {}).health, out = [];
+  const age = (Date.now() - new Date(data.generated)) / 36e5, wd = new Date().getDay();
+  if (age > (wd === 1 ? 74 : wd === 0 ? 50 : 30)) out.push(["r", `Letzter Scan vor ${Math.round(age)} Std. – neuer Scan steht aus`]);
+  if (h) {
+    if (h.universe && h.loaded / h.universe < .95) out.push(["r", `Nur ${pct(h.loaded / h.universe, 0)} der Kurse geladen`]);
+    const ok = h.info_total ? (h.info_fresh + h.info_cached) / h.info_total : 1;
+    if (h.info_total && h.info_fresh / h.info_total < .6) out.push([ok < .8 ? "r" : "y", `Stammdaten/Quartalstermine: ${h.info_fresh} frisch, ${h.info_cached} vom letzten erfolgreichen Abruf${ok < 1 ? `, ${h.info_total - h.info_fresh - h.info_cached} fehlen` : ""} (Yahoo hat Abfragen begrenzt)`]);
+    if (h.news === 0) out.push(["y", "Keine Nachrichten für das Briefing abrufbar"]);
+  }
+  return out;
+}
+const healthPill = () => { const hs = health(), bad = hs.some(x => x[0] === "r");
+  return `<button class="hpill ${hs.length ? (bad ? "r" : "y") : "g"}" data-gosec="settings" title="${esc(hs.map(x => x[1]).join(" · ") || "Alle Daten vollständig")}">${hs.length ? (bad ? "⚠ Daten unvollständig" : "● Daten teilweise") : "✓ Daten vollständig"}</button>`; };
 function renderHead() {
   const h = new Date().getHours();
   const nm = String(state.name || "").trim();
   $("greet").innerHTML = greetText();
   const s = data.stats || {}, when = new Date(data.generated).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr`;
+  $("sub").innerHTML = `<b>${s.hits ?? 0} Treffer</b>, <b>${s.fast_hits ?? 0} Fast-Treffer</b>${s.trend_on ? ` und <b>${s.trend_hits ?? 0} Trend-Rücksetzer</b>` : ""} · ${fmt(s.universe, 0)} Aktien geprüft · Scan ${esc(when)} Uhr ${healthPill()}`;
   const sectors = [...new Set(data.results.map(r => r.sector).filter(Boolean))].sort();
   $("sectorOpts").innerHTML = `<button class="opt" data-v="">alle</button>` + sectors.map(x => `<button class="opt" data-v="${esc(x)}">${esc(x)}</button>`).join("");
 }
@@ -3522,6 +3658,15 @@ document.addEventListener("click", e => {
   if (gs) { e.preventDefault(); closeCard(); goSec(gs.dataset.gosec); return; }
   const gk = e.target.closest("[data-gokinds]");
   if (gk) { e.preventDefault(); state.kinds = gk.dataset.gokinds.split(","); goSec("scanner"); return; }
+  const tf = e.target.closest("[data-tfcopy]");
+  if (tf) { const t = tf.dataset.tfcopy; (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { tf.textContent = "✓ Kopiert"; }).catch(() => prompt("Suchwerte:", t)); return; }
+  const pb = e.target.closest("[data-push]");
+  if (pb) {
+    if (pb.dataset.push === "on") { pushEnable(); return; }
+    if (pb.dataset.push === "copy" && pushSub) { const txt = pushCode(pushSub), ta = $("pushText"); ta.value = txt; ta.hidden = false; ta.select();
+      (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => { pb.textContent = "✓ Kopiert"; }).catch(() => { try { document.execCommand("copy"); pb.textContent = "✓ Kopiert"; } catch (x) {} }); }
+    return;
+  }
   if (e.target.closest("[data-tgsync]")) {
     const txt = syncText(), ta = $("tgText"), a = jsonData["alerts.json"];
     ta.value = txt; ta.hidden = false; ta.select();
@@ -3560,7 +3705,8 @@ document.addEventListener("click", e => {
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape") { closeDetail(); closeCard(); closeBrief(); } });
 
-if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").then(pushInit).catch(() => {});
+try { const q = new URLSearchParams(location.search).get("sec"); if (q && SEC_T[q]) { state.sec = q; history.replaceState(null, "", location.pathname + location.hash); } } catch (e) {}
 fetch("data/results.json", { cache: "no-store" }).then(r => r.json()).then(d => {
   data = d; renderHead(); syncOpts(); render(); loadCalendar(); setTimeout(maybeBrief, 400);
   requestAnimationFrame(() => window.KairoSplash && KairoSplash.ready());   // App steht → Start-Animation darf übergeben
