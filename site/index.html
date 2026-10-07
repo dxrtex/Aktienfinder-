@@ -594,35 +594,6 @@
   .tab-ind.on { opacity: 1; }
   @media (prefers-reduced-motion: reduce) { .tab-ind { transition: none; } }
 </style>
-<style id="ds-ioslight" media="not all">
-
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
-
-:root{--bg:#f2f2f7;--surface:#fff;--surface-2:#f2f2f7;--surface-3:#e5e5ea;--line:#e1e1e6;--glass:#fff;--glass-line:#e1e1e6;
---text:#000;--muted:#6e6e73;--faint:#aeaeb2;--accent:#007aff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#007aff 16%,transparent);
---up:#248a3d;--up-bg:color-mix(in srgb,#248a3d 15%,transparent);--red:#d70015;--red-bg:color-mix(in srgb,#d70015 14%,transparent);--gold:#b25000;--gold-bg:color-mix(in srgb,#b25000 14%,transparent);
---zone:color-mix(in srgb,#007aff 14%,transparent);--candle-up:#248a3d;--candle-down:#d70015;--radius:24px;--radius-s:16px;color-scheme:light}
-body{background:#f2f2f7;color:#000}
-.score::before{background:#fff!important} nav.tabbar{background:color-mix(in srgb,#fff 88%,transparent)!important}
-.cm-box{background:#fff}
-body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.chip.ok,.wl{color:var(--text)!important}.st-kein_setup{background:var(--surface-2)}.score::before{box-shadow:none}
-.cm-back{background:rgba(0,0,0,.25)!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
-.flag{color:var(--muted)!important;background:var(--surface-2)!important}.section-title{text-transform:uppercase;font-size:12.5px;font-weight:500;letter-spacing:.02em;margin:24px 16px 7px}
-.card,.hcard,.table-wrap{border:0!important;border-radius:12px!important}/* Korrekturen für helle Designs */
-.grd.g-A{color:#fff}.candles{background:var(--surface-2)}
-.cockpit .fig,.dep-sum .fig{background:var(--surface)}
-
-/* gemeinsame Korrekturen für alle wählbaren Designs */
-.chip.ok{color:var(--text)}.wl{color:var(--muted)}
-/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
-.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
-/* Auswahlfelder in Formularen */
-.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
-  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
-/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
-@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
-
-</style>
 <style id="ds-auto" media="not all">
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
@@ -665,30 +636,6 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
 @media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
 
 </style>
-<style id="ds-aktien" media="not all">
-
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
-
-:root{--bg:#000;--surface:#121212;--surface-2:#1c1c1e;--surface-3:#2c2c2e;--line:#2c2c2e;--glass:#121212;--glass-line:#2c2c2e;
---text:#fff;--muted:#8e8e93;--faint:#5a5a5e;--accent:#30d158;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#30d158 16%,transparent);
---up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
---zone:color-mix(in srgb,#30d158 14%,transparent);--candle-up:#30d158;--candle-down:#ff453a;--radius:24px;--radius-s:16px;color-scheme:dark}
-body{background:#000;color:#fff}
-.score::before{background:#121212!important} nav.tabbar{background:color-mix(in srgb,#121212 88%,transparent)!important}
-.cm-box{background:#121212}
-body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
-.flag{color:var(--muted)!important;background:var(--surface-2)!important}.fig b,.hcard h3,.hcard .hh b{font-weight:700}.hello h1{font-weight:800}td.num{font-weight:600}.btn,.kchip.on,.opt.on{color:#000!important}
-/* gemeinsame Korrekturen für alle wählbaren Designs */
-.chip.ok{color:var(--text)}.wl{color:var(--muted)}
-/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
-.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
-/* Auswahlfelder in Formularen */
-.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
-  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
-/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
-@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
-
-</style>
 <style id="ds-postfach" media="not all">
 
 body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
@@ -707,73 +654,6 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
 .grd.g-A{color:#fff}.candles{background:var(--surface-2)}
 .cockpit .fig,.dep-sum .fig{background:var(--surface)}
   /* Aufgaben-Postfach: Seitenleiste auf dem iPad, „Heute“ als Postfach mit Detail daneben */
-  .sb-brand, .sb-only { display: none; }
-  @media (min-width: 1024px) {
-    nav.tabbar { top: 0; bottom: 0; right: auto; width: 240px; padding: calc(env(safe-area-inset-top) + 18px) 12px 18px; border-top: 0; border-right: 1px solid var(--line);
-                 background: var(--surface) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
-    .tabs { display: flex !important; flex-direction: column; gap: 2px; max-width: none !important; }
-    .sb-brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 18px; font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
-    .sb-brand svg { width: 30px; height: 30px; border-radius: 7px; }
-    .sb-only { display: flex; } .sb-sep { height: 18px; }
-    .tab { flex-direction: row; justify-content: flex-start; gap: 12px; padding: 9px 10px; font-size: 16px; font-weight: 500; color: var(--text); border-radius: 10px; }
-    .tab svg { width: 22px; height: 22px; color: var(--accent); }
-    .tab.on { background: transparent; color: #fff; } .tab.on svg { color: #fff; }
-    .tab-ind { background: var(--accent); border-radius: 10px; }
-    .tab .badge { position: static; margin-left: auto; background: none; color: var(--muted); font-size: 14px; font-weight: 500; padding: 0; }
-    .tab.on .badge { color: rgba(255, 255, 255, .85); }
-    .wrap { margin-left: 240px; max-width: none; padding-left: 32px; padding-right: 32px; }
-    body { padding-bottom: 40px; }
-    .brand > svg, .brand > b { display: none; }
-  }
-  .pf { display: grid; gap: 18px; margin-top: 18px; align-items: start; }
-  @media (min-width: 1024px) { .pf { grid-template-columns: minmax(320px, 400px) 1fr; } }
-  .pf-list { background: var(--surface); border-radius: 14px; overflow: hidden; }
-  .pf-h { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); padding: 14px 16px 6px; }
-  .pf-it { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 16px; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; position: relative; }
-  .pf-it + .pf-it::before { content: ""; position: absolute; top: 0; left: 36px; right: 0; border-top: 1px solid var(--line); }
-  .pf-it.on { background: var(--surface-2); }
-  .pf-it i { flex: 0 0 9px; height: 9px; border-radius: 50%; }
-  .pf-it i.r { background: var(--red); } .pf-it i.g { background: var(--up); } .pf-it i.y { background: #ff9500; } .pf-it i.b { background: var(--accent); }
-  .pf-it span { flex: 1; min-width: 0; } .pf-it b { display: block; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .pf-it em { display: block; font-style: normal; font-size: 13px; color: var(--muted); }
-  .pf-it strong { font-size: 15px; } .pf-it s { text-decoration: none; color: var(--faint); font-size: 20px; }
-  .pf-empty { padding: 16px; color: var(--muted); }
-  .pf-detail .card { margin: 0; }
-  @media (max-width: 1023px) { .pf-detail { display: none; } }
-  .verdict { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
-  .verdict > i { flex: 0 0 10px; height: 10px; border-radius: 50%; background: var(--faint); }
-  .verdict.ok > i { background: var(--up); } .verdict.warn > i { background: #ff9500; }
-  .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
-  .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
-  .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
-  .pf-more { display: block; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
-  .pf + .hgrid { margin-top: 18px; }
-  .pf-detail .verdict { flex-wrap: wrap; } .pf-detail .verdict .btn { flex: 1 1 100%; }
-
-/* gemeinsame Korrekturen für alle wählbaren Designs */
-.chip.ok{color:var(--text)}.wl{color:var(--muted)}
-/* Nebenbuttons klar als Buttons erkennbar (grau wie in iOS), auch bei dunkler Schrift auf Akzent */
-.btn.ghost{background:color-mix(in srgb,var(--accent) 13%,transparent)!important;color:var(--accent)!important;border:0!important}
-/* Auswahlfelder in Formularen */
-.form select{appearance:none;-webkit-appearance:none;width:100%;font:inherit;font-size:16px;color:var(--text);background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:12px 40px 12px 14px;margin-top:6px;
-  background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 20px) 52%,calc(100% - 15px) 52%;background-size:5px 5px;background-repeat:no-repeat}
-/* iPhone: Filter-Chips in einer Zeile zum Wischen statt drei Zeilen */
-@media (max-width:640px){.kbar{flex-wrap:nowrap!important;overflow-x:auto;scrollbar-width:none;margin-left:-20px;margin-right:-20px;padding:2px 20px 6px}.kbar::-webkit-scrollbar{display:none}.kbar .kchip{flex:0 0 auto}}
-
-</style>
-<style id="ds-postfach-oled" media="not all">
-
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",sans-serif;font-feature-settings:"tnum"}
-
-:root{--bg:#000;--surface:#1c1c1e;--surface-2:#2c2c2e;--surface-3:#3a3a3c;--line:#38383a;--glass:#1c1c1e;--glass-line:#38383a;
---text:#fff;--muted:#98989f;--faint:#636366;--accent:#0a84ff;--accent-ink:#fff;--accent-bg:color-mix(in srgb,#0a84ff 16%,transparent);
---up:#30d158;--up-bg:color-mix(in srgb,#30d158 15%,transparent);--red:#ff453a;--red-bg:color-mix(in srgb,#ff453a 14%,transparent);--gold:#ffd60a;--gold-bg:color-mix(in srgb,#ffd60a 14%,transparent);
---zone:color-mix(in srgb,#0a84ff 14%,transparent);--candle-up:#30d158;--candle-down:#ff453a;--radius:24px;--radius-s:16px;color-scheme:dark}
-body{background:#000;color:#fff}
-.score::before{background:#1c1c1e!important} nav.tabbar{background:color-mix(in srgb,#1c1c1e 88%,transparent)!important}
-.cm-box{background:#1c1c1e}
-body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.hello h1{letter-spacing:-.028em}.section-title{letter-spacing:.06em}th{font-weight:600}
-.flag{color:var(--muted)!important;background:var(--surface-2)!important}.card,.hcard,.table-wrap{border:.5px solid var(--line)!important}th,td{border-bottom:.5px solid var(--line)}  /* Aufgaben-Postfach: Seitenleiste auf dem iPad, „Heute“ als Postfach mit Detail daneben */
   .sb-brand, .sb-only { display: none; }
   @media (min-width: 1024px) {
     nav.tabbar { top: 0; bottom: 0; right: auto; width: 240px; padding: calc(env(safe-area-inset-top) + 18px) 12px 18px; border-top: 0; border-right: 1px solid var(--line);
@@ -1104,7 +984,7 @@ const isApple = () => state.design === "apple";
 const isLight = () => ["ioslight", "postfach"].includes(state.design) || (state.design === "auto" && matchMedia("(prefers-color-scheme: light)").matches);
 const LC = () => isLight() ? { t: "#6e6e73", g: "#ececf0", b: "#d1d1d6", k: "#3a3a3c" } : { t: "#9a9a9f", g: "#1d1d1f", b: "#2a2a2d", k: "#e5e5ea" };
 // Designs: Klassisch (Standard) oder eines der wählbaren Designs – jedes ist ein eigenes Stylesheet
-const DESIGNS = [["classic", "Klassisch (Standard)"], ["ioslight", "iOS Hell"], ["auto", "Automatisch (tagsüber hell, abends dunkel)"], ["aktien", "Apple Aktien"], ["postfach", "Aufgaben-Postfach · Hell"], ["postfach-classic", "Aufgaben-Postfach · Klassisch"], ["postfach-oled", "Aufgaben-Postfach · OLED Schwarz"], ["postfach-aktien", "Aufgaben-Postfach · Apple Aktien"]];
+const DESIGNS = [["classic", "Klassisch (Standard)"], ["auto", "Automatisch (tagsüber hell, abends dunkel)"], ["postfach-classic", "Aufgaben-Postfach · Klassisch"], ["postfach-aktien", "Aufgaben-Postfach · Apple Aktien"], ["postfach", "Aufgaben-Postfach · Hell"]];
 if (!DESIGNS.some(([k]) => k === state.design)) state.design = "classic";   // frühere Test-Designs (Apple-Look, Pro) → Klassisch
 const isPostfach = () => String(state.design).startsWith("postfach");
 const applyDesign = () => {
