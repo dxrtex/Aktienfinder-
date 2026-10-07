@@ -1,0 +1,37 @@
+name: Studie Trend-Rücksetzer v2 (Rücksetzer-Check verbessern?)
+
+on:
+  workflow_dispatch:
+    inputs:
+      n:
+        description: "Anzahl zufälliger Aktien (USA + Europa)"
+        required: false
+        default: "2500"
+      period:
+        description: "Historie"
+        required: false
+        default: "10y"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: "1"
+
+jobs:
+  study:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r requirements.txt scikit-learn
+      - run: python -m backend.universe
+      - run: python -m backend.trend_study2 --n "${{ inputs.n || '2500' }}" --period "${{ inputs.period || '10y' }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trend-studie-v2
+          path: data/trend_model_v2.json
