@@ -746,6 +746,9 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
   .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
   .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
   .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
+  .pf-more { display: block; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+  .pf + .hgrid { margin-top: 18px; }
+  .pf-detail .verdict { flex-wrap: wrap; } .pf-detail .verdict .btn { flex: 1 1 100%; }
 
 /* gemeinsame Korrekturen für alle wählbaren Designs */
 .chip.ok{color:var(--text)}.wl{color:var(--muted)}
@@ -810,6 +813,9 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
   .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
   .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
   .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
+  .pf-more { display: block; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+  .pf + .hgrid { margin-top: 18px; }
+  .pf-detail .verdict { flex-wrap: wrap; } .pf-detail .verdict .btn { flex: 1 1 100%; }
 
 /* gemeinsame Korrekturen für alle wählbaren Designs */
 .chip.ok{color:var(--text)}.wl{color:var(--muted)}
@@ -866,6 +872,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue"
   .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
   .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
   .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
+  .pf-more { display: block; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+  .pf + .hgrid { margin-top: 18px; }
+  .pf-detail .verdict { flex-wrap: wrap; } .pf-detail .verdict .btn { flex: 1 1 100%; }
 
 /* gemeinsame Korrekturen für alle wählbaren Designs */
 .chip.ok{color:var(--text)}.wl{color:var(--muted)}
@@ -930,6 +939,9 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
   .verdict > div { flex: 1; min-width: 0; text-align: left; } .verdict b { display: block; font-size: 16px; font-weight: 600; }
   .verdict span { display: block; color: var(--muted); font-size: 13px; line-height: 1.4; }
   .verdict .btn { flex: 0 0 auto; padding: 9px 16px; font-size: 15px; }
+  .pf-more { display: block; width: 100%; padding: 11px 16px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-size: 15px; font-weight: 600; text-align: left; cursor: pointer; }
+  .pf + .hgrid { margin-top: 18px; }
+  .pf-detail .verdict { flex-wrap: wrap; } .pf-detail .verdict .btn { flex: 1 1 100%; }
 
 /* gemeinsame Korrekturen für alle wählbaren Designs */
 .chip.ok{color:var(--text)}.wl{color:var(--muted)}
@@ -2642,8 +2654,12 @@ function postfachHtml() {
   const row = x => x.dep ? `<button class="pf-it" data-pfdep="${esc(x.dep)}"><i class="${x.c}"></i><span><b>${esc(x.t)}</b><em>${esc(x.d)}</em></span>${x.v != null ? `<strong class="${x.v >= 0 ? "up" : "down"}">${sgnPct(x.v, 0)}</strong>` : ""}<s>›</s></button>`
     : `<button class="pf-it${x.t === state.pfSel ? " on" : ""}" data-pf="${esc(x.t)}"><i class="${x.c}"></i><span><b>${esc(x.n)}</b><em>${esc(x.d)}</em></span><s>›</s></button>`;
   const r = state.pfSel && data.results.find(x => x.ticker === state.pfSel);
-  return `<div class="pf"><section class="pf-list"><div class="pf-h">Jetzt handeln · ${now.length}</div>${now.map(row).join("") || `<div class="pf-empty">Heute nichts Dringendes.</div>`}
-    <div class="pf-h">Vorbereiten · ${prep.length}</div>${prep.map(row).join("") || `<div class="pf-empty">Nichts vorzubereiten.</div>`}</section>
+  // Listen gekürzt: je 4 Einträge, Rest über „mehr“
+  const N = 4, more = state.pfMore || {};
+  const part = (k, xs, empty) => !xs.length ? `<div class="pf-empty">${empty}</div>`
+    : xs.slice(0, more[k] ? xs.length : N).map(row).join("") + (xs.length > N ? `<button class="pf-more" data-pfmore="${k}">${more[k] ? "Weniger anzeigen" : `${xs.length - N} weitere anzeigen`}</button>` : "");
+  return `<div class="pf"><section class="pf-list"><div class="pf-h">Jetzt handeln · ${now.length}</div>${part("now", now, "Heute nichts Dringendes.")}
+    <div class="pf-h">Vorbereiten · ${prep.length}</div>${part("prep", prep, "Nichts vorzubereiten.")}</section>
     <section class="pf-detail">${r ? card(r) : ""}</section></div>`;
 }
 function mountPostfach() {
@@ -2651,9 +2667,11 @@ function mountPostfach() {
   const r = data.results.find(x => x.ticker === el.dataset.mini); if (r) loadChart(r.ticker).then(c => paintChart(el, c, r)).catch(() => {});
 }
 function todayHtml() {
-  if (isPostfach()) return postfachHtml();
   const al = getJson("alerts.json");
   const tgHint = al && !al.connected ? `<button class="hcard tg" ${SEC_LINK("settings")}><b>📲 Abendbericht aufs Handy</b><span>Neue Treffer, deine Aktien und Knock-out-Warnungen jeden Abend per Telegram – in 3 Minuten eingerichtet.</span><span class="hlink">Einrichten ›</span></button>` : "";
+  // Postfach: Aufgaben oben, darunter dieselben Karten wie sonst (ohne „Beste Treffer“ – die stehen schon im Postfach)
+  if (isPostfach()) return postfachHtml() + `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
+    <div class="hcol">${bilanzTeaserHtml()}${depotSnapHtml()}${soonHtml()}${journalTeaserHtml()}${tgHint}</div></div>`;
   return (isApple() ? todoHtml() : kpiHtml()) + `<div class="hgrid"><div class="hcol">${marketHtml()}${changesHtml()}${myStocksHtml()}</div>
     <div class="hcol">${bilanzTeaserHtml()}${depotSnapHtml()}${soonHtml()}${topHitsHtml()}${journalTeaserHtml()}${tgHint}</div></div>`;
 }
@@ -3222,6 +3240,8 @@ function goSec(sec) {
   if (sec === "depot" || sec === "today" || sec === "entry") loadSearch();
 }
 document.addEventListener("click", e => {
+  const pm = e.target.closest("[data-pfmore]");
+  if (pm) { state.pfMore = { ...(state.pfMore || {}), [pm.dataset.pfmore]: !(state.pfMore || {})[pm.dataset.pfmore] }; render(); return; }
   const pf = e.target.closest("[data-pf]");
   if (pf) { if (innerWidth < 1024) openCard(pf.dataset.pf); else { state.pfSel = pf.dataset.pf; render(); } return; }
   const pd = e.target.closest("[data-pfdep]"); if (pd) { depOpen.add(pd.dataset.pfdep); goSec("depot"); return; }
