@@ -581,6 +581,9 @@ def main(argv=None) -> int:
                 json.dump(_clean(obj), f, ensure_ascii=False, separators=(",", ":"))
     print(f"Treffer: {stats['hits']}, Fast-Treffer: {stats['fast_hits']}, Trend-Rücksetzer: {stats.get('trend_hits')}, Fehler: {stats['errors']}, "
           f"Dauer {stats['duration_s']} s")
+    ps = [r["tr"]["chk"]["p"] for r in rows if (r.get("tr") or {}).get("chk")]
+    print(f"Rücksetzer-Check: {len(ps)} von {sum(1 for r in rows if (r.get('tr') or {}).get('ok'))} Trend-Setups · "
+          f"↑ {sum(p >= .55 for p in ps)} · → {sum(.4 <= p < .55 for p in ps)} · ↓ {sum(p < .4 for p in ps)}")
     for r in rows[:30]:
         print(f"  {r['ticker']:<10} Score {r['score']:>3}  {'TREFFER' if r['passed'] else 'fehlt: ' + r['missing'][0]}")
     return 0
