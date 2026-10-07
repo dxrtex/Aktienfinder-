@@ -3419,8 +3419,10 @@ function health() {
   if (age > (wd === 1 ? 74 : wd === 0 ? 50 : 30)) out.push(["r", `Letzter Scan vor ${Math.round(age)} Std. – neuer Scan steht aus`]);
   if (h) {
     if (h.universe && h.loaded / h.universe < .95) out.push(["r", `Nur ${pct(h.loaded / h.universe, 0)} der Kurse geladen`]);
-    const ok = h.info_total ? (h.info_fresh + h.info_cached) / h.info_total : 1;
-    if (h.info_total && h.info_fresh / h.info_total < .6) out.push([ok < .8 ? "r" : "y", `Stammdaten/Quartalstermine: ${h.info_fresh} frisch, ${h.info_cached} vom letzten erfolgreichen Abruf${ok < 1 ? `, ${h.info_total - h.info_fresh - h.info_cached} fehlen` : ""} (Yahoo hat Abfragen begrenzt)`]);
+    // Stammdaten: fehlen sie bei Yahoo, nutzt Kairo die Daten aus der Aktienliste (Namen, Sektor, Quartalstermin) – daher nur gelb
+    if (h.info_total && h.info_fresh / h.info_total < .6) out.push(["y", h.info_cached
+      ? `Stammdaten/Quartalstermine: ${h.info_fresh} frisch, ${h.info_cached} vom letzten erfolgreichen Abruf, Rest aus der Aktienliste (Yahoo hat Einzelabfragen begrenzt)`
+      : `Yahoo hat heute die Einzelabfragen blockiert – Namen, Sektoren und Quartalstermine kommen aus der Aktienliste (meist aktuell, einzelne Termine können fehlen)`]);
     if (h.news === 0) out.push(["y", "Keine Nachrichten für das Briefing abrufbar"]);
   }
   return out;
