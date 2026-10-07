@@ -107,6 +107,15 @@ def search_row(res, meta: dict, h: dict) -> dict:
                    "vola": f.get("volatility")})
 
 
+def day_moves(df) -> dict:
+    """Kursveränderung zum Vortag und über 5 Handelstage (für das Tagesbriefing in der App)."""
+    try:
+        c = df["Close"].dropna()
+        return {"d1": round(float(c.iloc[-1] / c.iloc[-2] - 1), 4), "d5": round(float(c.iloc[-1] / c.iloc[-6] - 1), 4)} if len(c) > 6 else {}
+    except Exception:
+        return {}
+
+
 def entry_fields(res, tres, meta: dict) -> dict:
     """Für den Reiter „Einstieg“ (alle Aktien): Kairo-Plan und fehlende Kriterien, Trend-Status und -Plan, Earnings."""
     r6 = lambda x: None if x is None else round(float(x), 4)
@@ -401,7 +410,7 @@ def main(argv=None) -> int:
                 print(f"{t}: Trend-Fehler {exc!r}")
         tr_hit = bool(tres and tres.passed)
         try:
-            search[t] = {**search_row(res, m, hint(res)), **entry_fields(res, tres, m)}
+            search[t] = {**search_row(res, m, hint(res)), **entry_fields(res, tres, m), **day_moves(df)}
         except Exception as exc:
             print(f"{t}: Hinweis-Fehler {exc!r}")
         if res.passed or res.fast_hit or m.get("in_watchlist") or tr_hit:
