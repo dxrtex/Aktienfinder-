@@ -931,6 +931,8 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
     <div class="opts" data-key="minScore"><button class="opt" data-v="0">alle</button><button class="opt" data-v="40">ab 40</button><button class="opt" data-v="60">ab 60</button><button class="opt" data-v="80">ab 80</button></div></div>
   <div class="group"><div class="group-label">Qualitätsstufe der Treffer (Fast-Treffer bleiben sichtbar)</div>
     <div class="opts" data-key="grade"><button class="opt" data-v="">alle</button><button class="opt" data-v="A">nur A</button><button class="opt" data-v="B">A und B</button></div></div>
+  <div class="group"><div class="group-label">Rücksetzer-Check (nur Trend-Rücksetzer)</div>
+    <div class="opts" data-key="chk"><button class="opt" data-v="">alle</button><button class="opt" data-v="0.4">ab 40 % (ohne rote ↓)</button><button class="opt" data-v="0.55">nur grüne ↑ ab 55 %</button></div></div>
   <div class="group"><div class="group-label">Marktkapitalisierung ab</div>
     <div class="opts" data-key="minCap"><button class="opt" data-v="0">2 Mrd. $ (alle)</button><button class="opt" data-v="5">5 Mrd. $</button><button class="opt" data-v="10">10 Mrd. $</button><button class="opt" data-v="50">50 Mrd. $</button><button class="opt" data-v="100">100 Mrd. $</button><button class="opt" data-v="200">200 Mrd. $</button></div></div>
   <div class="group"><div class="group-label">Marktkapitalisierung bis</div>
@@ -948,7 +950,7 @@ body::before{display:none}.card,.table-wrap,.pane,.search input,.hcard{-webkit-b
   <div class="group"><div class="group-label">Sektor</div>
     <div class="opts" data-key="sector" id="sectorOpts"><button class="opt" data-v="">alle</button></div></div>
   <div class="group"><div class="group-label">Sortierung</div>
-    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button><button class="opt" data-v="vola">Volatilität ↓</button><button class="opt" data-v="vola_asc">Volatilität ↑</button><button class="opt" data-v="tgt">Analysten-Ziel</button></div></div>
+    <div class="opts" data-key="sort"><button class="opt" data-v="score">Score</button><button class="opt" data-v="crv">CRV</button><button class="opt" data-v="drawdown">Rückgang</button><button class="opt" data-v="cap">Börsenwert</button><button class="opt" data-v="vola">Volatilität ↓</button><button class="opt" data-v="vola_asc">Volatilität ↑</button><button class="opt" data-v="tgt">Analysten-Ziel</button><button class="opt" data-v="chk">Rücksetzer-Check</button></div></div>
   <div class="group"><div class="group-label">Export der angezeigten Liste</div>
     <div class="links"><button class="btn ghost" id="csv">CSV</button><button class="btn ghost" id="xlsx">Excel</button></div></div>
   <button class="btn" id="done">Fertig</button>
@@ -999,7 +1001,7 @@ const tvUrl = t => {
 };
 
 let data = null;
-const DEFAULTS = { grade: "", minScore: "0", minCap: "0", maxCap: "0", vola: "", minTgt: "", region: "", zone: "", div: "", sector: "", sort: "score" };
+const DEFAULTS = { grade: "", minScore: "0", minCap: "0", maxCap: "0", vola: "", minTgt: "", region: "", zone: "", div: "", sector: "", chk: "", sort: "score" };
 const VOLA = { low: [0, .3], mid: [.3, .5], high: [.5, .8], xhigh: [.8, Infinity] };
 // Analysten: Ø Kursziel und Abstand zum aktuellen Kurs (aus der Marktstimmung)
 const tgtUp = r => { const t = r.senti && r.senti.tgt; return t && t.m && r.close ? t.m / r.close - 1 : null; };
@@ -1028,7 +1030,14 @@ try { matchMedia("(prefers-color-scheme: light)").addEventListener("change", () 
 if ("IntersectionObserver" in window) new IntersectionObserver(es => document.body.classList.toggle("scrolled", !es[0].isIntersecting), { rootMargin: "-50px 0px 0px 0px" }).observe(document.getElementById("greet"));
 const save = () => { try { const { tableSort, tableAsc, ...p } = state; localStorage.setItem(PREF, JSON.stringify(p)); } catch (e) {} };
 
+// Rücksetzer-Check (nur Trend-Rücksetzer): ↑ grün ≥ 55 % · → gelb 40–55 % · ↓ rot < 40 %
+const chkP = r => isTrend(r) && r.tr.chk ? r.tr.chk.p : null;
+const chkCell = r => { const p = chkP(r); if (p == null) return `<span class="muted">–</span>`;
+  const t = p >= .55 ? ["up", "↑"] : p >= .4 ? ["gold", "→"] : ["down", "↓"];
+  return `<b class="${t[0]}" title="Wahrscheinlichkeit, dass es nur ein Rücksetzer bleibt (neues Hoch vor 50-%-Fibonacci)">${t[1]} ${pct(p, 0)}</b>`; };
+const chkIn = r => !state.chk || !isTrend(r) || (chkP(r) ?? 0) >= +state.chk;
 const SORTS = {
+  chk: (a, b) => (chkP(b) ?? -1) - (chkP(a) ?? -1),
   score: (a, b) => b.score - a.score || (b.crv ?? 0) - (a.crv ?? 0),
   crv: (a, b) => (b.crv ?? -1) - (a.crv ?? -1),
   drawdown: (a, b) => (b.drawdown ?? 0) - (a.drawdown ?? 0),
@@ -1053,7 +1062,7 @@ function rows(kind) {
     && (!state.region || r.region === state.region)
     && (!state.zone || r.zone_type.includes(state.zone))
     && (!state.div || r.divergence === state.div)
-    && (!state.sector || r.sector === state.sector)).sort(SORTS[state.sort]);
+    && (!state.sector || r.sector === state.sector) && chkIn(r)).sort(SORTS[state.sort]);
 }
 
 // Tabelle: Treffer, Fast-Treffer und Watchlist frei kombinierbar
@@ -1064,7 +1073,7 @@ function selRows() {
     && (!+state.minCap || (r.market_cap_usd ?? 0) >= +state.minCap * 1e9) && (!+state.maxCap || (r.market_cap_usd ?? Infinity) <= +state.maxCap * 1e9) && volaIn(r);
   const gOk = r => !r.passed || !state.grade || (r.grade && (state.grade === "A" ? r.grade.g === "A" : r.grade.g !== "C"));
   const full = r => light(r) && gOk(r) && tgtIn(r) && (r.score >= +state.minScore || !r.passed) && (!state.region || r.region === state.region)
-    && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector);
+    && (!state.zone || r.zone_type.includes(state.zone)) && (!state.div || r.divergence === state.div) && (!state.sector || r.sector === state.sector) && chkIn(r);
   // Watchlist-Aktien: nur Suche, Börsenwert und Volatilität filtern (wie bisher) – sonst alle Filter
   const fv = favs();
   return data.results.filter(r => ((k.has("hit") && r.passed) || (k.has("fast") && r.fast_hit) || (k.has("trend") && isTrend(r))) ? full(r) : ((k.has("watch") && r.in_watchlist) || (k.has("fav") && fv.has(r.ticker))) && light(r))
@@ -1378,6 +1387,7 @@ const COLS = [
   { k: "name", l: "Name", g: r => r.name, h: r => `<a href="#" class="nm" data-card="${esc(r.ticker)}">${esc((r.name || r.ticker).slice(0, 28))}</a>` },
   { k: "trend", l: "Prognose", g: r => r.trend ? (r.trend.fc ? r.trend.fc.d : r.trend.slope + (r.trend.d5 ?? 0) / 10) : 0, h: r => trendHtml(r) || "–" },
   { k: "status", l: "Status", g: r => r.passed ? 3 : isTrend(r) ? 2 : r.fast_hit ? 1 : 0, h: r => (r.passed ? `<span class="st hit">Treffer</span>` : r.fast_hit && !isTrend(r) ? `<span class="st fast">Fast</span>` : isTrend(r) ? "" : `<span class="st">Watchlist</span>`) + (isTrend(r) ? `<span class="st trend">${r.tr.top ? "Trend Top" : "Trend"}</span>` : "") },
+  { k: "chk", l: "Rücksetzer-Check", n: 1, g: r => chkP(r) ?? -1, h: r => chkCell(r) },
   { k: "grade", l: "Stufe", g: r => r.grade ? { A: 3, B: 2, C: 1 }[r.grade.g] : 0, h: r => gradeBadge(r) || `<span class="muted">–</span>` },
   { k: "exchange", l: "Börse", g: r => r.exchange, h: r => esc(r.exchange) },
   { k: "cap", l: "Market Cap", n: 1, g: r => r.market_cap_usd ?? 0, h: r => fmtCap(r.market_cap_usd) },
@@ -2949,7 +2959,7 @@ function renderMain() {
   KIND_BTNS = trendOn() ? KIND_BTNS_ALL : KIND_BTNS_ALL.filter(x => x[0] !== "trend");
   if (trendOn() && !state.trendSeen) { state.trendSeen = 1; state.kinds = [...new Set([...(state.kinds || []), "trend"])]; save(); }
   const list = selRows(), k = new Set(state.kinds || []);
-  const nFilt = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
+  const nFilt = ["chk", "grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"].filter(x => String(state[x] ?? "") !== String(DEFAULTS[x] ?? "")).length;
   const bar = `<div class="kbar">${KIND_BTNS.map(([v, l, f]) => `<button class="kchip${k.has(v) ? " on" : ""}" data-kind="${v}">${k.has(v) ? "✓ " : ""}${l} <small>${v === "fav" ? favs().size : data.results.filter(f).length}</small></button>`).join("")}
       ${(state.presets || []).map((p, i) => `<button class="kchip pre${presetActive(p) ? " on" : ""}" data-preset="${i}">${esc(p.name)}</button>`).join("")}
       <button class="kchip filt" data-sub="filter">Filter${nFilt ? ` <small>${nFilt}</small>` : ""}</button></div>`;
@@ -3018,7 +3028,7 @@ const sparkIO = "IntersectionObserver" in window ? new IntersectionObserver(es =
   try { const c = await loadChart(t); paintSpark(e.target, c); setChg(e.target.closest(".aitem"), t, dayChg(c)); } catch (err) {}
 }), { rootMargin: "300px" }) : null;
 function observeSparks() { if (sparkIO) document.querySelectorAll("[data-spark]").forEach(el => sparkIO.observe(el)); }
-const FILTER_KEYS = ["grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"];
+const FILTER_KEYS = ["chk", "grade", "minScore", "minCap", "maxCap", "vola", "minTgt", "region", "zone", "div", "sector"];
 const presetActive = p => FILTER_KEYS.every(k => String(state[k] ?? "") === String(p.f[k] ?? "")) && (p.kinds || []).join() === (state.kinds || []).join();
 function sheetExtras() {
   const gg = document.querySelector('.opts[data-key="grade"]'); if (gg) gg.closest(".group").hidden = !(data.stats && data.stats.grade);
